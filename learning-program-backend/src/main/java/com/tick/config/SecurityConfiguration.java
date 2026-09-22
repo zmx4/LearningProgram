@@ -22,10 +22,8 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.io.IOException;
-import java.security.Security;
 
 @Configuration
 public class SecurityConfiguration {

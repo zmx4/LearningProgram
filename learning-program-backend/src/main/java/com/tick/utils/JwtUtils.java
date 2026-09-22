@@ -61,7 +61,7 @@ public class JwtUtils {
         Map<String, Claim> claims =  jwt.getClaims();
         return User.withUsername(claims.get("username").asString())
                 .password("******")
-                .authorities(claims.get("authorities").asString())
+                .authorities(claims.get("authorities").asArray(String.class))
                 .build();
     }
 
