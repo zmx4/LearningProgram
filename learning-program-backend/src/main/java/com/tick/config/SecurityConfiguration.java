@@ -1,8 +1,10 @@
 package com.tick.config;
 
 import com.tick.entity.RestBean;
+import com.tick.entity.dto.Account;
 import com.tick.entity.vo.response.AuthorizeVO;
 import com.tick.filter.JwtAuthorizeFilter;
+import com.tick.service.AccountService;
 import com.tick.utils.JwtUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.ServletException;
@@ -18,13 +20,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -37,6 +34,9 @@ public class SecurityConfiguration {
 
     @Resource
     JwtAuthorizeFilter jwtAuthorizeFilter;
+
+    @Resource
+    AccountService accountService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -83,12 +83,13 @@ public class SecurityConfiguration {
                                         Authentication authentication) throws IOException, ServletException {
         response.setContentType("application/json");
         User user = (User)authentication.getPrincipal();
-        String token = jwtUtils.createJwt(user,1,"qwq");
+        Account account = accountService.findAccountByUsernameOrEmail(user.getUsername());
+        String token = jwtUtils.createJwt(user,account.getId(),account.getUsername());
         AuthorizeVO authorizeVO = new AuthorizeVO();
         authorizeVO.setExpireTime(jwtUtils.expireTime());
-        authorizeVO.setRole("");
+        authorizeVO.setRole(account.getRole());
         authorizeVO.setToken(token);
-        authorizeVO.setUsername("qwq");
+        authorizeVO.setUsername(account.getUsername());
         response.getWriter().write(RestBean.success(authorizeVO).asJsonString());
     }
     public void onAuthenticationFailure(HttpServletRequest request,
