@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: learning-program-backend
+server:
+  port: 1231
