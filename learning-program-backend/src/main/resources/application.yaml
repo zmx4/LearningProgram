@@ -7,5 +7,10 @@ spring:
     name: learning-program-backend
   banner:
     charset: utf-8
+  datasource:
+    username: root
+    password: 13974268
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/learning
 server:
   port: 1231
