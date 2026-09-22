@@ -1,5 +1,7 @@
 spring:
   application:
     name: learning-program-backend
+  banner:
+    charset: utf-8
 server:
   port: 1231

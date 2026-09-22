@@ -1,4 +1,24 @@
 package com.tick.entity;
 
-public record RestBean() {
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
+
+import java.io.Serializable;
+
+public record RestBean<T>(int code, T data, String message) implements Serializable {
+    public static <T>RestBean<T> success(T data) {
+        return new RestBean<T>(200, data, "success");
+    }
+
+    public static <T>RestBean<T> success() {
+        return success(null);
+    }
+
+    public static <T>RestBean<T> failure(int code, String message) {
+        return new RestBean<T>(code, null, message);
+    }
+
+    public String asJsonString() {
+        return JSONObject.toJSONString(this, JSONWriter.Feature.WriteNulls);
+    }
 }
