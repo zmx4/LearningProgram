@@ -1,6 +1,10 @@
 package com.tick.config;
 
 import com.tick.entity.RestBean;
+import com.tick.entity.vo.response.AuthorizeVO;
+import com.tick.filter.JwtAuthorizeFilter;
+import com.tick.utils.JwtUtils;
+import jakarta.annotation.Resource;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,16 +16,26 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.io.IOException;
 import java.security.Security;
 
 @Configuration
 public class SecurityConfiguration {
+
+    @Resource
+    JwtUtils jwtUtils;
+
+    @Resource
+    JwtAuthorizeFilter jwtAuthorizeFilter;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
@@ -40,13 +54,21 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(conf ->
                         conf.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthorizeFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
         response.setContentType("application/json");
-        response.getWriter().write(RestBean.success().asJsonString());
+        User user = (User)authentication.getPrincipal();
+        String token = jwtUtils.createJwt(user,1,"qwq");
+        AuthorizeVO authorizeVO = new AuthorizeVO();
+        authorizeVO.setExpireTime(jwtUtils.expireTime());
+        authorizeVO.setRole("");
+        authorizeVO.setToken(token);
+        authorizeVO.setUsername("qwq");
+        response.getWriter().write(RestBean.success(authorizeVO).asJsonString());
     }
     public void onAuthenticationFailure(HttpServletRequest request,
                                         HttpServletResponse response,

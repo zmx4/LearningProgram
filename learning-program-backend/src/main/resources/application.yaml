@@ -1,4 +1,8 @@
 spring:
+  security:
+    jwt:
+      key: erasfiluhbnselir
+      expire: 144
   application:
     name: learning-program-backend
   banner:
