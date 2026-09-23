@@ -17,7 +17,7 @@
     </div>
   </div>
 </template>
-
+  
 <style scoped>
 .right-card{
   width: 400px;
