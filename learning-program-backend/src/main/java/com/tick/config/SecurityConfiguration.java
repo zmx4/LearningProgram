@@ -11,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.AccessDeniedException;
@@ -86,10 +87,11 @@ public class SecurityConfiguration {
         Account account = accountService.findAccountByUsernameOrEmail(user.getUsername());
         String token = jwtUtils.createJwt(user,account.getId(),account.getUsername());
         AuthorizeVO authorizeVO = new AuthorizeVO();
+//        authorizeVO.setRole(account.getRole());
+//        authorizeVO.setUsername(account.getUsername());
+        BeanUtils.copyProperties(account,authorizeVO);
         authorizeVO.setExpireTime(jwtUtils.expireTime());
-        authorizeVO.setRole(account.getRole());
         authorizeVO.setToken(token);
-        authorizeVO.setUsername(account.getUsername());
         response.getWriter().write(RestBean.success(authorizeVO).asJsonString());
     }
     public void onAuthenticationFailure(HttpServletRequest request,
