@@ -101,7 +101,7 @@ function post(url, data, success, failure = defaultFailure) {
 }
 
 function logout(success, failure = defaultFailure){
-    get('/api/auth/logout', () => {
+    internalPost('/api/auth/logout', null, accessHeader(), () => {
         deleteAccessToken()
         ElMessage.success(`退出登录成功，欢迎您再次使用`)
         success()

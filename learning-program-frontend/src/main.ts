@@ -3,6 +3,8 @@ import App from './App.vue'
 import router from '@/router'
 import axios from "axios";
 
+import 'element-plus/theme-chalk/dark/css-vars.css'
+
 axios.defaults.baseURL = 'http://127.0.0.1:1231'
 
 const app = createApp(App)

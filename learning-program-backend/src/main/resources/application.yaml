@@ -12,5 +12,9 @@ spring:
     password: 13974268
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://172.24.223.113:3306/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  data:
+    redis:
+      host: 172.24.223.113
+      port: 6379
 server:
   port: 1231

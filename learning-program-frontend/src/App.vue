@@ -1,11 +1,18 @@
-<script setup lang="ts">
+<script setup>
+
 
 </script>
 
 <template>
-	<router-view />
+  <header>
+    <div class="wrapper">
+      <router-view/>
+    </div>
+  </header>
 </template>
 
 <style scoped>
-
+header {
+  line-height: 1.5;
+}
 </style>
