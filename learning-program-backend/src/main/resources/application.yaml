@@ -3,6 +3,7 @@ spring:
     jwt:
       key: erasfiluhbnselir
       expire: 144
+    email: false
   application:
     name: learning-program-backend
   banner:

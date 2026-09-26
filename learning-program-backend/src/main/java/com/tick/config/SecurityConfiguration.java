@@ -10,6 +10,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Bean;
@@ -65,25 +66,25 @@ public class SecurityConfiguration {
     }
 
     public void onAccessDeny(HttpServletRequest request,
-                             HttpServletResponse response,
-                             AccessDeniedException accessDeniedException) throws IOException, ServletException {
+                             @NonNull HttpServletResponse response,
+                             @NonNull AccessDeniedException accessDeniedException) throws IOException, ServletException {
         response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(RestBean.forbidden(accessDeniedException.getMessage()).asJsonString());
     }
 
     public void onUnauthorized(HttpServletRequest request,
-                               HttpServletResponse response,
-                               AuthenticationException exception) throws IOException, ServletException {
+                               @NonNull HttpServletResponse response,
+                               @NonNull AuthenticationException exception) throws IOException, ServletException {
         response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(RestBean.unauthorized(exception.getMessage()).asJsonString());
-        return;
     }
 
     public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+                                        @NonNull HttpServletResponse response,
+                                        @NonNull Authentication authentication) throws IOException, ServletException {
         response.setContentType("application/json");
         User user = (User)authentication.getPrincipal();
+        assert user != null;
         Account account = accountService.findAccountByUsernameOrEmail(user.getUsername());
         String token = jwtUtils.createJwt(user,account.getId(),account.getUsername());
         AuthorizeVO authorizeVO = new AuthorizeVO();
@@ -95,13 +96,13 @@ public class SecurityConfiguration {
         response.getWriter().write(RestBean.success(authorizeVO).asJsonString());
     }
     public void onAuthenticationFailure(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException, ServletException {
+                                        @NonNull HttpServletResponse response,
+                                        @NonNull AuthenticationException exception) throws IOException, ServletException {
         response.setContentType("application/json");
         response.getWriter().write(RestBean.unauthorized(exception.getMessage()).asJsonString());
     }
-    public void onLogoutSuccess(HttpServletRequest request,
-                                HttpServletResponse response,
+    public void onLogoutSuccess(@NonNull HttpServletRequest request,
+                                @NonNull HttpServletResponse response,
                                 @Nullable Authentication authentication) throws IOException, ServletException {
         response.setContentType("application/json;charset=utf-8");
         PrintWriter writer = response.getWriter();
