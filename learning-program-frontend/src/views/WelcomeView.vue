@@ -1,5 +1,6 @@
 <script setup lang="ts">
 
+import Components from "unplugin-vue-components/vite";
 </script>
 
 <template>
@@ -13,7 +14,11 @@
       <div style="margin-top: 10px">.....</div>
     </div>
     <div class="right-card">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="el-fade-in-linear"  mode="out-in">
+          <Component :is="Component"/>
+        </transition>
+      </router-view>
     </div>
   </div>
 </template>
