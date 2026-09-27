@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-// @ts-expect-error `@/net` is currently implemented as JavaScript without declarations.
 import { unauthorized } from '@/net'
 
 const routes: RouteRecordRaw[] = [
@@ -30,15 +29,18 @@ const router = createRouter({
     routes
 })
 
-router.beforeEach((to, from,next)=>{
+router.beforeEach((to) => {
     const isUnauthenticated = unauthorized()
-    if(typeof to.name === 'string' && to.name.startsWith('index') && !isUnauthenticated){
-        next('/index')
-    }else if(to.fullPath.startsWith('/index') && isUnauthenticated){
-        next('/')
-    }else{
-        next()
+
+    if (to.path.startsWith('/index') && isUnauthenticated) {
+        return { name: 'welcome-login' }
     }
+
+    if (typeof to.name === 'string' && to.name.startsWith('welcome') && !isUnauthenticated) {
+        return { name: 'index' }
+    }
+
+    return true
 })
 
 export default router
