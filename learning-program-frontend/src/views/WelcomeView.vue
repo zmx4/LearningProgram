@@ -1,6 +1,4 @@
 <script setup lang="ts">
-
-import Components from "unplugin-vue-components/vite";
 </script>
 
 <template>

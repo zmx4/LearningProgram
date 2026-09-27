@@ -100,6 +100,10 @@ function post(url, data, success, failure = defaultFailure) {
     internalPost(url, data, accessHeader() , success, failure)
 }
 
+function publicPost(url, data, success, failure = defaultFailure) {
+    internalPost(url, data, {}, success, failure)
+}
+
 function logout(success, failure = defaultFailure){
     internalPost('/api/auth/logout', null, accessHeader(), () => {
         deleteAccessToken()
@@ -112,8 +116,12 @@ function get(url, success, failure = defaultFailure) {
     internalGet(url, accessHeader(), success, failure)
 }
 
+function publicGet(url, success, failure = defaultFailure) {
+    internalGet(url, {}, success, failure)
+}
+
 function unauthorized() {
     return !takeAccessToken()
 }
 
-export { post, get, login, logout, unauthorized }
+export { post, publicPost, get, publicGet, login, logout, unauthorized }
