@@ -20,13 +20,14 @@
     </div>
   </div>
 </template>
-  
+
 <style scoped>
-.right-card{
+.right-card {
   width: 400px;
   z-index: 1;
-  background: wheat;
+  background-color: var(--el-bg-color);
 }
+
 .welcome-title {
   position: absolute;
   bottom: 30px;
