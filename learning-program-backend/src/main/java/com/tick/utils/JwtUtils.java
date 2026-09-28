@@ -14,6 +14,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -23,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtUtils {
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
     @Value("${spring.security.jwt.key}")
     String key;
@@ -54,7 +57,7 @@ public class JwtUtils {
             return false;
         }
         Date now = new Date();
-        long expire = Math.max(expiration.getTime(), 0);
+        long expire = Math.max(expiration.getTime() - System.currentTimeMillis(), 1);
         template.opsForValue().set(Const.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
         return true;
     }
@@ -72,10 +75,14 @@ public class JwtUtils {
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
         try {
             DecodedJWT verify = jwtVerifier.verify(token);
-            if (this.isInvalidToken(verify.getId())) return null;
+            if (this.isInvalidToken(verify.getId())) {
+                logger.warn("Rejected blacklisted JWT: {}", verify.getId());
+                return null;
+            }
             Date expiresAt = verify.getExpiresAt();
             return new Date().after(expiresAt) ? null : verify;
         } catch (JWTVerificationException e) {
+            logger.warn("Rejected invalid JWT: {}", e.getMessage());
             return null;
         }
     }

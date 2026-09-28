@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -45,6 +46,7 @@ public class SecurityConfiguration {
         return http
                 .authorizeHttpRequests(conf ->
                         conf
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .anyRequest().authenticated())
                 .formLogin(conf ->
@@ -68,6 +70,7 @@ public class SecurityConfiguration {
     public void onAccessDeny(HttpServletRequest request,
                              @NonNull HttpServletResponse response,
                              @NonNull AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(RestBean.forbidden(accessDeniedException.getMessage()).asJsonString());
     }
@@ -75,6 +78,7 @@ public class SecurityConfiguration {
     public void onUnauthorized(HttpServletRequest request,
                                @NonNull HttpServletResponse response,
                                @NonNull AuthenticationException exception) throws IOException, ServletException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(RestBean.unauthorized(exception.getMessage()).asJsonString());
     }

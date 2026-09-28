@@ -7,6 +7,7 @@ import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.service.AccountService;
+import com.tick.service.NotificationService;
 import jakarta.annotation.Resource;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     PasswordEncoder encoder;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private NotificationService notificationService;
 
     @Override
     public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
@@ -66,6 +69,15 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String password = encoder.encode(vo.getPassword());
         Account account = new Account(null, username, password, email, "user", new Date());
         if (this.save(account)) {
+            notificationService.save(new com.tick.entity.dto.Notification(
+                    null,
+                    account.getId(),
+                    "欢迎加入学习平台",
+                    "你的账号已经创建成功，开始规划今天的学习内容吧。",
+                    "system",
+                    false,
+                    new Date()
+            ));
             return null;
         } else {
             return "内部错误,请联系管理员";

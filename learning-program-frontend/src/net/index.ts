@@ -28,8 +28,19 @@ type Headers = AxiosRequestConfig['headers']
 
 const accessHeader = (): Headers => {
     const token = takeAccessToken()
-    return token ? { Authorization: `Bearer ${token}` } : {}
+    if (!token) {
+        return {}
+    }
+    return { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
 }
+
+axios.interceptors.request.use((config) => {
+    const token = takeAccessToken()
+    if (token) {
+        config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`
+    }
+    return config
+})
 
 const defaultError: ErrorCallback = (error) => {
     console.error(error)

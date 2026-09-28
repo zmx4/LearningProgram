@@ -90,6 +90,20 @@ CREATE TABLE IF NOT EXISTS db_account (
     role VARCHAR(32) NOT NULL DEFAULT 'user',
     register_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS db_notification (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    account_id INT NOT NULL,
+    title VARCHAR(128) NOT NULL,
+    content VARCHAR(1000) NOT NULL,
+    type VARCHAR(32) NOT NULL DEFAULT 'system',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_account
+        FOREIGN KEY (account_id) REFERENCES db_account(id)
+        ON DELETE CASCADE,
+    INDEX idx_notification_account_created (account_id, created_at)
+);
 ```
 
 > `password` 字段需要能够保存 BCrypt 密文，建议使用 `VARCHAR(255)`。如果数据库中已经存在同名表，请按现有数据结构确认字段是否与 `Account` 实体一致。
@@ -204,6 +218,9 @@ pnpm preview
 | `POST` | `/api/auth/logout` | 退出登录并使当前令牌失效 | 是 |
 | `POST` | `/api/auth/reset-confirm` | 校验重置密码信息 | 否 |
 | `GET` | `/api/test/hello` | 受保护接口测试 | 是 |
+| `GET` | `/api/notifications` | 查询当前用户通知及未读数量 | 是 |
+| `POST` | `/api/notifications/{id}/read` | 将当前用户的一条通知标记为已读 | 是 |
+| `POST` | `/api/notifications/read-all` | 将当前用户全部通知标记为已读 | 是 |
 
 登录成功后，客户端应在请求头中携带：
 

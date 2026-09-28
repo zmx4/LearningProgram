@@ -21,6 +21,10 @@ const routes: RouteRecordRaw[] = [
         path: '/index',
         name: 'index',
         component: () => import('@/views/IndexView.vue')
+    },{
+        path: '/notifications',
+        name: 'notifications',
+        component: () => import('@/views/NotificationView.vue')
     }
 ]
 
@@ -32,7 +36,7 @@ const router = createRouter({
 router.beforeEach((to) => {
     const isUnauthenticated = unauthorized()
 
-    if (to.path.startsWith('/index') && isUnauthenticated) {
+    if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 
