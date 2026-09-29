@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ArrowLeft, Bell, CircleCheck, Message } from '@element-plus/icons-vue'
+import { Message } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
-import router from '@/router'
 
 interface NotificationItem {
   id: number
@@ -64,28 +63,12 @@ onMounted(loadNotifications)
 
 <template>
   <div class="notification-page">
-    <header class="notification-header">
-      <button class="back-button" type="button" @click="router.push({ name: 'index' })">
-        <el-icon><ArrowLeft /></el-icon>
-        返回首页
-      </button>
-      <div class="header-title">
-        <div class="title-icon"><el-icon><Bell /></el-icon></div>
-        <div>
-          <p class="eyebrow">LEARNING SPACE</p>
-          <h1>消息通知</h1>
-        </div>
-      </div>
-      <button class="read-all-button" type="button" :disabled="unreadCount === 0" @click="markAllRead">
-        <el-icon><CircleCheck /></el-icon>
-        全部标记为已读
-      </button>
-    </header>
-
     <main class="notification-content">
       <div class="summary">
         <h2>全部消息</h2>
-        <span>{{ unreadCount }} 条未读</span>
+        <button class="read-all-button" type="button" :disabled="unreadCount === 0" @click="markAllRead">
+          全部标记为已读
+        </button>
       </div>
 
       <div v-loading="loading" class="notification-list">

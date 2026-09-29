@@ -1,95 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import {
-  Bell,
-  Reading,
-  Collection,
-  DataAnalysis,
-  HomeFilled,
-  Setting,
-  UserFilled,
-} from '@element-plus/icons-vue'
-import { logout } from '@/net'
-import router from '@/router'
-
-const activeSection = ref('home')
-
-const navigationItems = [
-  { id: 'home', label: '首页', icon: HomeFilled },
-  { id: 'courses', label: '我的课程', icon: Reading },
-  { id: 'resources', label: '学习资源', icon: Collection },
-  { id: 'progress', label: '学习进度', icon: DataAnalysis },
-]
-
-function userLogout() {
-  logout(() => router.push('/'))
-}
+import { Reading } from '@element-plus/icons-vue'
 </script>
 
 <template>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">学</div>
-        <span>学习平台</span>
-      </div>
-
-      <div class="sidebar-placeholder" aria-label="导航占位区域">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <nav class="side-nav" aria-label="主导航">
-        <button v-for="item in navigationItems" :key="item.id" class="nav-item"
-          :class="{ active: activeSection === item.id }" type="button" @click="activeSection = item.id">
-          <el-icon>
-            <component :is="item.icon" />
-          </el-icon>
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button class="nav-item" type="button">
-          <el-icon>
-            <Setting />
-          </el-icon>
-          <span>设置</span>
-        </button>
-      </div>
-    </aside>
-
-    <section class="page">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">LEARNING SPACE</p>
-          <h1>你好，欢迎回来</h1>
-        </div>
-        <div class="topbar-actions">
-          <button class="icon-button" type="button" aria-label="通知" @click="router.push({ name: 'notifications' })">
-            <el-icon>
-              <Bell />
-            </el-icon>
-            <span class="notification-dot"></span>
-          </button>
-          <div class="profile">
-            <div class="avatar" aria-label="用户头像"><el-icon>
-                <UserFilled />
-              </el-icon></div>
-            <span class="profile-name">学习者</span>
-          </div>
-          <button class="logout-button" type="button" @click="userLogout">退出登录</button>
-        </div>
-      </header>
-
-      <main class="content">
+  <main class="content">
         <div class="hero-card">
           <div>
             <p class="card-label">今日学习计划</p>
             <h2>保持专注，持续进步</h2>
             <p class="hero-copy">安排好今天的学习时间，让每一次积累都离目标更近一步。</p>
-            <button class="primary-button" type="button" @click="activeSection = 'courses'">开始学习</button>
+            <button class="primary-button" type="button">开始学习</button>
           </div>
           <div class="hero-decoration" aria-hidden="true">
             <div class="decoration-circle circle-large"></div>
@@ -125,9 +45,7 @@ function userLogout() {
           <h3>准备好开始你的学习了吗？</h3>
           <p>课程、学习资源和进度信息将在这里展示。</p>
         </div>
-      </main>
-    </section>
-  </div>
+  </main>
 </template>
 
 <style scoped>

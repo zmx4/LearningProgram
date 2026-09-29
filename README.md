@@ -57,7 +57,7 @@ LearningProgram/
 ├── learning-program-frontend/      # Vue 前端
 │   ├── src/net/                    # Axios 请求及认证状态处理
 │   ├── src/router/                 # 前端路由和路由守卫
-│   └── src/views/                  # 页面和业务视图
+│   └── src/views/                  # MainView 布局及 *Page.vue 页面组件
 └── README.md
 ```
 

@@ -19,12 +19,51 @@ const routes: RouteRecordRaw[] = [
         ]
     },{
         path: '/index',
-        name: 'index',
-        component: () => import('@/views/IndexView.vue')
+        component: () => import('@/views/MainView.vue'),
+        children: [
+            {
+                path: '',
+                name: 'index',
+                component: () => import('@/views/HomePage.vue')
+            }
+        ]
     },{
         path: '/notifications',
-        name: 'notifications',
-        component: () => import('@/views/NotificationView.vue')
+        component: () => import('@/views/MainView.vue'),
+        children: [
+            {
+                path: '',
+                name: 'notifications',
+                component: () => import('@/views/NotificationPage.vue')
+            }
+        ]
+    },{
+        path: '/courses',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'courses',
+            component: () => import('@/views/FeaturePage.vue'),
+            meta: { title: '我的课程' }
+        }]
+    },{
+        path: '/resources',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'resources',
+            component: () => import('@/views/FeaturePage.vue'),
+            meta: { title: '学习资源' }
+        }]
+    },{
+        path: '/progress',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'progress',
+            component: () => import('@/views/FeaturePage.vue'),
+            meta: { title: '学习进度' }
+        }]
     }
 ]
 
@@ -36,7 +75,9 @@ const router = createRouter({
 router.beforeEach((to) => {
     const isUnauthenticated = unauthorized()
 
-    if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')) && isUnauthenticated) {
+    if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
+        || to.path.startsWith('/courses') || to.path.startsWith('/resources')
+        || to.path.startsWith('/progress')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 
