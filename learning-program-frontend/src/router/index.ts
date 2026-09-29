@@ -24,7 +24,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: '',
                 name: 'index',
-                component: () => import('@/views/HomePage.vue')
+                component: () => import('@/views/page/HomePage.vue')
             }
         ]
     },{
@@ -34,7 +34,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: '',
                 name: 'notifications',
-                component: () => import('@/views/NotificationPage.vue')
+                component: () => import('@/views/page/NotificationPage.vue')
             }
         ]
     },{
@@ -43,7 +43,7 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'courses',
-            component: () => import('@/views/FeaturePage.vue'),
+            component: () => import('@/views/page/FeaturePage.vue'),
             meta: { title: '我的课程' }
         }]
     },{
@@ -52,7 +52,7 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'resources',
-            component: () => import('@/views/FeaturePage.vue'),
+            component: () => import('@/views/page/FeaturePage.vue'),
             meta: { title: '学习资源' }
         }]
     },{
@@ -61,7 +61,7 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'progress',
-            component: () => import('@/views/FeaturePage.vue'),
+            component: () => import('@/views/page/FeaturePage.vue'),
             meta: { title: '学习进度' }
         }]
     },{
@@ -70,7 +70,7 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'profile',
-            component: () => import('@/views/ProfilePage.vue'),
+            component: () => import('@/views/page/ProfilePage.vue'),
             meta: { title: '个人信息' }
         }]
     },{
@@ -79,8 +79,17 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'settings',
-            component: () => import('@/views/SettingsPage.vue'),
+            component: () => import('@/views/page/SettingsPage.vue'),
             meta: { title: '设置' }
+        }]
+    },{
+        path: '/user/:id',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'user',
+            component: () => import('@/views/page/UserPage.vue'),
+            meta: { title: '用户信息' }
         }]
     }
 ]
@@ -96,7 +105,7 @@ router.beforeEach((to) => {
     if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
-        || to.path.startsWith('/settings')) && isUnauthenticated) {
+        || to.path.startsWith('/settings') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 
