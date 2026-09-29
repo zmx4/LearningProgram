@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
+import com.tick.entity.vo.request.ProfileUpdateVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
@@ -67,7 +68,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             return null;
         }
         String password = encoder.encode(vo.getPassword());
-        Account account = new Account(null, username, password, email, "user", new Date());
+        Account account = new Account(null, username, password, email, null, null, "user", new Date());
         if (this.save(account)) {
             notificationService.save(new com.tick.entity.dto.Notification(
                     null,
@@ -111,5 +112,34 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     private boolean existsAccountByEmail(String email) {
         return this.baseMapper.exists(Wrappers.<Account>query().eq("email", email));
+    }
+
+    @Override
+    public Account updateProfile(Integer accountId, ProfileUpdateVO vo) {
+        Account account = this.getById(accountId);
+        if (account == null) {
+            return null;
+        }
+
+        String email = normalize(vo.getEmail());
+        boolean emailChanged = !emailEquals(email, account.getEmail());
+        if (emailChanged && email != null
+                && this.query().eq("email", email).ne("id", accountId).exists()) {
+            throw new IllegalArgumentException("此邮箱已被其他用户使用");
+        }
+        account.setUsername(vo.getUsername().trim());
+        account.setEmail(email);
+        account.setPhone(normalize(vo.getPhone()));
+        account.setBio(normalize(vo.getBio()));
+        this.updateById(account);
+        return account;
+    }
+
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private boolean emailEquals(String first, String second) {
+        return first == null ? second == null : first.equals(second);
     }
 }

@@ -25,7 +25,7 @@ const navigationItems = [
   {name: 'progress', label: '学习进度', icon: DataAnalysis},
 ]
 
-const activeSection = computed(() => route.name === 'notifications' ? '' : String(route.name ?? 'index'))
+const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' ? '' : String(route.name ?? 'index'))
 
 function userLogout() {
   logout(() => router.push({name: 'welcome-login'}))
@@ -106,14 +106,14 @@ function toggleSidebar() {
             </el-icon>
             <span class="notification-dot"></span>
           </button>
-          <div class="profile">
+          <button class="profile" type="button" aria-label="打开个人信息" @click="router.push({ name: 'profile' })">
             <div class="avatar" aria-label="用户头像">
               <el-icon>
                 <UserFilled/>
               </el-icon>
             </div>
             <span class="profile-name">学习者</span>
-          </div>
+          </button>
           <button class="logout-button" type="button" @click="userLogout">退出登录</button>
         </div>
       </header>
@@ -369,6 +369,10 @@ function toggleSidebar() {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .avatar {

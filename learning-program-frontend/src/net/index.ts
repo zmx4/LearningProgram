@@ -143,6 +143,20 @@ function internalGet<T>(
         .catch(error)
 }
 
+function internalPut<T>(
+    url: string,
+    data: unknown,
+    headers: Headers,
+    success: SuccessCallback<T>,
+    failure: FailureCallback,
+    error: ErrorCallback = defaultError,
+): void {
+    void axios
+        .put<ApiResponse<T>>(url, data, { headers })
+        .then(({ data: response }) => handleResponse(response, url, success, failure))
+        .catch(error)
+}
+
 function login(
     username: string,
     password: string,
@@ -203,6 +217,15 @@ function get<T>(
     internalGet<T>(url, accessHeader(), success, failure)
 }
 
+function put<T>(
+    url: string,
+    data: unknown,
+    success: SuccessCallback<T>,
+    failure: FailureCallback = defaultFailure,
+): void {
+    internalPut<T>(url, data, accessHeader(), success, failure)
+}
+
 function publicGet<T>(
     url: string,
     success: SuccessCallback<T>,
@@ -216,4 +239,4 @@ function unauthorized(): boolean {
     return !takeAccessToken()
 }
 
-export { post, publicPost, get, publicGet, login, logout, unauthorized }
+export { post, publicPost, get, put, publicGet, login, logout, unauthorized }
