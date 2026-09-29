@@ -73,6 +73,15 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/ProfilePage.vue'),
             meta: { title: '个人信息' }
         }]
+    },{
+        path: '/settings',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'settings',
+            component: () => import('@/views/SettingsPage.vue'),
+            meta: { title: '设置' }
+        }]
     }
 ]
 
@@ -86,7 +95,8 @@ router.beforeEach((to) => {
 
     if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
-        || to.path.startsWith('/progress') || to.path.startsWith('/profile')) && isUnauthenticated) {
+        || to.path.startsWith('/progress') || to.path.startsWith('/profile')
+        || to.path.startsWith('/settings')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 

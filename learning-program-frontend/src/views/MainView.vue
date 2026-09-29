@@ -25,7 +25,7 @@ const navigationItems = [
   {name: 'progress', label: '学习进度', icon: DataAnalysis},
 ]
 
-const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' ? '' : String(route.name ?? 'index'))
+const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' || route.name === 'settings' ? '' : String(route.name ?? 'index'))
 
 function userLogout() {
   logout(() => router.push({name: 'welcome-login'}))
@@ -83,7 +83,8 @@ function toggleSidebar() {
       </div>
 
       <div class="sidebar-footer">
-        <button class="nav-item" type="button">
+        <button class="nav-item" type="button" :class="{ active: activeSection === 'settings' }"
+                @click="router.push({ name: 'settings' })">
           <el-icon>
             <Setting/>
           </el-icon>

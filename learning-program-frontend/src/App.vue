@@ -1,17 +1,36 @@
-<script setup>
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import {useDark, useToggle} from "@vueuse/core";
+export type ThemeMode = 'light' | 'dark' | 'system'
 
-useDark({
-  selector: 'html',
-  attribute:'class',
-  valueDark:'dark',
-  valueLight:'light'
+const themeStorageKey = 'learning-theme-mode'
+const themeMode = ref<ThemeMode>('system')
+let systemThemeMedia: MediaQueryList | null = null
+
+function isThemeMode(value: string | null): value is ThemeMode {
+  return value === 'light' || value === 'dark' || value === 'system'
+}
+
+function applyTheme() {
+  const dark = themeMode.value === 'dark'
+    || (themeMode.value === 'system' && systemThemeMedia?.matches === true)
+  document.documentElement.classList.toggle('dark', dark)
+}
+
+function onSystemThemeChange() {
+  if (themeMode.value === 'system') applyTheme()
+}
+
+onMounted(() => {
+  const storedMode = localStorage.getItem(themeStorageKey)
+  if (isThemeMode(storedMode)) themeMode.value = storedMode
+  systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)')
+  systemThemeMedia.addEventListener('change', onSystemThemeChange)
+  applyTheme()
 })
-useDark({
-  onChanged(dark){
-    useToggle(dark)
-  }
+
+onBeforeUnmount(() => {
+  systemThemeMedia?.removeEventListener('change', onSystemThemeChange)
 })
 </script>
 
