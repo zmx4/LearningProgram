@@ -13,6 +13,7 @@ interface ApiResponse<T> {
 interface AuthStorage {
     token: string
     expire: string | number | Date
+    username?: string
 }
 
 interface LoginResponse {
@@ -85,8 +86,9 @@ function storeAccessToken(
     remember: boolean,
     token: string,
     expire: string | number | Date,
+    username: string,
 ): void {
-    const authObj: AuthStorage = { token, expire }
+    const authObj: AuthStorage = { token, expire, username }
     const storage = remember ? localStorage : sessionStorage
     storage.setItem(authItemName, JSON.stringify(authObj))
 }
@@ -169,7 +171,7 @@ function login(
         { username, password },
         { 'Content-Type': 'application/x-www-form-urlencoded' },
         (data) => {
-            storeAccessToken(remember, data.token, data.expireTime)
+            storeAccessToken(remember, data.token, data.expireTime, data.username)
             ElMessage.success(`登录成功，欢迎 ${data.username} 来到我们的系统`)
             success(data)
         },
@@ -239,4 +241,15 @@ function unauthorized(): boolean {
     return !takeAccessToken()
 }
 
-export { post, publicPost, get, put, publicGet, login, logout, unauthorized }
+function currentUsername(): string {
+    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    if (!str) return ''
+    try {
+        const authObj = JSON.parse(str) as AuthStorage
+        return authObj.username?.trim() ?? ''
+    } catch {
+        return ''
+    }
+}
+
+export { post, publicPost, get, put, publicGet, login, logout, unauthorized, currentUsername }

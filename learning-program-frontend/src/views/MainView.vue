@@ -12,11 +12,12 @@ import {
 } from '@element-plus/icons-vue'
 import {computed, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {logout} from '@/net'
+import {currentUsername, logout} from '@/net'
 
 const route = useRoute()
 const router = useRouter()
 const sidebarExpanded = ref(false)
+const username = ref(currentUsername() || '用户')
 
 const navigationItems = [
   {name: 'index', label: '首页', icon: HomeFilled},
@@ -113,7 +114,7 @@ function toggleSidebar() {
                 <UserFilled/>
               </el-icon>
             </div>
-            <span class="profile-name">学习者</span>
+            <span class="profile-name">{{ username }}</span>
           </button>
           <button class="logout-button" type="button" @click="userLogout">退出登录</button>
         </div>
