@@ -167,5 +167,14 @@ export default {
     system: '跟随系统',
     systemDescription: '根据系统外观自动切换',
     switched: '已切换为{mode}模式',
+    dailyWord: '每日一词',
+    dailyWordDescription: '在侧边栏显示每日推荐单词',
+    dailyWordSource: '单词来源',
+  },
+  dailyWord: {
+    title: '每日一词',
+    loading: '正在加载…',
+    unavailable: '暂时无法获取',
+    noTranslation: '暂无释义',
   },
 } as const

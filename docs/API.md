@@ -189,6 +189,57 @@ Authorization: Bearer <token>
 
 返回用户名、邮箱、个人简介和临时头像信息。
 
+## 单词接口
+
+### 查询单词
+
+```http
+GET /api/dictionary?word=hello
+Authorization: ******
+```
+
+也支持使用路径参数：`GET /api/dictionary/{word}`。
+
+成功响应中的 `data` 包含单词、释义和记录 ID：
+
+```json
+{
+  "id": 1,
+  "word": "hello",
+  "translation": "你好"
+}
+```
+
+单词不存在时返回 `404`，单词为空或超过 255 个字符时返回 `400`。
+
+### 查询 CET4/CET6 单词
+
+```http
+GET /api/dictionary/cet4?count=10
+Authorization: ******
+```
+
+```http
+GET /api/dictionary/cet6?count=10
+Authorization: ******
+```
+
+`count` 可选，默认值为 `1`，取值范围为 `1` 至 `100`。接口每次随机返回指定数量的单词，单个请求和批量请求均返回数组：
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 1,
+      "word": "ability",
+      "translation": "能力"
+    }
+  ],
+  "message": "success"
+}
+```
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。

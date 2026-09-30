@@ -9,12 +9,25 @@ import {
   HomeFilled,
   Reading,
   Setting,
+  Notebook,
   UserFilled,
 } from '@element-plus/icons-vue'
-import {computed, ref} from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {currentRole, currentUsername, logout} from '@/net'
+import {currentRole, currentUsername, get, logout} from '@/net'
 import { useI18n } from 'vue-i18n'
+import {
+  dailyWordSettingsChangedEvent,
+  readDailyWordSettings,
+  type DailyWordSettings,
+  type DailyWordSource,
+} from '@/utils/dailyWord'
+
+interface DailyWord {
+  id: number
+  word: string
+  translation: string | null
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +35,9 @@ const { t } = useI18n()
 const sidebarExpanded = ref(false)
 const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
+const dailyWordSettings = ref<DailyWordSettings>(readDailyWordSettings())
+const dailyWord = ref<DailyWord | null>(null)
+const dailyWordLoading = ref(false)
 
 const navigationItems = [
   {name: 'index', label: 'navigation.home', icon: HomeFilled},
@@ -39,6 +55,56 @@ function userLogout() {
 function toggleSidebar() {
   sidebarExpanded.value = !sidebarExpanded.value
 }
+
+function dailyWordCacheKey(source: DailyWordSource): string {
+  return `learning-daily-word-${source}-${new Date().toISOString().slice(0, 10)}`
+}
+
+function loadDailyWord() {
+  dailyWord.value = null
+  if (!dailyWordSettings.value.enabled) return
+
+  const cacheKey = dailyWordCacheKey(dailyWordSettings.value.source)
+  const cached = localStorage.getItem(cacheKey)
+  if (cached) {
+    try {
+      dailyWord.value = JSON.parse(cached) as DailyWord
+      return
+    } catch {
+      localStorage.removeItem(cacheKey)
+    }
+  }
+
+  dailyWordLoading.value = true
+  get<DailyWord[]>(
+    `/api/dictionary/${dailyWordSettings.value.source}?count=1`,
+    (words) => {
+      dailyWordLoading.value = false
+      const word = words[0]
+      if (!word) return
+      dailyWord.value = word
+      localStorage.setItem(cacheKey, JSON.stringify(word))
+    },
+    () => {
+      dailyWordLoading.value = false
+    },
+  )
+}
+
+function onDailyWordSettingsChanged(event: Event) {
+  const settings = (event as CustomEvent<DailyWordSettings>).detail
+  dailyWordSettings.value = settings
+  loadDailyWord()
+}
+
+onMounted(() => {
+  loadDailyWord()
+  window.addEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+})
+
+onUnmounted(() => {
+  window.removeEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+})
 </script>
 
 <template>
@@ -91,10 +157,23 @@ function toggleSidebar() {
         </button>
       </nav>
 
-      <div class="sidebar-placeholder" :aria-label="t('common.navigationPlaceholder')">
-        <span></span>
-        <span></span>
-        <span></span>
+      <div
+          v-if="dailyWordSettings.enabled"
+          class="daily-word"
+          :aria-label="t('dailyWord.title')"
+      >
+        <div class="daily-word-heading">
+          <el-icon><Notebook /></el-icon>
+          <span>{{ t('dailyWord.title') }}</span>
+          <small>{{ dailyWordSettings.source.toUpperCase() }}</small>
+        </div>
+        <template v-if="dailyWord">
+          <strong>{{ dailyWord.word }}</strong>
+          <p>{{ dailyWord.translation || t('dailyWord.noTranslation') }}</p>
+        </template>
+        <p v-else class="daily-word-status">
+          {{ dailyWordLoading ? t('dailyWord.loading') : t('dailyWord.unavailable') }}
+        </p>
       </div>
 
       <div class="sidebar-footer">
@@ -237,7 +316,7 @@ function toggleSidebar() {
 
 .sidebar:not(.expanded) .brand > span,
 .sidebar:not(.expanded) .nav-item span,
-.sidebar:not(.expanded) .sidebar-placeholder {
+.sidebar:not(.expanded) .daily-word {
   display: none;
 }
 
@@ -256,25 +335,51 @@ function toggleSidebar() {
   opacity: 1;
 }
 
-.sidebar-placeholder {
+.daily-word {
   display: grid;
-  gap: 9px;
+  gap: 8px;
   margin: 24px 13px 24px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 13px;
+  background: var(--el-fill-color-lighter);
 }
 
-.sidebar-placeholder span {
-  width: 100%;
-  height: 9px;
-  border-radius: 5px;
-  background: var(--el-fill-color-light);
+.daily-word-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.sidebar-placeholder span:nth-child(2) {
-  width: 72%;
+.daily-word-heading small {
+  margin-left: auto;
+  color: var(--el-color-primary);
+  font-size: 10px;
 }
 
-.sidebar-placeholder span:nth-child(3) {
-  width: 86%;
+.daily-word strong {
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-word p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-word .daily-word-status {
+  color: var(--el-text-color-placeholder);
 }
 
 .side-nav {

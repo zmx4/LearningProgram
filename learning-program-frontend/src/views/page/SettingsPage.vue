@@ -4,6 +4,11 @@ import { Monitor, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { ThemeMode } from '@/App.vue'
 import { useI18n } from 'vue-i18n'
+import {
+  readDailyWordSettings,
+  saveDailyWordSettings,
+  type DailyWordSource,
+} from '@/utils/dailyWord'
 
 const themeStorageKey = 'learning-theme-mode'
 const { t } = useI18n()
@@ -13,6 +18,7 @@ const themeMode = ref<ThemeMode>(
     ? storedMode
     : 'system',
 )
+const dailyWordSettings = ref(readDailyWordSettings())
 
 const themeOptions = [
   { value: 'light' as const, label: 'settings.light', description: 'settings.lightDescription', icon: Sunny },
@@ -27,6 +33,16 @@ function updateTheme(mode: ThemeMode) {
   document.documentElement.classList.toggle('dark', mode === 'dark' || (mode === 'system' && media.matches))
   const selectedOption = themeOptions.find((option) => option.value === mode)
   ElMessage.success(t('settings.switched', { mode: selectedOption ? t(selectedOption.label) : '' }))
+}
+
+function updateDailyWordEnabled(enabled: boolean) {
+  dailyWordSettings.value.enabled = enabled
+  saveDailyWordSettings(dailyWordSettings.value)
+}
+
+function updateDailyWordSource(source: DailyWordSource) {
+  dailyWordSettings.value.source = source
+  saveDailyWordSettings(dailyWordSettings.value)
 }
 </script>
 
@@ -67,6 +83,32 @@ function updateTheme(mode: ThemeMode) {
         </button>
       </div>
     </section>
+
+    <section class="settings-card">
+      <div class="setting-title">
+        <div>
+          <h3>{{ t('settings.dailyWord') }}</h3>
+          <p>{{ t('settings.dailyWordDescription') }}</p>
+        </div>
+        <el-switch
+          :model-value="dailyWordSettings.enabled"
+          :aria-label="t('settings.dailyWord')"
+          @update:model-value="updateDailyWordEnabled"
+        />
+      </div>
+
+      <div class="daily-word-source">
+        <span>{{ t('settings.dailyWordSource') }}</span>
+        <el-radio-group
+          :model-value="dailyWordSettings.source"
+          :disabled="!dailyWordSettings.enabled"
+          @update:model-value="updateDailyWordSource"
+        >
+          <el-radio-button label="cet4">CET4</el-radio-button>
+          <el-radio-button label="cet6">CET6</el-radio-button>
+        </el-radio-group>
+      </div>
+    </section>
   </main>
 </template>
 
@@ -94,6 +136,7 @@ h2 { margin-bottom: 8px; font-size: 26px; }
 .setting-title h3 { margin-bottom: 6px; font-size: 17px; }
 .setting-title p { margin-bottom: 0; color: var(--el-text-color-secondary); font-size: 13px; }
 .current-mode { color: var(--el-color-primary); font-size: 13px; }
+.daily-word-source { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--el-text-color-secondary); font-size: 13px; }
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .theme-option {
   display: flex;
