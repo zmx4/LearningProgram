@@ -3,7 +3,6 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Notification;
 import com.tick.service.NotificationService;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +16,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
-    @Resource
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
+
+    public NotificationController(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
 
     @GetMapping
     public RestBean<Map<String, Object>> list(HttpServletRequest request) {

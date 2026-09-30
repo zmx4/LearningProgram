@@ -3,7 +3,6 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.service.AccountService;
-import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,8 +13,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
-    @Resource
-    private AccountService accountService;
+    private final AccountService accountService;
+
+    public UserController(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @GetMapping("/{id}")
     public RestBean<Map<String, String>> getUser(@PathVariable Integer id) {

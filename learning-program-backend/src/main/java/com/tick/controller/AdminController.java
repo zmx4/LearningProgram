@@ -5,9 +5,7 @@ import com.tick.entity.dto.Account;
 import com.tick.entity.dto.Notification;
 import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,11 +25,13 @@ import java.util.Set;
 public class AdminController {
     private static final Set<String> SUPPORTED_TARGETS = Set.of("all", "role", "users");
 
-    @Resource
-    private AccountService accountService;
+    private final AccountService accountService;
+    private final NotificationService notificationService;
 
-    @Resource
-    private NotificationService notificationService;
+    public AdminController(AccountService accountService, NotificationService notificationService) {
+        this.accountService = accountService;
+        this.notificationService = notificationService;
+    }
 
     @GetMapping("/users")
     public RestBean<List<Map<String, Object>>> users() {

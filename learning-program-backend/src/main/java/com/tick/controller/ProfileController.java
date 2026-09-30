@@ -4,7 +4,6 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.ProfileUpdateVO;
 import com.tick.service.AccountService;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +17,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
-    @Resource
-    private AccountService accountService;
+    private final AccountService accountService;
+
+    public ProfileController(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @GetMapping
     public RestBean<Map<String, String>> getProfile(HttpServletRequest request) {

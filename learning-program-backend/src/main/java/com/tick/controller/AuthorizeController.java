@@ -4,7 +4,6 @@ import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.service.AccountService;
-import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -20,8 +18,11 @@ import java.util.function.Supplier;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthorizeController {
-    @Resource
-    AccountService accountService;
+    private final AccountService accountService;
+
+    public AuthorizeController(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @PostMapping("/register")
     public RestBean<Void> register(@RequestBody @Valid EmailRegisterVO vo) {

@@ -40,9 +40,7 @@ class AuthorizeControllerTest {
     }
 
     private AuthorizeController createController() {
-        AuthorizeController controller = new AuthorizeController();
-        controller.accountService = accountService;
-        return controller;
+        return new AuthorizeController(accountService);
     }
 
     private EmailRegisterVO validRequest() {

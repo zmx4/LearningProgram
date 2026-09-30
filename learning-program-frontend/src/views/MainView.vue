@@ -134,7 +134,11 @@ function toggleSidebar() {
         </div>
       </header>
 
-      <router-view/>
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade-slide" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </section>
   </div>
 </template>
@@ -161,11 +165,16 @@ function toggleSidebar() {
   display: flex;
   width: 72px;
   flex: 0 0 72px;
+  height: 100vh;
+  min-height: 100vh;
   flex-direction: column;
-  position: relative;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
   padding: 28px 16px 20px;
   background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
+  overflow-y: auto;
   transition: width .2s ease, flex-basis .2s ease;
 }
 
@@ -325,6 +334,21 @@ function toggleSidebar() {
 .page {
   min-width: 0;
   flex: 1;
+}
+
+.page-fade-slide-enter-active,
+.page-fade-slide-leave-active {
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.page-fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .topbar {
