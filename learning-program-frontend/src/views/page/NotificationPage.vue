@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { Message } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
+import { useI18n } from 'vue-i18n'
 
 interface NotificationItem {
   id: number
@@ -20,6 +21,7 @@ interface NotificationResponse {
 const notifications = ref<NotificationItem[]>([])
 const unreadCount = ref(0)
 const loading = ref(true)
+const { t } = useI18n()
 
 function loadNotifications() {
   loading.value = true
@@ -65,9 +67,9 @@ onMounted(loadNotifications)
   <div class="notification-page">
     <main class="notification-content">
       <div class="summary">
-        <h2>全部消息</h2>
+        <h2>{{ t('notifications.all') }}</h2>
         <button class="read-all-button" type="button" :disabled="unreadCount === 0" @click="markAllRead">
-          全部标记为已读
+          {{ t('notifications.markAllRead') }}
         </button>
       </div>
 
@@ -83,14 +85,14 @@ onMounted(loadNotifications)
           <div class="message-body">
             <div class="message-heading">
               <h3>{{ notification.title }}</h3>
-              <span v-if="!notification.read" class="unread-label">未读</span>
+              <span v-if="!notification.read" class="unread-label">{{ t('notifications.unread') }}</span>
             </div>
             <p>{{ notification.content }}</p>
             <time>{{ formatDate(notification.createdAt) }}</time>
           </div>
         </article>
 
-        <el-empty v-if="!loading && notifications.length === 0" description="暂时没有新的消息" />
+        <el-empty v-if="!loading && notifications.length === 0" :description="t('notifications.empty')" />
       </div>
     </main>
   </div>

@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import { Monitor, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { ThemeMode } from '@/App.vue'
+import { useI18n } from 'vue-i18n'
 
 const themeStorageKey = 'learning-theme-mode'
+const { t } = useI18n()
 const storedMode = localStorage.getItem(themeStorageKey)
 const themeMode = ref<ThemeMode>(
   storedMode === 'light' || storedMode === 'dark' || storedMode === 'system'
@@ -13,9 +15,9 @@ const themeMode = ref<ThemeMode>(
 )
 
 const themeOptions = [
-  { value: 'light' as const, label: '明亮', description: '始终使用明亮主题', icon: Sunny },
-  { value: 'dark' as const, label: '暗黑', description: '始终使用暗黑主题', icon: Moon },
-  { value: 'system' as const, label: '跟随系统', description: '根据系统外观自动切换', icon: Monitor },
+  { value: 'light' as const, label: 'settings.light', description: 'settings.lightDescription', icon: Sunny },
+  { value: 'dark' as const, label: 'settings.dark', description: 'settings.darkDescription', icon: Moon },
+  { value: 'system' as const, label: 'settings.system', description: 'settings.systemDescription', icon: Monitor },
 ]
 
 function updateTheme(mode: ThemeMode) {
@@ -23,28 +25,29 @@ function updateTheme(mode: ThemeMode) {
   localStorage.setItem(themeStorageKey, mode)
   const media = window.matchMedia('(prefers-color-scheme: dark)')
   document.documentElement.classList.toggle('dark', mode === 'dark' || (mode === 'system' && media.matches))
-  ElMessage.success(`已切换为${themeOptions.find((option) => option.value === mode)?.label}模式`)
+  const selectedOption = themeOptions.find((option) => option.value === mode)
+  ElMessage.success(t('settings.switched', { mode: selectedOption ? t(selectedOption.label) : '' }))
 }
 </script>
 
 <template>
   <main class="settings-page">
     <section class="settings-heading">
-      <p class="eyebrow">PREFERENCES</p>
-      <h2>设置</h2>
-      <p>调整你的使用偏好，设置仅保存在当前浏览器中。</p>
+      <p class="eyebrow">{{ t('settings.eyebrow') }}</p>
+      <h2>{{ t('settings.title') }}</h2>
+      <p>{{ t('settings.description') }}</p>
     </section>
 
     <section class="settings-card">
       <div class="setting-title">
         <div>
-          <h3>主题模式</h3>
-          <p>选择应用的显示主题</p>
+          <h3>{{ t('settings.theme') }}</h3>
+          <p>{{ t('settings.themeDescription') }}</p>
         </div>
-        <span class="current-mode">{{ themeOptions.find((option) => option.value === themeMode)?.label }}</span>
+        <span class="current-mode">{{ t(themeOptions.find((option) => option.value === themeMode)?.label ?? 'settings.system') }}</span>
       </div>
 
-      <div class="theme-options" role="radiogroup" aria-label="主题模式">
+      <div class="theme-options" role="radiogroup" :aria-label="t('settings.theme')">
         <button
           v-for="option in themeOptions"
           :key="option.value"
@@ -57,8 +60,8 @@ function updateTheme(mode: ThemeMode) {
         >
           <span class="theme-icon"><el-icon><component :is="option.icon" /></el-icon></span>
           <span class="theme-copy">
-            <strong>{{ option.label }}</strong>
-            <small>{{ option.description }}</small>
+            <strong>{{ t(option.label) }}</strong>
+            <small>{{ t(option.description) }}</small>
           </span>
           <span class="radio-indicator" aria-hidden="true"></span>
         </button>

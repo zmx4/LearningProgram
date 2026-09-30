@@ -8,7 +8,7 @@
                 src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/>
     </div>
     <div class="welcome-title">
-      <div style="font-size: 30px; font-weight: bold">欢迎来到我们的学习平台</div>
+      <div style="font-size: 30px; font-weight: bold">{{ $t('welcome.title') }}</div>
       <div style="margin-top: 10px">.....</div>
     </div>
     <div class="right-card">

@@ -3,6 +3,7 @@ import {onMounted, reactive, ref} from 'vue'
 import {Delete, Message, Refresh, UserFilled} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {get, post, put, del} from '@/net'
+import {useI18n} from 'vue-i18n'
 
 interface AdminUser {
   id: number
@@ -16,6 +17,7 @@ interface AdminUser {
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const sending = ref(false)
+const { t } = useI18n()
 const form = reactive({
   title: '',
   content: '',
@@ -41,9 +43,9 @@ function updateRole(user: AdminUser) {
 
 async function removeUser(user: AdminUser) {
   try {
-    await ElMessageBox.confirm(`确定删除用户“${user.username}”吗？`, '删除用户', {type: 'warning'})
+    await ElMessageBox.confirm(t('admin.confirmDelete', { username: user.username }), t('admin.deleteTitle'), {type: 'warning'})
     del(`/api/admin/users/${user.id}`, null, () => {
-      ElMessage.success('用户已删除')
+      ElMessage.success(t('admin.deleted'))
       loadUsers()
     })
   } catch {
@@ -53,12 +55,12 @@ async function removeUser(user: AdminUser) {
 
 function sendNotification() {
   if (!form.title.trim() || !form.content.trim()) {
-    ElMessage.warning('请填写通知标题和内容')
+    ElMessage.warning(t('admin.fillNotification'))
     return
   }
   sending.value = true
   post('/api/admin/notifications', form, (data: { sentCount: number }) => {
-    ElMessage.success(`通知已发送给 ${data.sentCount} 位用户`)
+    ElMessage.success(t('admin.sent', { count: data.sentCount }))
     form.title = ''
     form.content = ''
     sending.value = false
@@ -74,11 +76,11 @@ onMounted(loadUsers)
   <main class="admin-page">
     <section class="page-heading">
       <div>
-        <p class="eyebrow">ADMINISTRATION</p>
-        <h2>管理员中心</h2>
-        <p class="description">管理平台用户并向指定范围发送通知。</p>
+        <p class="eyebrow">{{ t('admin.eyebrow') }}</p>
+        <h2>{{ t('admin.title') }}</h2>
+        <p class="description">{{ t('admin.description') }}</p>
       </div>
-      <el-button :icon="Refresh" @click="loadUsers">刷新</el-button>
+      <el-button :icon="Refresh" @click="loadUsers">{{ t('admin.refresh') }}</el-button>
     </section>
 
     <section class="panel">
@@ -86,22 +88,22 @@ onMounted(loadUsers)
         <el-icon>
           <UserFilled/>
         </el-icon>
-        <h3>用户管理</h3></div>
+        <h3>{{ t('admin.users') }}</h3></div>
       <el-table v-loading="loading" :data="users" stripe>
-        <el-table-column prop="username" label="用户名" min-width="130"/>
-        <el-table-column prop="email" label="邮箱" min-width="180"/>
-        <el-table-column prop="phone" label="手机号" min-width="120"/>
-        <el-table-column label="角色" width="150">
+        <el-table-column prop="username" :label="t('admin.username')" min-width="130"/>
+        <el-table-column prop="email" :label="t('admin.email')" min-width="180"/>
+        <el-table-column prop="phone" :label="t('admin.phone')" min-width="120"/>
+        <el-table-column :label="t('admin.role')" width="150">
           <template #default="{ row }">
             <el-select v-model="row.role" size="small" @change="updateRole(row)">
-              <el-option label="普通用户" value="user"/>
-              <el-option label="管理员" value="admin"/>
+              <el-option :label="t('admin.ordinaryUser')" value="user"/>
+              <el-option :label="t('admin.administrator')" value="admin"/>
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90">
+        <el-table-column :label="t('admin.action')" width="90">
           <template #default="{ row }">
-            <el-button text type="danger" :icon="Delete" @click="removeUser(row)">删除</el-button>
+            <el-button text type="danger" :icon="Delete" @click="removeUser(row)">{{ t('admin.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -112,33 +114,33 @@ onMounted(loadUsers)
         <el-icon>
           <Message/>
         </el-icon>
-        <h3>发送通知</h3></div>
+        <h3>{{ t('admin.send') }}</h3></div>
       <el-form label-position="top" @submit.prevent="sendNotification">
-        <el-form-item label="通知标题">
+        <el-form-item :label="t('admin.notificationTitle')">
           <el-input v-model="form.title" maxlength="80"/>
         </el-form-item>
-        <el-form-item label="通知内容">
+        <el-form-item :label="t('admin.notificationContent')">
           <el-input v-model="form.content" type="textarea" :rows="4" maxlength="500"/>
         </el-form-item>
-        <el-form-item label="发送范围">
+        <el-form-item :label="t('admin.target')">
           <el-radio-group v-model="form.targetType">
-            <el-radio value="all">全体用户</el-radio>
-            <el-radio value="role">指定角色</el-radio>
-            <el-radio value="users">指定用户</el-radio>
+            <el-radio value="all">{{ t('admin.allUsers') }}</el-radio>
+            <el-radio value="role">{{ t('admin.roleUsers') }}</el-radio>
+            <el-radio value="users">{{ t('admin.selectedUsers') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="form.targetType === 'role'" label="角色">
+        <el-form-item v-if="form.targetType === 'role'" :label="t('admin.role')">
           <el-select v-model="form.targetRole">
-            <el-option label="普通用户" value="user"/>
-            <el-option label="管理员" value="admin"/>
+            <el-option :label="t('admin.ordinaryUser')" value="user"/>
+            <el-option :label="t('admin.administrator')" value="admin"/>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="form.targetType === 'users'" label="用户">
-          <el-select v-model="form.userIds" multiple filterable placeholder="选择用户" style="width: 100%">
+        <el-form-item v-if="form.targetType === 'users'" :label="t('admin.username')">
+          <el-select v-model="form.userIds" multiple filterable :placeholder="t('admin.selectUsers')" style="width: 100%">
             <el-option v-for="user in users" :key="user.id" :label="user.username" :value="user.id"/>
           </el-select>
         </el-form-item>
-        <el-button type="primary" :loading="sending" @click="sendNotification">发送通知</el-button>
+        <el-button type="primary" :loading="sending" @click="sendNotification">{{ t('admin.send') }}</el-button>
       </el-form>
     </section>
   </main>

@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { Reading } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
   <main class="content">
         <div class="hero-card">
           <div>
-            <p class="card-label">今日学习计划</p>
-            <h2>保持专注，持续进步</h2>
-            <p class="hero-copy">安排好今天的学习时间，让每一次积累都离目标更近一步。</p>
-            <button class="primary-button" type="button">开始学习</button>
+            <p class="card-label">{{ t('home.plan') }}</p>
+            <h2>{{ t('home.focus') }}</h2>
+            <p class="hero-copy">{{ t('home.planDescription') }}</p>
+            <button class="primary-button" type="button">{{ t('home.start') }}</button>
           </div>
           <div class="hero-decoration" aria-hidden="true">
             <div class="decoration-circle circle-large"></div>
@@ -20,21 +23,21 @@ import { Reading } from '@element-plus/icons-vue'
 
         <div class="section-heading">
           <div>
-            <p class="card-label">概览</p>
-            <h2>学习概况</h2>
+            <p class="card-label">{{ t('home.overview') }}</p>
+            <h2>{{ t('home.summary') }}</h2>
           </div>
-          <span class="placeholder-chip">数据即将上线</span>
+          <span class="placeholder-chip">{{ t('home.upcoming') }}</span>
         </div>
 
         <div class="stats-grid">
           <article v-for="stat in [
-            { label: '进行中的课程', value: '—', hint: '等待课程数据' },
-            { label: '本周学习时长', value: '—', hint: '等待学习记录' },
-            { label: '完成的课程', value: '—', hint: '等待完成数据' },
+            { label: 'home.ongoingCourses', value: '—', hint: 'home.waitingCourse' },
+            { label: 'home.weeklyTime', value: '—', hint: 'home.waitingRecords' },
+            { label: 'home.completedCourses', value: '—', hint: 'home.waitingCompletion' },
           ]" :key="stat.label" class="stat-card">
-            <p>{{ stat.label }}</p>
+            <p>{{ t(stat.label) }}</p>
             <strong>{{ stat.value }}</strong>
-            <span>{{ stat.hint }}</span>
+            <span>{{ t(stat.hint) }}</span>
           </article>
         </div>
 
@@ -42,8 +45,8 @@ import { Reading } from '@element-plus/icons-vue'
           <div class="empty-icon"><el-icon>
               <Reading />
             </el-icon></div>
-          <h3>准备好开始你的学习了吗？</h3>
-          <p>课程、学习资源和进度信息将在这里展示。</p>
+          <h3>{{ t('home.ready') }}</h3>
+          <p>{{ t('home.readyDescription') }}</p>
         </div>
   </main>
 </template>

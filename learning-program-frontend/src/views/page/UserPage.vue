@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { ArrowLeft, UserFilled } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '@/net'
+import { useI18n } from 'vue-i18n'
 
 interface UserInfo {
   username: string
@@ -15,6 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const user = ref<UserInfo | null>(null)
 const loading = ref(true)
+const { t } = useI18n()
 
 function loadUser() {
   loading.value = true
@@ -34,28 +36,28 @@ watch(() => route.params.id, loadUser)
   <main class="user-page">
     <button class="back-button" type="button" @click="router.back()">
       <el-icon><ArrowLeft /></el-icon>
-      返回上一页
+      {{ t('user.back') }}
     </button>
 
     <section v-loading="loading" class="user-card">
       <template v-if="user">
-        <div class="user-avatar" aria-label="临时头像">
+        <div class="user-avatar" :aria-label="t('user.avatar')">
           <el-icon><UserFilled /></el-icon>
         </div>
         <h2>{{ user.username }}</h2>
-        <p class="user-label">学习者</p>
+        <p class="user-label">{{ t('user.learner') }}</p>
         <div class="user-details">
           <div class="detail-item">
-            <span>邮箱</span>
-            <strong>{{ user.email || '未填写' }}</strong>
+            <span>{{ t('user.email') }}</span>
+            <strong>{{ user.email || t('user.notProvided') }}</strong>
           </div>
           <div class="detail-item bio">
-            <span>个人简介</span>
-            <strong>{{ user.bio || '这个人还没有填写个人简介' }}</strong>
+            <span>{{ t('user.bio') }}</span>
+            <strong>{{ user.bio || t('user.noBio') }}</strong>
           </div>
         </div>
       </template>
-      <el-empty v-else-if="!loading" description="用户不存在或无法查看" />
+      <el-empty v-else-if="!loading" :description="t('user.unavailable')" />
     </section>
   </main>
 </template>

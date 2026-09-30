@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
+const { t } = useI18n()
 </script>
 
 <template>
   <main class="feature-page">
     <p class="card-label">LEARNING SPACE</p>
     <h2>{{ route.meta.title }}</h2>
-    <p>该功能正在建设中，敬请期待。</p>
+    <p>{{ t('feature.building') }}</p>
   </main>
 </template>
 

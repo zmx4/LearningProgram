@@ -14,18 +14,20 @@ import {
 import {computed, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {currentRole, currentUsername, logout} from '@/net'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const sidebarExpanded = ref(false)
-const username = ref(currentUsername() || '用户')
+const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
 
 const navigationItems = [
-  {name: 'index', label: '首页', icon: HomeFilled},
-  {name: 'courses', label: '我的课程', icon: Reading},
-  {name: 'resources', label: '学习资源', icon: Collection},
-  {name: 'progress', label: '学习进度', icon: DataAnalysis},
+  {name: 'index', label: 'navigation.home', icon: HomeFilled},
+  {name: 'courses', label: 'navigation.courses', icon: Reading},
+  {name: 'resources', label: 'navigation.resources', icon: Collection},
+  {name: 'progress', label: 'navigation.progress', icon: DataAnalysis},
 ]
 
 const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' || route.name === 'settings' ? '' : String(route.name ?? 'index'))
@@ -49,11 +51,11 @@ function toggleSidebar() {
     >
       <div class="brand">
         <div class="brand-mark">学</div>
-        <span>学习平台</span>
+        <span>{{ t('common.appName') }}</span>
         <button
             class="sidebar-toggle"
             type="button"
-            :aria-label="sidebarExpanded ? '收起侧边栏' : '展开侧边栏'"
+            :aria-label="sidebarExpanded ? t('common.collapseSidebar') : t('common.expandSidebar')"
             @click="toggleSidebar"
         >
           <el-icon>
@@ -63,7 +65,7 @@ function toggleSidebar() {
         </button>
       </div>
 
-      <nav class="side-nav" aria-label="主导航">
+      <nav class="side-nav" :aria-label="t('common.mainNavigation')">
         <button
             v-for="item in navigationItems"
             :key="item.name"
@@ -75,7 +77,7 @@ function toggleSidebar() {
           <el-icon>
             <component :is="item.icon"/>
           </el-icon>
-          <span>{{ item.label }}</span>
+          <span>{{ t(item.label) }}</span>
         </button>
         <button
             v-if="isAdmin"
@@ -85,11 +87,11 @@ function toggleSidebar() {
             @click="router.push({ name: 'admin' })"
         >
           <el-icon><Avatar/></el-icon>
-          <span>管理员</span>
+          <span>{{ t('navigation.admin') }}</span>
         </button>
       </nav>
 
-      <div class="sidebar-placeholder" aria-label="导航占位区域">
+      <div class="sidebar-placeholder" :aria-label="t('common.navigationPlaceholder')">
         <span></span>
         <span></span>
         <span></span>
@@ -101,7 +103,7 @@ function toggleSidebar() {
           <el-icon>
             <Setting/>
           </el-icon>
-          <span>设置</span>
+          <span>{{ t('common.settings') }}</span>
         </button>
       </div>
     </aside>
@@ -110,25 +112,25 @@ function toggleSidebar() {
       <header class="topbar">
         <div>
           <p class="eyebrow">LEARNING SPACE</p>
-          <h1>你好，欢迎回来</h1>
+          <h1>{{ t('common.welcomeBack') }}</h1>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" type="button" aria-label="通知"
+          <button class="icon-button" type="button" :aria-label="t('common.notifications')"
                   @click="router.push({ name: 'notifications' })">
             <el-icon>
               <Bell/>
             </el-icon>
             <span class="notification-dot"></span>
           </button>
-          <button class="profile" type="button" aria-label="打开个人信息" @click="router.push({ name: 'profile' })">
-            <div class="avatar" aria-label="用户头像">
+          <button class="profile" type="button" :aria-label="t('common.openProfile')" @click="router.push({ name: 'profile' })">
+            <div class="avatar" :aria-label="t('common.userAvatar')">
               <el-icon>
                 <UserFilled/>
               </el-icon>
             </div>
             <span class="profile-name">{{ username }}</span>
           </button>
-          <button class="logout-button" type="button" @click="userLogout">退出登录</button>
+          <button class="logout-button" type="button" @click="userLogout">{{ t('common.logout') }}</button>
         </div>
       </header>
 

@@ -4,6 +4,7 @@ import { ArrowLeft, Camera, UserFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { get, put } from '@/net'
+import { useI18n } from 'vue-i18n'
 
 interface Profile {
   nickname: string
@@ -15,7 +16,8 @@ interface Profile {
 
 const profileStorageKey = 'learning-profile'
 const router = useRouter()
-const defaultProfile: Profile = { nickname: '学习者', email: '', phone: '', bio: '', role: 'user' }
+const { t } = useI18n()
+const defaultProfile: Profile = { nickname: t('common.learner'), email: '', phone: '', bio: '', role: 'user' }
 const saved = localStorage.getItem(profileStorageKey)
 let initialProfile = defaultProfile
 if (saved) {
@@ -24,7 +26,7 @@ if (saved) {
     initialProfile = { ...defaultProfile, ...parsed }
   } catch {
     localStorage.removeItem(profileStorageKey)
-    ElMessage.warning('个人信息读取失败，已恢复默认值')
+    ElMessage.warning(t('profile.readFailed'))
   }
 }
 const form = reactive<Profile>(initialProfile)
@@ -32,7 +34,7 @@ const saving = ref(false)
 const loading = ref(false)
 
 function roleLabel(role: string) {
-  return role === 'admin' ? '管理员' : '普通用户'
+  return role === 'admin' ? t('common.administrator') : t('common.ordinaryUser')
 }
 
 function saveProfile() {
@@ -52,14 +54,14 @@ function saveProfile() {
     })
     localStorage.setItem(profileStorageKey, JSON.stringify(form))
     saving.value = false
-    ElMessage.success('个人信息已保存')
+    ElMessage.success(t('profile.saved'))
   }, () => { saving.value = false })
 }
 
 function resetProfile() {
   Object.assign(form, defaultProfile)
   localStorage.removeItem(profileStorageKey)
-  ElMessage.info('已恢复默认信息')
+  ElMessage.info(t('profile.restored'))
 }
 
 function loadProfile() {
@@ -84,14 +86,14 @@ onMounted(loadProfile)
   <main class="profile-page">
     <button class="back-button" type="button" @click="router.back()">
       <el-icon><ArrowLeft /></el-icon>
-      返回上一页
+      {{ t('profile.back') }}
     </button>
 
     <section class="profile-heading">
       <div>
-        <p class="eyebrow">ACCOUNT SETTINGS</p>
-        <h2>个人信息</h2>
-        <p class="heading-copy">完善你的资料，让学习空间更贴近你。</p>
+        <p class="eyebrow">{{ t('profile.eyebrow') }}</p>
+        <h2>{{ t('profile.title') }}</h2>
+        <p class="heading-copy">{{ t('profile.description') }}</p>
       </div>
     </section>
 
@@ -102,39 +104,39 @@ onMounted(loadProfile)
           <span class="camera-badge" aria-hidden="true"><el-icon><Camera /></el-icon></span>
         </div>
         <div>
-          <h3>{{ form.nickname || '学习者' }}</h3>
+          <h3>{{ form.nickname || t('common.learner') }}</h3>
           <p>{{ roleLabel(form.role) }}</p>
         </div>
       </div>
 
       <el-form label-position="top" class="profile-form" @submit.prevent="saveProfile">
         <div class="form-grid">
-          <el-form-item label="昵称">
-            <el-input v-model="form.nickname" maxlength="20" show-word-limit placeholder="请输入昵称" />
+          <el-form-item :label="t('profile.nickname')">
+            <el-input v-model="form.nickname" maxlength="20" show-word-limit :placeholder="t('profile.nicknamePlaceholder')" />
           </el-form-item>
-          <el-form-item label="邮箱">
-            <el-input v-model="form.email" type="email" placeholder="请输入邮箱" />
+          <el-form-item :label="t('profile.email')">
+            <el-input v-model="form.email" type="email" :placeholder="t('profile.emailPlaceholder')" />
           </el-form-item>
-          <el-form-item label="手机号">
-            <el-input v-model="form.phone" placeholder="请输入手机号" />
+          <el-form-item :label="t('profile.phone')">
+            <el-input v-model="form.phone" :placeholder="t('profile.phonePlaceholder')" />
           </el-form-item>
-          <el-form-item label="账号身份">
+          <el-form-item :label="t('profile.identity')">
             <el-input :model-value="roleLabel(form.role)" disabled />
           </el-form-item>
         </div>
-        <el-form-item label="个人简介">
+        <el-form-item :label="t('profile.bio')">
           <el-input
             v-model="form.bio"
             maxlength="120"
             show-word-limit
             :rows="4"
             type="textarea"
-            placeholder="介绍一下自己吧"
+            :placeholder="t('profile.bioPlaceholder')"
           />
         </el-form-item>
         <div class="form-actions">
-          <el-button @click="resetProfile">恢复默认</el-button>
-          <el-button type="primary" :loading="saving" native-type="submit">保存信息</el-button>
+          <el-button @click="resetProfile">{{ t('profile.reset') }}</el-button>
+          <el-button type="primary" :loading="saving" native-type="submit">{{ t('profile.save') }}</el-button>
         </div>
       </el-form>
     </section>
