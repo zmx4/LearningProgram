@@ -10,12 +10,13 @@ import {
   Reading,
   Setting,
   Notebook,
+  EditPen,
   UserFilled,
 } from '@element-plus/icons-vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import {computed, onMounted, onUnmounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {currentRole, currentUsername, get, logout} from '@/net'
-import { useI18n } from 'vue-i18n'
+import {useI18n} from 'vue-i18n'
 import {
   dailyWordSettingsChangedEvent,
   readDailyWordSettings,
@@ -31,7 +32,7 @@ interface DailyWord {
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const {t} = useI18n()
 const sidebarExpanded = ref(false)
 const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
@@ -44,6 +45,7 @@ const navigationItems = [
   {name: 'courses', label: 'navigation.courses', icon: Reading},
   {name: 'resources', label: 'navigation.resources', icon: Collection},
   {name: 'progress', label: 'navigation.progress', icon: DataAnalysis},
+  {name: 'tests', label: 'navigation.tests', icon: EditPen},
 ]
 
 const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' || route.name === 'settings' ? '' : String(route.name ?? 'index'))
@@ -77,17 +79,17 @@ function loadDailyWord() {
 
   dailyWordLoading.value = true
   get<DailyWord[]>(
-    `/api/dictionary/${dailyWordSettings.value.source}?count=1`,
-    (words) => {
-      dailyWordLoading.value = false
-      const word = words[0]
-      if (!word) return
-      dailyWord.value = word
-      localStorage.setItem(cacheKey, JSON.stringify(word))
-    },
-    () => {
-      dailyWordLoading.value = false
-    },
+      `/api/dictionary/${dailyWordSettings.value.source}?count=1`,
+      (words) => {
+        dailyWordLoading.value = false
+        const word = words[0]
+        if (!word) return
+        dailyWord.value = word
+        localStorage.setItem(cacheKey, JSON.stringify(word))
+      },
+      () => {
+        dailyWordLoading.value = false
+      },
   )
 }
 
@@ -152,7 +154,9 @@ onUnmounted(() => {
             type="button"
             @click="router.push({ name: 'admin' })"
         >
-          <el-icon><Avatar/></el-icon>
+          <el-icon>
+            <Avatar/>
+          </el-icon>
           <span>{{ t('navigation.admin') }}</span>
         </button>
       </nav>
@@ -163,7 +167,9 @@ onUnmounted(() => {
           :aria-label="t('dailyWord.title')"
       >
         <div class="daily-word-heading">
-          <el-icon><Notebook /></el-icon>
+          <el-icon>
+            <Notebook/>
+          </el-icon>
           <span>{{ t('dailyWord.title') }}</span>
           <small>{{ dailyWordSettings.source.toUpperCase() }}</small>
         </div>
@@ -201,7 +207,8 @@ onUnmounted(() => {
             </el-icon>
             <span class="notification-dot"></span>
           </button>
-          <button class="profile" type="button" :aria-label="t('common.openProfile')" @click="router.push({ name: 'profile' })">
+          <button class="profile" type="button" :aria-label="t('common.openProfile')"
+                  @click="router.push({ name: 'profile' })">
             <div class="avatar" :aria-label="t('common.userAvatar')">
               <el-icon>
                 <UserFilled/>
@@ -215,7 +222,7 @@ onUnmounted(() => {
 
       <router-view v-slot="{ Component }">
         <transition name="page-fade-slide" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component"/>
         </transition>
       </router-view>
     </section>
@@ -349,14 +356,13 @@ onUnmounted(() => {
   opacity: 1;
   transform: translateY(0);
   visibility: visible;
-  transition:
-    max-height .2s ease,
-    margin .2s ease,
-    padding .2s ease,
-    border-width .2s ease,
-    opacity .12s ease .08s,
-    transform .2s ease .08s,
-    visibility 0s linear .08s;
+  transition: max-height .2s ease,
+  margin .2s ease,
+  padding .2s ease,
+  border-width .2s ease,
+  opacity .12s ease .08s,
+  transform .2s ease .08s,
+  visibility 0s linear .08s;
 }
 
 .sidebar:not(.expanded) .daily-word {
@@ -369,14 +375,13 @@ onUnmounted(() => {
   opacity: 0;
   transform: translateY(-6px);
   visibility: hidden;
-  transition:
-    max-height .2s ease,
-    margin .2s ease,
-    padding .2s ease,
-    border-width .2s ease,
-    opacity .08s ease,
-    transform .2s ease,
-    visibility 0s linear .2s;
+  transition: max-height .2s ease,
+  margin .2s ease,
+  padding .2s ease,
+  border-width .2s ease,
+  opacity .08s ease,
+  transform .2s ease,
+  visibility 0s linear .2s;
 }
 
 .daily-word-heading {

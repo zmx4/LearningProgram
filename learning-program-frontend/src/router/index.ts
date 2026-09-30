@@ -38,6 +38,15 @@ const routes: RouteRecordRaw[] = [
             }
         ]
     },{
+        path: '/tests',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'tests',
+            component: () => import('@/views/page/TestsPage.vue'),
+            meta: { title: '测试中心' }
+        }]
+    },{
         path: '/courses',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -114,7 +123,7 @@ router.beforeEach((to) => {
     if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
-        || to.path.startsWith('/settings') || to.path.startsWith('/user/')) && isUnauthenticated) {
+        || to.path.startsWith('/settings') || to.path.startsWith('/tests') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 

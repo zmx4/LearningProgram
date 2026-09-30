@@ -254,6 +254,25 @@ GET /api/dictionary/cet4?count=10
 Authorization: ******
 ```
 
+## 测试接口
+
+### 保存四六级单词测试结果
+
+```http
+POST /api/tests/words/results
+Authorization: ******
+Content-Type: application/json
+```
+
+请求体包含 `source`、`totalCount`、`correctCount` 和 `durationSeconds`，服务端计算错误数和得分。
+
+### 查询测试历史和汇总
+
+```http
+GET /api/tests/words/history
+Authorization: ******
+```
+
 ```http
 GET /api/dictionary/cet6?count=10
 Authorization: ******
