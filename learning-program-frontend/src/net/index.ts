@@ -14,12 +14,14 @@ interface AuthStorage {
     token: string
     expire: string | number | Date
     username?: string
+    role?: string
 }
 
 interface LoginResponse {
     token: string
     expireTime: string | number | Date
     username: string
+    role: string
 }
 
 type SuccessCallback<T> = (data: T) => void
@@ -87,8 +89,9 @@ function storeAccessToken(
     token: string,
     expire: string | number | Date,
     username: string,
+    role: string,
 ): void {
-    const authObj: AuthStorage = { token, expire, username }
+    const authObj: AuthStorage = { token, expire, username, role }
     const storage = remember ? localStorage : sessionStorage
     storage.setItem(authItemName, JSON.stringify(authObj))
 }
@@ -159,6 +162,20 @@ function internalPut<T>(
         .catch(error)
 }
 
+function internalDelete<T>(
+    url: string,
+    data: unknown,
+    headers: Headers,
+    success: SuccessCallback<T>,
+    failure: FailureCallback,
+    error: ErrorCallback = defaultError,
+): void {
+    void axios
+        .delete<ApiResponse<T>>(url, { data, headers })
+        .then(({ data: response }) => handleResponse(response, url, success, failure))
+        .catch(error)
+}
+
 function login(
     username: string,
     password: string,
@@ -171,7 +188,7 @@ function login(
         { username, password },
         { 'Content-Type': 'application/x-www-form-urlencoded' },
         (data) => {
-            storeAccessToken(remember, data.token, data.expireTime, data.username)
+            storeAccessToken(remember, data.token, data.expireTime, data.username, data.role)
             ElMessage.success(`登录成功，欢迎 ${data.username} 来到我们的系统`)
             success(data)
         },
@@ -228,6 +245,15 @@ function put<T>(
     internalPut<T>(url, data, accessHeader(), success, failure)
 }
 
+function del<T>(
+    url: string,
+    data: unknown,
+    success: SuccessCallback<T>,
+    failure: FailureCallback = defaultFailure,
+): void {
+    internalDelete<T>(url, data, accessHeader(), success, failure)
+}
+
 function publicGet<T>(
     url: string,
     success: SuccessCallback<T>,
@@ -252,4 +278,15 @@ function currentUsername(): string {
     }
 }
 
-export { post, publicPost, get, put, publicGet, login, logout, unauthorized, currentUsername }
+function currentRole(): string {
+    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    if (!str) return ''
+    try {
+        const authObj = JSON.parse(str) as AuthStorage
+        return authObj.role?.trim() ?? ''
+    } catch {
+        return ''
+    }
+}
+
+export { post, publicPost, get, put, del, publicGet, login, logout, unauthorized, currentUsername, currentRole }

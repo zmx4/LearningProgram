@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { unauthorized } from '@/net'
+import { currentRole, unauthorized } from '@/net'
 
 const routes: RouteRecordRaw[] = [
     {
@@ -83,6 +83,15 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '设置' }
         }]
     },{
+        path: '/admin',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'admin',
+            component: () => import('@/views/page/AdminPage.vue'),
+            meta: { title: '管理员中心', adminOnly: true }
+        }]
+    },{
         path: '/user/:id',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -107,6 +116,10 @@ router.beforeEach((to) => {
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
         || to.path.startsWith('/settings') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
+    }
+
+    if (to.meta.adminOnly && currentRole() !== 'admin') {
+        return { name: 'index' }
     }
 
     if (typeof to.name === 'string' && to.name.startsWith('welcome') && !isUnauthenticated) {

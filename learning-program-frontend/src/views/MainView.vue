@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bell,
+  Avatar,
   Collection,
   DataAnalysis,
   HomeFilled,
@@ -12,12 +13,13 @@ import {
 } from '@element-plus/icons-vue'
 import {computed, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {currentUsername, logout} from '@/net'
+import {currentRole, currentUsername, logout} from '@/net'
 
 const route = useRoute()
 const router = useRouter()
 const sidebarExpanded = ref(false)
 const username = ref(currentUsername() || '用户')
+const isAdmin = currentRole() === 'admin'
 
 const navigationItems = [
   {name: 'index', label: '首页', icon: HomeFilled},
@@ -74,6 +76,16 @@ function toggleSidebar() {
             <component :is="item.icon"/>
           </el-icon>
           <span>{{ item.label }}</span>
+        </button>
+        <button
+            v-if="isAdmin"
+            class="nav-item"
+            :class="{ active: activeSection === 'admin' }"
+            type="button"
+            @click="router.push({ name: 'admin' })"
+        >
+          <el-icon><Avatar/></el-icon>
+          <span>管理员</span>
         </button>
       </nav>
 

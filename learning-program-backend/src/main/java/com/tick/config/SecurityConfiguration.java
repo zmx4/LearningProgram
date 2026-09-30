@@ -48,6 +48,7 @@ public class SecurityConfiguration {
                         conf
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/admin/**").hasRole("admin")
                                 .anyRequest().authenticated())
                 .formLogin(conf ->
                         conf.loginProcessingUrl("/api/auth/login")
