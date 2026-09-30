@@ -19,11 +19,17 @@ public class Account {
     String phone;
     String bio;
     String role;
+    Integer points;
     @TableField("register_time")
     Date registerDate;
 
     public Account(Integer id, String username, String password, String email,
                    String phone, String bio, String role, Date registerDate) {
+        this(id, username, password, email, phone, bio, role, 0, registerDate);
+    }
+
+    public Account(Integer id, String username, String password, String email,
+                   String phone, String bio, String role, Integer points, Date registerDate) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -31,6 +37,7 @@ public class Account {
         this.phone = phone;
         this.bio = bio;
         this.role = role;
+        this.points = points;
         this.registerDate = registerDate;
     }
 

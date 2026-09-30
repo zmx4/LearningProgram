@@ -253,13 +253,15 @@ onUnmounted(() => {
   padding: 28px 16px 20px;
   background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
-  overflow-y: auto;
+  overflow: hidden;
   transition: width .2s ease, flex-basis .2s ease;
 }
 
 .sidebar.expanded {
   width: 248px;
   flex-basis: 248px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .brand {
@@ -315,8 +317,7 @@ onUnmounted(() => {
 }
 
 .sidebar:not(.expanded) .brand > span,
-.sidebar:not(.expanded) .nav-item span,
-.sidebar:not(.expanded) .daily-word {
+.sidebar:not(.expanded) .nav-item span {
   display: none;
 }
 
@@ -338,11 +339,44 @@ onUnmounted(() => {
 .daily-word {
   display: grid;
   gap: 8px;
-  margin: 24px 13px 24px;
+  max-height: 180px;
+  margin: 24px 13px;
   padding: 14px;
   border: 1px solid var(--el-border-color-light);
   border-radius: 13px;
   background: var(--el-fill-color-lighter);
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    max-height .2s ease,
+    margin .2s ease,
+    padding .2s ease,
+    border-width .2s ease,
+    opacity .12s ease .08s,
+    transform .2s ease .08s,
+    visibility 0s linear .08s;
+}
+
+.sidebar:not(.expanded) .daily-word {
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  transition:
+    max-height .2s ease,
+    margin .2s ease,
+    padding .2s ease,
+    border-width .2s ease,
+    opacity .08s ease,
+    transform .2s ease,
+    visibility 0s linear .2s;
 }
 
 .daily-word-heading {

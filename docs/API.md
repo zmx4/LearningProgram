@@ -212,6 +212,41 @@ Authorization: ******
 
 单词不存在时返回 `404`，单词为空或超过 255 个字符时返回 `400`。
 
+## 签到接口
+
+### 查询签到日历
+
+```http
+GET /api/check-in?year=2026&month=9
+Authorization: ******
+```
+
+返回指定月份的签到日期、今日签到状态、连续签到天数、累计积分，以及该月的签到次数、积分和每日积分明细。
+
+### 签到
+
+```http
+POST /api/check-in
+Authorization: ******
+```
+
+每天只能签到一次。首次签到获得 1 分，连续签到时获得的积分等于当前连续签到天数；中断后重新从 1 分开始。
+
+### 查询总积分
+
+```http
+GET /api/points
+Authorization: ******
+```
+
+响应：
+
+```json
+{
+  "totalPoints": 12
+}
+```
+
 ### 查询 CET4/CET6 单词
 
 ```http
