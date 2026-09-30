@@ -59,7 +59,8 @@ public class ProfileController {
                 "username", account.getUsername(),
                 "email", account.getEmail() == null ? "" : account.getEmail(),
                 "phone", account.getPhone() == null ? "" : account.getPhone(),
-                "bio", account.getBio() == null ? "" : account.getBio()
+                "bio", account.getBio() == null ? "" : account.getBio(),
+                "role", account.getRole() == null ? "user" : account.getRole()
         );
     }
 }

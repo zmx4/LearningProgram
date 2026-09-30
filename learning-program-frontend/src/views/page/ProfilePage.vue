@@ -10,11 +10,12 @@ interface Profile {
   email: string
   phone: string
   bio: string
+  role: string
 }
 
 const profileStorageKey = 'learning-profile'
 const router = useRouter()
-const defaultProfile: Profile = { nickname: '学习者', email: '', phone: '', bio: '' }
+const defaultProfile: Profile = { nickname: '学习者', email: '', phone: '', bio: '', role: 'user' }
 const saved = localStorage.getItem(profileStorageKey)
 let initialProfile = defaultProfile
 if (saved) {
@@ -30,9 +31,13 @@ const form = reactive<Profile>(initialProfile)
 const saving = ref(false)
 const loading = ref(false)
 
+function roleLabel(role: string) {
+  return role === 'admin' ? '管理员' : '普通用户'
+}
+
 function saveProfile() {
   saving.value = true
-  put<{ username: string; email: string; phone: string; bio: string }>('/api/profile', {
+  put<{ username: string; email: string; phone: string; bio: string; role: string }>('/api/profile', {
     username: form.nickname.trim(),
     email: form.email.trim(),
     phone: form.phone.trim(),
@@ -43,6 +48,7 @@ function saveProfile() {
       email: data.email,
       phone: data.phone,
       bio: data.bio,
+      role: data.role,
     })
     localStorage.setItem(profileStorageKey, JSON.stringify(form))
     saving.value = false
@@ -58,12 +64,13 @@ function resetProfile() {
 
 function loadProfile() {
   loading.value = true
-  get<{ username: string; email: string; phone: string; bio: string }>('/api/profile', (data) => {
+  get<{ username: string; email: string; phone: string; bio: string; role: string }>('/api/profile', (data) => {
     Object.assign(form, {
       nickname: data.username,
       email: data.email,
       phone: data.phone,
       bio: data.bio,
+      role: data.role,
     })
     localStorage.setItem(profileStorageKey, JSON.stringify(form))
     loading.value = false
@@ -96,7 +103,7 @@ onMounted(loadProfile)
         </div>
         <div>
           <h3>{{ form.nickname || '学习者' }}</h3>
-          <p>学习者</p>
+          <p>{{ roleLabel(form.role) }}</p>
         </div>
       </div>
 
@@ -112,7 +119,7 @@ onMounted(loadProfile)
             <el-input v-model="form.phone" placeholder="请输入手机号" />
           </el-form-item>
           <el-form-item label="账号身份">
-            <el-input model-value="学习者" disabled />
+            <el-input :model-value="roleLabel(form.role)" disabled />
           </el-form-item>
         </div>
         <el-form-item label="个人简介">
