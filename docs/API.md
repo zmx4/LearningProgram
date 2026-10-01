@@ -294,6 +294,94 @@ Authorization: ******
 }
 ```
 
+## 测试题库接口
+
+题库由「测试类型」和「题目」两级组成，题目内容以 JSON 存放在 `db_test_question.content` 列中。
+题型用 `kind` 表示，取值为 `single`（单选）、`multiple`（多选）、`blank`（填空）。
+以下读取接口登录后即可访问。
+
+### 查询全部测试类型
+
+```http
+GET /api/test-types
+Authorization: ******
+```
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 1,
+      "code": "knowledge-basic",
+      "name": "计算机基础",
+      "description": "计算机基础知识测试，包含单选、多选与填空三种题型。",
+      "createdAt": "2026-10-01T16:30:00"
+    }
+  ],
+  "message": "success"
+}
+```
+
+### 查询单个测试类型
+
+```http
+GET /api/test-types/{id}
+Authorization: ******
+```
+
+类型不存在时 `code` 为 `404`。
+
+### 查询某个类型的题目
+
+```http
+GET /api/test-questions?typeId=1&count=5&kind=single
+Authorization: ******
+```
+
+参数说明：
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `typeId` | 是 | 测试类型 id |
+| `kind` | 否 | 题型，取值为 `single` / `multiple` / `blank`；不传表示不限题型 |
+| `count` | 否 | 题目数量，取值范围 `1` 至 `100`；**不传返回该类型全部题目**（按 id 升序），传了则随机抽取 |
+
+响应中的 `content` 就是数据库中存放的那段 JSON，按题型含义如下：
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 1,
+      "typeId": 1,
+      "kind": "single",
+      "content": {
+        "stem": "HTTP 协议默认使用的端口号是？",
+        "options": [
+          { "key": "A", "text": "21" },
+          { "key": "B", "text": "80" }
+        ],
+        "answer": ["B"],
+        "analysis": "HTTP 默认端口为 80，HTTPS 默认端口为 443。"
+      },
+      "createdAt": "2026-10-01T16:30:00"
+    }
+  ],
+  "message": "success"
+}
+```
+
+`content` 字段约定：
+
+- `stem`：题干，必填
+- `options`：选项数组，元素为 `{ "key": "A", "text": "..." }`；**填空题恒为空数组**
+- `answer`：答案数组。单选恰好 1 项且为选项 `key`；多选至少 2 项且均为选项 `key`；填空题按空格顺序每空一项
+- `analysis`：解析，可选，没有时为 `null`
+
+`typeId` 不存在返回 `404`，其他参数非法返回 `400`。
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。
@@ -392,6 +480,87 @@ Content-Type: application/json
   "message": "success"
 }
 ```
+
+### 新增测试类型
+
+```http
+POST /api/admin/test-types
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "knowledge-basic",
+  "name": "计算机基础",
+  "description": "计算机基础知识测试，包含单选、多选与填空三种题型。"
+}
+```
+
+`code` 只能包含字母、数字、下划线和短横线，长度 1 到 50，且全局唯一；`name` 必填且不超过 100 个字符；
+`description` 可选，不超过 255 个字符。编码重复或参数非法时返回 `400`。
+
+### 新增题目
+
+```http
+POST /api/admin/test-questions
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+单选题：
+
+```json
+{
+  "typeId": 1,
+  "kind": "single",
+  "content": {
+    "stem": "HTTP 协议默认使用的端口号是？",
+    "options": [
+      { "key": "A", "text": "21" },
+      { "key": "B", "text": "80" },
+      { "key": "C", "text": "443" }
+    ],
+    "answer": ["B"],
+    "analysis": "HTTP 默认端口为 80，HTTPS 默认端口为 443。"
+  }
+}
+```
+
+多选题的 `answer` 至少 2 项：
+
+```json
+{
+  "typeId": 1,
+  "kind": "multiple",
+  "content": {
+    "stem": "下列哪些属于关系型数据库？",
+    "options": [
+      { "key": "A", "text": "MySQL" },
+      { "key": "B", "text": "Redis" },
+      { "key": "C", "text": "MariaDB" }
+    ],
+    "answer": ["A", "C"]
+  }
+}
+```
+
+填空题不传 `options`，`answer` 按空格顺序每空一项：
+
+```json
+{
+  "typeId": 1,
+  "kind": "blank",
+  "content": {
+    "stem": "Java 中用于声明常量的关键字是 ____，可变字符串类是 ____。",
+    "answer": ["final", "StringBuilder"]
+  }
+}
+```
+
+服务端校验规则：题干不能为空；选择题至少 2 个选项、选项标识不能重复、答案必须是已有选项标识；
+单选恰好 1 个答案，多选至少 2 个答案；填空题不能带选项且答案不能为空。任一不满足返回 `400`，
+`typeId` 不存在同样返回 `400`。创建成功后返回该题目的完整数据（结构与查询接口一致）。
 
 ## 测试接口
 

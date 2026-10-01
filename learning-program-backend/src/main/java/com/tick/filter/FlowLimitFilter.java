@@ -50,7 +50,7 @@ public class FlowLimitFilter extends HttpFilter {
     private boolean limitPeriodCheck(String ip) {
         if (template.hasKey(Const.FLOW_LIMIT_COUNTER + ip)) {
             long increment = Optional.ofNullable(template.opsForValue().increment(Const.FLOW_LIMIT_COUNTER + ip)).orElse(0L);
-            if (increment > 10) {
+            if (increment > 50) {
                 template.opsForValue().set(Const.FLOW_LIMIT_BLOCK + ip, "", 30, TimeUnit.SECONDS);
                 return false;
             }
