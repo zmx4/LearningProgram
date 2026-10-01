@@ -48,7 +48,21 @@ const navigationItems = [
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
 ]
 
-const activeSection = computed(() => route.name === 'notifications' || route.name === 'profile' || route.name === 'settings' ? '' : String(route.name ?? 'index'))
+// Sub-pages (for example /tests/words) keep their parent entry highlighted.
+const navigationSections: Record<string, string> = {
+  '/index': 'index',
+  '/courses': 'courses',
+  '/resources': 'resources',
+  '/progress': 'progress',
+  '/tests': 'tests',
+  '/admin': 'admin',
+}
+
+const activeSection = computed(() => {
+  const section = Object.keys(navigationSections)
+      .find(path => route.path === path || route.path.startsWith(`${path}/`))
+  return section ? navigationSections[section] : ''
+})
 
 function userLogout() {
   logout(() => router.push({name: 'welcome-login'}))

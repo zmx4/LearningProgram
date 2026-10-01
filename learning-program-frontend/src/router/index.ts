@@ -45,6 +45,16 @@ const routes: RouteRecordRaw[] = [
             name: 'tests',
             component: () => import('@/views/page/TestsPage.vue'),
             meta: { title: '测试中心' }
+        },{
+            path: 'words',
+            name: 'tests-words',
+            component: () => import('@/views/page/tests/WordTestPage.vue'),
+            meta: { title: '单词测试' }
+        },{
+            path: 'knowledge',
+            name: 'tests-knowledge',
+            component: () => import('@/views/page/tests/KnowledgeTestPage.vue'),
+            meta: { title: '知识测试' }
         }]
     },{
         path: '/courses',
