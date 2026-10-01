@@ -382,6 +382,100 @@ Authorization: ******
 
 `typeId` 不存在返回 `404`，其他参数非法返回 `400`。
 
+## 知识测试接口
+
+知识测试从「测试题库接口」中读取测试类型和题目，交卷后成绩保存在 `db_knowledge_test_record` 表中。
+判分由前端完成（填空题按忽略大小写、去首尾空格比较），服务端负责校验并计算错误数与得分。
+
+### 保存知识测试结果
+
+```http
+POST /api/tests/knowledge/results
+Authorization: ******
+Content-Type: application/json
+```
+
+请求体：
+
+```json
+{
+  "typeId": 1,
+  "totalCount": 10,
+  "correctCount": 8,
+  "durationSeconds": 125,
+  "detail": [
+    { "questionId": 1, "kind": "single", "userAnswer": ["B"], "correct": true },
+    { "questionId": 2, "kind": "multiple", "userAnswer": ["A", "C"], "correct": false },
+    { "questionId": 3, "kind": "blank", "userAnswer": ["final", "StringBuilder"], "correct": true }
+  ]
+}
+```
+
+- `typeId` 必填，测试类型不存在返回 `400`
+- `totalCount` 取值范围 1 至 100；`correctCount` 介于 0 与 `totalCount` 之间，否则返回 `400`
+- `detail` 为答题明细，可缺省；服务端会清理非法项（缺少题目 id、题型非法）并截断过长答案
+- 服务端计算 `wrongCount` 和 `score`（百分制），并记录 `typeName` 快照
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "id": 1,
+    "typeId": 1,
+    "typeName": "计算机基础",
+    "totalCount": 10,
+    "correctCount": 8,
+    "wrongCount": 2,
+    "score": 80,
+    "durationSeconds": 125,
+    "detail": [
+      { "questionId": 1, "kind": "single", "userAnswer": ["B"], "correct": true }
+    ],
+    "createdAt": "2026-10-01T17:20:00"
+  },
+  "message": "success"
+}
+```
+
+### 查询知识测试历史和汇总
+
+```http
+GET /api/tests/knowledge/history
+Authorization: ******
+```
+
+```json
+{
+  "code": 200,
+  "data": {
+    "summary": {
+      "testCount": 3,
+      "averageScore": 76.7,
+      "bestScore": 90,
+      "totalQuestions": 30,
+      "totalCorrect": 23
+    },
+    "records": [
+      {
+        "id": 3,
+        "typeId": 1,
+        "typeName": "计算机基础",
+        "totalCount": 10,
+        "correctCount": 9,
+        "wrongCount": 1,
+        "score": 90,
+        "durationSeconds": 98,
+        "detail": [],
+        "createdAt": "2026-10-01T17:20:00"
+      }
+    ],
+    "message": "success"
+  }
+}
+```
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。

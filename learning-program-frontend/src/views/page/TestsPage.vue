@@ -19,7 +19,7 @@ const entries = [
     title: 'tests.knowledge.title',
     description: 'tests.knowledge.description',
     icon: Notebook,
-    badge: 'tests.knowledge.badge',
+    badge: '',
   },
 ]
 </script>
