@@ -1,3 +1,0 @@
-ALTER TABLE db_account
-    ADD COLUMN phone VARCHAR(30) NULL,
-    ADD COLUMN bio VARCHAR(120) NULL;
