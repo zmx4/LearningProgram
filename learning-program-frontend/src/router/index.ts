@@ -113,6 +113,11 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/admin/AdminUsers.vue'),
             meta: { title: '用户管理' }
         },{
+            path: 'sets',
+            name: 'admin-sets',
+            component: () => import('@/views/admin/AdminQuestionSets.vue'),
+            meta: { title: '题集管理' }
+        },{
             path: 'notifications',
             name: 'admin-notifications',
             component: () => import('@/views/admin/AdminNotifications.vue'),
