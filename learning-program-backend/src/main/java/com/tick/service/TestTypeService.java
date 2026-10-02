@@ -11,4 +11,8 @@ public interface TestTypeService {
     TestType getType(Integer id);
 
     TestType createType(TestTypeCreateVO vo);
+
+    TestType updateType(Integer id, TestTypeCreateVO vo);
+
+    void deleteType(Integer id);
 }

@@ -632,6 +632,25 @@ Content-Type: application/json
 `code` 只能包含字母、数字、下划线和短横线，长度 1 到 50，且全局唯一；`name` 必填且不超过 100 个字符；
 `description` 可选，不超过 255 个字符。编码重复或参数非法时返回 `400`。
 
+### 修改测试类型
+
+```http
+PUT /api/admin/test-types/{id}
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+请求体与新增一致，校验规则相同（`code` 唯一性检查会排除自身）。类型不存在返回 `400`。
+
+### 删除测试类型
+
+```http
+DELETE /api/admin/test-types/{id}
+Authorization: Bearer <admin-token>
+```
+
+类型下仍有题目，或已有知识测试记录引用该类型时返回 `400` 并给出提示，否则删除成功。
+
 ### 新增题目
 
 ```http
@@ -693,6 +712,26 @@ Content-Type: application/json
 服务端校验规则：题干不能为空；选择题至少 2 个选项、选项标识不能重复、答案必须是已有选项标识；
 单选恰好 1 个答案，多选至少 2 个答案；填空题不能带选项且答案不能为空。任一不满足返回 `400`，
 `typeId` 不存在同样返回 `400`。创建成功后返回该题目的完整数据（结构与查询接口一致）。
+
+### 修改题目
+
+```http
+PUT /api/admin/test-questions/{id}
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+请求体与新增题目一致（`typeId` 必填，可借此转移题目所属类型），校验规则相同。
+题目不存在返回 `400`，成功后返回更新后的题目数据。
+
+### 删除题目
+
+```http
+DELETE /api/admin/test-questions/{id}
+Authorization: Bearer <admin-token>
+```
+
+题目被题集引用时返回 `400` 并提示先在题集中移除，否则删除成功。
 
 ### 新增题集
 

@@ -89,7 +89,9 @@ onMounted(loadUsers)
             <el-option v-for="user in users" :key="user.id" :label="user.username" :value="user.id"/>
           </el-select>
         </el-form-item>
-        <el-button type="primary" :loading="sending" @click="sendNotification">{{ t('admin.send') }}</el-button>
+        <div class="form-actions">
+          <el-button type="primary" :loading="sending" @click="sendNotification">{{ t('admin.send') }}</el-button>
+        </div>
       </el-form>
     </section>
   </div>
@@ -149,6 +151,11 @@ h2 {
   margin-bottom: 0;
   color: var(--el-text-color-primary);
   font-size: 17px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 700px) {

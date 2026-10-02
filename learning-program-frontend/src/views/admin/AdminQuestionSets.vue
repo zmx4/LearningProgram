@@ -236,10 +236,12 @@ onMounted(() => {
         <el-table-column prop="description" :label="t('admin.setDescription')" min-width="220" show-overflow-tooltip/>
         <el-table-column prop="questionCount" :label="t('admin.questionCount')" width="100"/>
         <el-table-column prop="createdAt" :label="t('admin.createdAt')" min-width="170"/>
-        <el-table-column :label="t('admin.action')" width="150">
+        <el-table-column :label="t('admin.action')" width="170" align="center">
           <template #default="{ row }">
-            <el-button text type="primary" :icon="Edit" @click="openEdit(row)">{{ t('admin.edit') }}</el-button>
-            <el-button text type="danger" :icon="Delete" @click="removeSet(row)">{{ t('admin.delete') }}</el-button>
+            <div class="row-actions">
+              <el-button text type="primary" :icon="Edit" @click="openEdit(row)">{{ t('admin.edit') }}</el-button>
+              <el-button text type="danger" :icon="Delete" @click="removeSet(row)">{{ t('admin.delete') }}</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -310,6 +312,17 @@ h2 {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.row-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 @media (max-width: 700px) {

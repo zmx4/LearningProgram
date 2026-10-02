@@ -18,4 +18,8 @@ public interface TestQuestionService {
     List<TestQuestionVO> listByIds(List<Integer> ids);
 
     TestQuestionVO createQuestion(Integer typeId, TestQuestionCreateVO vo);
+
+    TestQuestionVO updateQuestion(Integer id, TestQuestionCreateVO vo);
+
+    void deleteQuestion(Integer id);
 }

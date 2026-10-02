@@ -3,12 +3,15 @@ package com.tick.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.tick.entity.dto.QuestionSetItem;
 import com.tick.entity.dto.TestQuestion;
 import com.tick.entity.dto.TestQuestionContent;
 import com.tick.entity.dto.TestQuestionKind;
 import com.tick.entity.vo.request.TestQuestionCreateVO;
 import com.tick.entity.vo.response.TestQuestionVO;
+import com.tick.mapper.QuestionSetItemMapper;
 import com.tick.mapper.TestQuestionMapper;
 import com.tick.service.TestQuestionService;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,12 @@ import java.util.stream.Collectors;
 public class TestQuestionServiceImpl extends ServiceImpl<TestQuestionMapper, TestQuestion>
         implements TestQuestionService {
     private static final int MAX_COUNT = 100;
+
+    private final QuestionSetItemMapper questionSetItemMapper;
+
+    public TestQuestionServiceImpl(QuestionSetItemMapper questionSetItemMapper) {
+        this.questionSetItemMapper = questionSetItemMapper;
+    }
 
     @Override
     public List<TestQuestionVO> getQuestions(Integer typeId, String kind, Integer count) {
@@ -73,6 +82,40 @@ public class TestQuestionServiceImpl extends ServiceImpl<TestQuestionMapper, Tes
                 null, typeId, kind.getCode(), toContentJson(content), LocalDateTime.now());
         save(question);
         return toVO(question);
+    }
+
+    @Override
+    public TestQuestionVO updateQuestion(Integer id, TestQuestionCreateVO vo) {
+        TestQuestion question = id == null ? null : getById(id);
+        if (question == null) {
+            throw new IllegalArgumentException("题目不存在");
+        }
+        if (vo == null) {
+            throw new IllegalArgumentException("请求体不能为空");
+        }
+
+        TestQuestionKind kind = TestQuestionKind.fromCode(vo.getKind());
+        TestQuestionContent content = vo.getContent() == null ? new TestQuestionContent() : vo.getContent();
+        content.normalizeAndValidate(kind);
+
+        question.setTypeId(vo.getTypeId() == null ? question.getTypeId() : vo.getTypeId());
+        question.setKind(kind.getCode());
+        question.setContent(toContentJson(content));
+        updateById(question);
+        return toVO(question);
+    }
+
+    @Override
+    public void deleteQuestion(Integer id) {
+        if (id == null || getById(id) == null) {
+            throw new IllegalArgumentException("题目不存在");
+        }
+        Long refCount = questionSetItemMapper.selectCount(
+                new LambdaQueryWrapper<QuestionSetItem>().eq(QuestionSetItem::getQuestionId, id));
+        if (refCount > 0) {
+            throw new IllegalArgumentException("该题目已被题集引用，请先在题集中移除");
+        }
+        removeById(id);
     }
 
     private TestQuestionKind resolveKind(String kind) {
