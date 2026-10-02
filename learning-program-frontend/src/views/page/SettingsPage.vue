@@ -126,6 +126,7 @@ h2, h3, p { margin-top: 0; }
 h2 { margin-bottom: 8px; font-size: 26px; }
 .settings-heading > p:last-child { margin-bottom: 30px; color: var(--el-text-color-secondary); font-size: 14px; }
 .settings-card {
+  margin-bottom: 20px;
   padding: 30px 34px 34px;
   border: 1px solid var(--el-border-color-light);
   border-radius: 16px;

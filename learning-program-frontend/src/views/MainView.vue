@@ -55,7 +55,6 @@ const navigationSections: Record<string, string> = {
   '/resources': 'resources',
   '/progress': 'progress',
   '/tests': 'tests',
-  '/admin': 'admin',
 }
 
 const activeSection = computed(() => {
@@ -164,7 +163,6 @@ onUnmounted(() => {
         <button
             v-if="isAdmin"
             class="nav-item"
-            :class="{ active: activeSection === 'admin' }"
             type="button"
             @click="router.push({ name: 'admin' })"
         >

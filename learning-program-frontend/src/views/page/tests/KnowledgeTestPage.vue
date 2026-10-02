@@ -198,6 +198,27 @@ function checkCorrect(question: TestQuestion, answer: string[]): boolean {
       && expected.every((item, index) => item.trim().toLowerCase() === (answer[index] ?? '').trim().toLowerCase())
 }
 
+// 交卷后基于本地题目与作答生成回顾列表，正确答案与解析直接来自题目内容
+const reviewItems = computed(() => {
+  if (!completed.value) return []
+  return questions.value.map((question, index) => {
+    const userAnswer = answers.value[index] ?? []
+    return { question, userAnswer, correct: checkCorrect(question, userAnswer) }
+  })
+})
+
+function optionText(question: TestQuestion, key: string): string {
+  const option = question.content.options?.find(item => item.key === key)
+  return option ? `${key}. ${option.text}` : key
+}
+
+function displayAnswer(question: TestQuestion, keys: string[]): string {
+  const values = keys.map(item => item.trim()).filter(item => item.length > 0)
+  if (!values.length) return '—'
+  if (question.kind === 'blank') return values.join('、')
+  return values.map(key => optionText(question, key)).join('、')
+}
+
 function submitTest() {
   submitting.value = true
   const detail: AnswerDetail[] = questions.value.map((question, index) => {
@@ -259,14 +280,6 @@ onMounted(() => {
           <span>{{ t('tests.knowledge.wrongCount') }} <strong>{{ result.wrongCount }}</strong></span>
           <span>{{ t('tests.knowledge.duration') }} <strong>{{ result.durationSeconds }}s</strong></span>
         </div>
-        <div v-if="result.detail?.length" class="review-chips">
-          <span
-              v-for="(item, index) in result.detail"
-              :key="index"
-              class="review-chip"
-              :class="item.correct ? 'right' : 'wrong'"
-          >{{ index + 1 }} {{ item.correct ? '✓' : '✗' }}</span>
-        </div>
       </template>
       <template v-else>
         <h3>{{ t('tests.knowledge.ready') }}</h3>
@@ -324,6 +337,37 @@ onMounted(() => {
           {{ current < questions.length - 1 ? t('tests.knowledge.next') : t('tests.knowledge.submit') }}
         </button>
       </div>
+    </section>
+
+    <section v-if="completed && reviewItems.length" class="test-card review-card">
+      <div class="history-heading">
+        <h3>{{ t('tests.knowledge.review') }}</h3>
+        <span>{{ t('tests.knowledge.reviewHint') }}</span>
+      </div>
+      <article v-for="(item, index) in reviewItems" :key="item.question.id" class="review-item">
+        <div class="review-item-head">
+          <span class="review-no" :class="item.correct ? 'right' : 'wrong'">{{ index + 1 }}</span>
+          <span class="review-kind">{{ kindLabel(item.question.kind) }}</span>
+          <span class="review-badge" :class="item.correct ? 'right' : 'wrong'">{{
+              item.correct ? t('tests.knowledge.tagRight') : t('tests.knowledge.tagWrong')
+            }}</span>
+        </div>
+        <p class="review-stem">{{ item.question.content.stem }}</p>
+        <div class="review-answers">
+          <p class="review-line" :class="item.correct ? 'right' : 'wrong'">
+            <span class="review-label">{{ t('tests.knowledge.yourAnswer') }}</span>
+            {{ displayAnswer(item.question, item.userAnswer) }}
+          </p>
+          <p class="review-line right">
+            <span class="review-label">{{ t('tests.knowledge.correctAnswer') }}</span>
+            {{ displayAnswer(item.question, item.question.content.answer ?? []) }}
+          </p>
+        </div>
+        <p v-if="item.question.content.analysis" class="review-analysis">
+          <span class="review-label">{{ t('tests.knowledge.analysis') }}</span>
+          {{ item.question.content.analysis }}
+        </p>
+      </article>
     </section>
 
     <section class="test-card">
@@ -584,29 +628,103 @@ onMounted(() => {
   font-size: 20px;
 }
 
-.review-chips {
+.review-card {
+  padding-top: 22px;
+  padding-bottom: 8px;
+}
+
+.review-item {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.review-item:last-child {
+  border-bottom: 0;
+}
+
+.review-item-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 4px;
+  align-items: center;
+  gap: 10px;
 }
 
-.review-chip {
-  min-width: 44px;
-  padding: 4px 10px;
-  border-radius: 999px;
+.review-no {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--el-color-white);
   font-size: 12px;
-  text-align: center;
+  font-weight: 600;
 }
 
-.review-chip.right {
+.review-no.right {
+  background: var(--el-color-success);
+}
+
+.review-no.wrong {
+  background: var(--el-color-danger);
+}
+
+.review-kind {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.review-badge {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.review-badge.right {
   color: var(--el-color-success);
   background: var(--el-color-success-light-9);
 }
 
-.review-chip.wrong {
+.review-badge.wrong {
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
+}
+
+.review-stem {
+  margin: 10px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.review-line {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.review-line.right {
+  color: var(--el-color-success);
+}
+
+.review-line.wrong {
+  color: var(--el-color-danger);
+}
+
+.review-label {
+  margin-right: 8px;
+  color: var(--el-text-color-secondary);
+  font-weight: 400;
+}
+
+.review-analysis {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .history-table {

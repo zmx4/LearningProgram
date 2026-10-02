@@ -103,12 +103,20 @@ const routes: RouteRecordRaw[] = [
         }]
     },{
         path: '/admin',
-        component: () => import('@/views/MainView.vue'),
+        name: 'admin',
+        component: () => import('@/views/AdminView.vue'),
+        redirect: { name: 'admin-users' },
+        meta: { title: '管理员中心', adminOnly: true },
         children: [{
-            path: '',
-            name: 'admin',
-            component: () => import('@/views/page/AdminPage.vue'),
-            meta: { title: '管理员中心', adminOnly: true }
+            path: 'users',
+            name: 'admin-users',
+            component: () => import('@/views/admin/AdminUsers.vue'),
+            meta: { title: '用户管理' }
+        },{
+            path: 'notifications',
+            name: 'admin-notifications',
+            component: () => import('@/views/admin/AdminNotifications.vue'),
+            meta: { title: '通知管理' }
         }]
     },{
         path: '/user/:id',
@@ -133,7 +141,8 @@ router.beforeEach((to) => {
     if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
-        || to.path.startsWith('/settings') || to.path.startsWith('/tests') || to.path.startsWith('/user/')) && isUnauthenticated) {
+        || to.path.startsWith('/settings') || to.path.startsWith('/tests')
+        || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
 
