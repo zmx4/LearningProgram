@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { get, post } from '@/net'
+import TestStatistics from '@/components/TestStatistics.vue'
 
 type QuestionKind = 'single' | 'multiple' | 'blank'
 
@@ -369,6 +370,8 @@ onMounted(() => {
         </p>
       </article>
     </section>
+
+    <TestStatistics v-if="!questions.length || completed" :records="history.records"/>
 
     <section class="test-card">
       <div class="history-heading"><h3>{{ t('tests.knowledge.history') }}</h3><span>{{

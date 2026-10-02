@@ -148,6 +148,14 @@ export default {
     description: '通过测试检验学习成果，查看每次测试的详细数据。',
     enter: '进入测试',
     back: '返回测试中心',
+    stats: {
+      title: '数据统计',
+      trend: '最近得分趋势',
+      accuracy: '总正确率',
+      correct: '答对',
+      wrong: '答错',
+      noData: '暂无测试数据',
+    },
     word: {
       title: '四六级单词测试',
       description: '随机抽取 10 个单词，选择对应中文释义。',

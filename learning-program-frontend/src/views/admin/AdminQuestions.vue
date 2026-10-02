@@ -137,7 +137,8 @@ function addOption() {
 }
 
 function removeOption(index: number) {
-  const removed = form.options[index].key
+  const removed = form.options[index]?.key
+  if (removed === undefined) return
   form.options.splice(index, 1)
   form.answerKey = form.answerKey === removed ? '' : form.answerKey
   form.answerKeys = form.answerKeys.filter(key => key !== removed)

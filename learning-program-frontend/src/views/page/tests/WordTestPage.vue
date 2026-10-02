@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { get, post } from '@/net'
+import TestStatistics from '@/components/TestStatistics.vue'
 
 type Source = 'cet4' | 'cet6'
 
@@ -160,6 +161,8 @@ onMounted(loadHistory)
         <button v-for="option in options" :key="option" type="button" @click="choose(option)">{{ option }}</button>
       </div>
     </section>
+
+    <TestStatistics v-if="!words.length || completed" :records="history.records"/>
 
     <section class="test-card">
       <div class="history-heading"><h3>{{ t('tests.word.history') }}</h3><span>{{
