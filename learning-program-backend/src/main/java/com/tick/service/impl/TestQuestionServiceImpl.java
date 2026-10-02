@@ -15,6 +15,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class TestQuestionServiceImpl extends ServiceImpl<TestQuestionMapper, TestQuestion>
@@ -40,6 +43,20 @@ public class TestQuestionServiceImpl extends ServiceImpl<TestQuestionMapper, Tes
         }
 
         return questions.stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<TestQuestionVO> listByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, TestQuestion> byId = baseMapper.selectBatchIds(ids).stream()
+                .collect(Collectors.toMap(TestQuestion::getId, q -> q));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(this::toVO)
+                .toList();
     }
 
     @Override

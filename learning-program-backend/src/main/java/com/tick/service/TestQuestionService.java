@@ -12,5 +12,10 @@ public interface TestQuestionService {
      */
     List<TestQuestionVO> getQuestions(Integer typeId, String kind, Integer count);
 
+    /**
+     * 按 id 批量获取题目，返回顺序与传入的 ids 顺序一致。
+     */
+    List<TestQuestionVO> listByIds(List<Integer> ids);
+
     TestQuestionVO createQuestion(Integer typeId, TestQuestionCreateVO vo);
 }

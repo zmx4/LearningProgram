@@ -382,6 +382,44 @@ Authorization: ******
 
 `typeId` 不存在返回 `404`，其他参数非法返回 `400`。
 
+## 题集接口
+
+题集（`db_question_set`）把若干题目（引用 `db_test_question`）组织为一个集合，包含标题、描述与题目列表，
+题目通过关联表 `db_question_set_item` 引用，题目在题集中的顺序即加入顺序。以下读取接口登录后即可访问。
+
+### 查询全部题集
+
+```http
+GET /api/question-sets
+Authorization: ******
+```
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 1,
+      "title": "第一章练习",
+      "description": "HTTP 与数据库基础题。",
+      "questionCount": 3,
+      "createdAt": "2026-10-02T10:00:00"
+    }
+  ],
+  "message": "success"
+}
+```
+
+### 查询题集详情
+
+```http
+GET /api/question-sets/{id}
+Authorization: ******
+```
+
+`questions` 按题目加入题集的顺序排列，元素结构与「查询某个类型的题目」响应中的题目一致。
+题集不存在时 `code` 为 `404`。
+
 ## 知识测试接口
 
 知识测试从「测试题库接口」中读取测试类型和题目，交卷后成绩保存在 `db_knowledge_test_record` 表中。
@@ -655,6 +693,46 @@ Content-Type: application/json
 服务端校验规则：题干不能为空；选择题至少 2 个选项、选项标识不能重复、答案必须是已有选项标识；
 单选恰好 1 个答案，多选至少 2 个答案；填空题不能带选项且答案不能为空。任一不满足返回 `400`，
 `typeId` 不存在同样返回 `400`。创建成功后返回该题目的完整数据（结构与查询接口一致）。
+
+### 新增题集
+
+```http
+POST /api/admin/question-sets
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+```json
+{
+  "title": "第一章练习",
+  "description": "HTTP 与数据库基础题。",
+  "questionIds": [1, 2, 3]
+}
+```
+
+`title` 必填且不超过 100 个字符；`description` 可选，不超过 255 个字符；`questionIds` 为题目 id 列表，
+可空（先建空题集再补题），重复 id 会自动去重，包含不存在的题目返回 `400`。
+创建成功后返回题集数据（结构同「查询全部题集」）。
+
+### 修改题集
+
+```http
+PUT /api/admin/question-sets/{id}
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+请求体与新增题集一致；`questionIds` 为该题集完整的题目列表，**全量覆盖**现有题目及顺序。
+校验规则同新增。题集不存在返回 `400`。
+
+### 删除题集
+
+```http
+DELETE /api/admin/question-sets/{id}
+Authorization: Bearer <admin-token>
+```
+
+删除题集及其题目关联（不影响题目本身）。题集不存在返回 `400`。
 
 ## 测试接口
 
