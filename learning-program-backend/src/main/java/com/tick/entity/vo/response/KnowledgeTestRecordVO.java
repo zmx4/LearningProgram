@@ -17,6 +17,7 @@ import java.util.List;
 public class KnowledgeTestRecordVO {
     private Integer id;
     private Integer typeId;
+    private Integer setId;
     private String typeName;
     private Integer totalCount;
     private Integer correctCount;

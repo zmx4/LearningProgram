@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { get, post } from '@/net'
@@ -60,11 +60,22 @@ interface History {
   records: TestRecord[]
 }
 
+interface QuestionSetDetail {
+  id: number;
+  title: string;
+  description: string | null;
+  questions: TestQuestion[]
+}
+
 const countOptions = [5, 10, 20]
 
 const router = useRouter()
+const route = useRoute()
 const {t} = useI18n()
 
+// 课程学习页通过 /tests/knowledge?set={id} 进入题集练习模式，与 typeId 普通模式二选一
+const setId = ref<number | null>(null)
+const setTitle = ref('')
 const types = ref<TestType[]>([])
 const typeId = ref<number | null>(null)
 const questionCount = ref(10)
@@ -90,7 +101,9 @@ const loading = ref(false)
 
 const currentQuestion = computed(() => questions.value[current.value])
 const currentAnswer = computed(() => answers.value[current.value] ?? [])
-const typeName = computed(() => types.value.find(item => item.id === typeId.value)?.name ?? '')
+const typeName = computed(() => setId.value
+    ? setTitle.value
+    : types.value.find(item => item.id === typeId.value)?.name ?? '')
 const progress = computed(() => questions.value.length ? `${current.value + 1}/${questions.value.length}` : '')
 
 function kindLabel(kind: QuestionKind) {
@@ -140,26 +153,47 @@ function loadHistory() {
 }
 
 function startTest() {
+  if (setId.value) {
+    startSetTest()
+    return
+  }
   if (!typeId.value) return
   loading.value = true
   get<TestQuestion[]>(`/api/test-questions?typeId=${typeId.value}&count=${questionCount.value}`, data => {
     loading.value = false
-    if (!data.length) {
-      ElMessage.warning(t('tests.knowledge.noQuestions'))
-      return
-    }
-    questions.value = data
-    answers.value = data.map(question => question.kind === 'blank'
-        ? Array.from({length: question.content.answer?.length ?? 0}, () => '')
-        : [])
-    blankAnswers.value = answers.value[0] ?? []
-    current.value = 0
-    completed.value = false
-    result.value = null
-    startedAt.value = Date.now()
+    beginQuestions(data)
   }, () => {
     loading.value = false
   })
+}
+
+function startSetTest() {
+  if (!setId.value) return
+  loading.value = true
+  get<QuestionSetDetail>(`/api/question-sets/${setId.value}`, detail => {
+    loading.value = false
+    setTitle.value = detail.title
+    beginQuestions(detail.questions)
+  }, () => {
+    loading.value = false
+    ElMessage.warning(t('tests.knowledge.setLoadFailed'))
+  })
+}
+
+function beginQuestions(data: TestQuestion[]) {
+  if (!data.length) {
+    ElMessage.warning(t('tests.knowledge.noQuestions'))
+    return
+  }
+  questions.value = data
+  answers.value = data.map(question => question.kind === 'blank'
+      ? Array.from({length: question.content.answer?.length ?? 0}, () => '')
+      : [])
+  blankAnswers.value = answers.value[0] ?? []
+  current.value = 0
+  completed.value = false
+  result.value = null
+  startedAt.value = Date.now()
 }
 
 function chooseOption(key: string) {
@@ -233,7 +267,8 @@ function submitTest() {
   })
   const correctCount = detail.filter(item => item.correct).length
   post<TestRecord>('/api/tests/knowledge/results', {
-    typeId: typeId.value,
+    typeId: setId.value ? undefined : typeId.value,
+    setId: setId.value ?? undefined,
     totalCount: questions.value.length,
     correctCount,
     durationSeconds: Math.floor((Date.now() - startedAt.value) / 1000),
@@ -249,6 +284,12 @@ function submitTest() {
 }
 
 onMounted(() => {
+  const raw = route.query.set
+  const parsed = Number(Array.isArray(raw) ? raw[0] : raw)
+  if (Number.isInteger(parsed) && parsed > 0) {
+    setId.value = parsed
+    startSetTest()
+  }
   loadTypes()
   loadHistory()
 })
@@ -286,7 +327,13 @@ onMounted(() => {
         <h3>{{ t('tests.knowledge.ready') }}</h3>
         <p>{{ t('tests.knowledge.description') }}</p>
       </template>
-      <div v-if="types.length" class="test-actions">
+      <div v-if="setId" class="test-actions">
+        <span v-if="setTitle" class="set-name">{{ setTitle }}</span>
+        <button type="button" :disabled="loading" @click="startTest">
+          {{ completed ? t('tests.knowledge.tryAgain') : t('tests.knowledge.start') }}
+        </button>
+      </div>
+      <div v-else-if="types.length" class="test-actions">
         <select v-model="typeId" :disabled="completed" :aria-label="t('tests.knowledge.type')">
           <option :value="null" disabled>{{ t('tests.knowledge.type') }}</option>
           <option v-for="item in types" :key="item.id" :value="item.id">{{ item.name }}</option>
@@ -480,6 +527,14 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
+  align-items: center;
+}
+
+.set-name {
+  margin-right: auto;
+  color: var(--el-color-primary);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .test-actions select, .test-actions button, .question-actions button {

@@ -11,6 +11,7 @@ import java.util.List;
 @Data
 public class KnowledgeTestResultVO {
     private Integer typeId;
+    private Integer setId;
     private Integer totalCount;
     private Integer correctCount;
     private Integer durationSeconds;

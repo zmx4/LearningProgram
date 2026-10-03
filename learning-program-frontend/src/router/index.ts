@@ -62,8 +62,13 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'courses',
-            component: () => import('@/views/page/FeaturePage.vue'),
+            component: () => import('@/views/page/CoursesPage.vue'),
             meta: { title: '我的课程' }
+        },{
+            path: ':id',
+            name: 'course-study',
+            component: () => import('@/views/page/CourseStudyPage.vue'),
+            meta: { title: '课程学习' }
         }]
     },{
         path: '/resources',
@@ -122,6 +127,11 @@ const routes: RouteRecordRaw[] = [
             name: 'admin-sets',
             component: () => import('@/views/admin/AdminQuestionSets.vue'),
             meta: { title: '题集管理' }
+        },{
+            path: 'courses',
+            name: 'admin-courses',
+            component: () => import('@/views/admin/AdminCourses.vue'),
+            meta: { title: '课程管理' }
         },{
             path: 'notifications',
             name: 'admin-notifications',

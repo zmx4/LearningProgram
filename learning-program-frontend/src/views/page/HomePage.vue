@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, ArrowRight, Reading } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { get, post } from '@/net'
 
 const { t } = useI18n()
+const router = useRouter()
 interface CheckInStatus {
   dates: string[]
   todayChecked: boolean
@@ -15,14 +17,52 @@ interface CheckInStatus {
   records: Array<{ date: string; points: number; streak: number }>
 }
 
+interface ProgressSummary {
+  ongoingCount: number
+  completedCount: number
+  weeklySeconds: number
+}
+
 const now = new Date()
 const selectedYear = ref(now.getFullYear())
 const selectedMonth = ref(now.getMonth() + 1)
 const checkInStatus = ref<CheckInStatus>({
   dates: [], todayChecked: false, streak: 0, points: 0, checkInCount: 0, monthPoints: 0, records: [],
 })
+const progressSummary = ref<ProgressSummary | null>(null)
 const loading = ref(false)
 const today = now.toISOString().slice(0, 10)
+
+const stats = computed(() => [
+  {
+    label: 'home.ongoingCourses',
+    value: progressSummary.value ? String(progressSummary.value.ongoingCount) : '—',
+    hint: 'home.ongoingHint',
+  }, {
+    label: 'home.weeklyTime',
+    value: progressSummary.value ? formatDuration(progressSummary.value.weeklySeconds) : '—',
+    hint: 'home.weeklyHint',
+  }, {
+    label: 'home.completedCourses',
+    value: progressSummary.value ? String(progressSummary.value.completedCount) : '—',
+    hint: 'home.completedHint',
+  },
+])
+
+function formatDuration(seconds: number): string {
+  if (seconds <= 0) return t('home.noStudyTime')
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}${t('home.hours')}${minutes > 0 ? minutes + t('home.minutes') : ''}`
+  if (minutes > 0) return `${minutes}${t('home.minutes')}`
+  return t('home.lessThanMinute')
+}
+
+function loadProgressSummary() {
+  get<{ summary: ProgressSummary }>('/api/courses/progress', data => {
+    progressSummary.value = data.summary
+  })
+}
 
 const monthTitle = computed(() => `${selectedYear.value}年${selectedMonth.value}月`)
 const calendarDays = computed(() => {
@@ -63,7 +103,10 @@ function checkIn() {
   })
 }
 
-onMounted(loadCheckInStatus)
+onMounted(() => {
+  loadCheckInStatus()
+  loadProgressSummary()
+})
 </script>
 
 <template>
@@ -73,7 +116,7 @@ onMounted(loadCheckInStatus)
             <p class="card-label">{{ t('home.plan') }}</p>
             <h2>{{ t('home.focus') }}</h2>
             <p class="hero-copy">{{ t('home.planDescription') }}</p>
-            <button class="primary-button" type="button">{{ t('home.start') }}</button>
+            <button class="primary-button" type="button" @click="router.push({ name: 'courses' })">{{ t('home.start') }}</button>
           </div>
           <div class="hero-decoration" aria-hidden="true">
             <div class="decoration-circle circle-large"></div>
@@ -87,15 +130,13 @@ onMounted(loadCheckInStatus)
             <p class="card-label">{{ t('home.overview') }}</p>
             <h2>{{ t('home.summary') }}</h2>
           </div>
-          <span class="placeholder-chip">{{ t('home.upcoming') }}</span>
+          <button class="placeholder-chip chip-link" type="button" @click="router.push({ name: 'courses' })">
+            {{ t('courses.title') }}
+          </button>
         </div>
 
         <div class="stats-grid">
-          <article v-for="stat in [
-            { label: 'home.ongoingCourses', value: '—', hint: 'home.waitingCourse' },
-            { label: 'home.weeklyTime', value: '—', hint: 'home.waitingRecords' },
-            { label: 'home.completedCourses', value: '—', hint: 'home.waitingCompletion' },
-          ]" :key="stat.label" class="stat-card">
+          <article v-for="stat in stats" :key="stat.label" class="stat-card">
             <p>{{ t(stat.label) }}</p>
             <strong>{{ stat.value }}</strong>
             <span>{{ t(stat.hint) }}</span>
@@ -473,10 +514,21 @@ h1 {
 
 .placeholder-chip {
   padding: 7px 11px;
+  border: 0;
   border-radius: 20px;
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
+  font: inherit;
   font-size: 12px;
+}
+
+.chip-link {
+  cursor: pointer;
+}
+
+.chip-link:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
 
 .stats-grid {

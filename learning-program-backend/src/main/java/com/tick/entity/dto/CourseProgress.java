@@ -11,33 +11,27 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 知识测试成绩记录。答题明细以 JSON 存放在 detail 列，结构对应 {@link KnowledgeTestAnswer}。
+ * 课程学习进度，一个用户对某课程一个章节的记录：学过几次、累计学了多久。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("db_knowledge_test_record")
-public class KnowledgeTestRecord {
+@TableName("db_course_progress")
+public class CourseProgress {
     @TableId(type = IdType.AUTO)
     private Integer id;
     @TableField("account_id")
     private Integer accountId;
-    @TableField("type_id")
-    private Integer typeId;
-    @TableField("set_id")
-    private Integer setId;
-    @TableField("type_name")
-    private String typeName;
-    @TableField("total_count")
-    private Integer totalCount;
-    @TableField("correct_count")
-    private Integer correctCount;
-    @TableField("wrong_count")
-    private Integer wrongCount;
-    private Integer score;
+    @TableField("course_id")
+    private Integer courseId;
+    @TableField("chapter_id")
+    private Integer chapterId;
     @TableField("duration_seconds")
     private Integer durationSeconds;
-    private String detail;
+    @TableField("studied_count")
+    private Integer studiedCount;
     @TableField("created_at")
     private LocalDateTime createdAt;
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

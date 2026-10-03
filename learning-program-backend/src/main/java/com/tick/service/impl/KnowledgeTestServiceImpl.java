@@ -4,11 +4,13 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.KnowledgeTestAnswer;
 import com.tick.entity.dto.KnowledgeTestRecord;
+import com.tick.entity.dto.QuestionSet;
 import com.tick.entity.dto.TestQuestionKind;
 import com.tick.entity.dto.TestType;
 import com.tick.entity.vo.request.KnowledgeTestResultVO;
 import com.tick.entity.vo.response.KnowledgeTestRecordVO;
 import com.tick.mapper.KnowledgeTestRecordMapper;
+import com.tick.mapper.QuestionSetMapper;
 import com.tick.service.KnowledgeTestService;
 import com.tick.service.TestTypeService;
 import org.springframework.stereotype.Service;
@@ -27,9 +29,11 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
     private static final int MAX_ANSWER_ITEMS = 10;
 
     private final TestTypeService testTypeService;
+    private final QuestionSetMapper questionSetMapper;
 
-    public KnowledgeTestServiceImpl(TestTypeService testTypeService) {
+    public KnowledgeTestServiceImpl(TestTypeService testTypeService, QuestionSetMapper questionSetMapper) {
         this.testTypeService = testTypeService;
+        this.questionSetMapper = questionSetMapper;
     }
 
     @Override
@@ -37,9 +41,25 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
         if (vo == null) {
             throw new IllegalArgumentException("请求体不能为空");
         }
-        TestType type = testTypeService.getType(vo.getTypeId());
-        if (type == null) {
-            throw new IllegalArgumentException("测试类型不存在");
+        if (vo.getSetId() == null && vo.getTypeId() == null) {
+            throw new IllegalArgumentException("typeId 与 setId 必须传其一");
+        }
+        if (vo.getSetId() != null && vo.getTypeId() != null) {
+            throw new IllegalArgumentException("typeId 与 setId 只能传其一");
+        }
+        // typeId 普通模式与 setId 课程题集模式二选一，typeName 作为快照落库供历史展示
+        TestType type = null;
+        QuestionSet set = null;
+        if (vo.getSetId() != null) {
+            set = questionSetMapper.selectById(vo.getSetId());
+            if (set == null) {
+                throw new IllegalArgumentException("题集不存在");
+            }
+        } else {
+            type = testTypeService.getType(vo.getTypeId());
+            if (type == null) {
+                throw new IllegalArgumentException("测试类型不存在");
+            }
         }
         if (vo.getTotalCount() == null || vo.getTotalCount() < 1 || vo.getTotalCount() > MAX_TOTAL_COUNT) {
             throw new IllegalArgumentException("题目数量必须在 1 到 " + MAX_TOTAL_COUNT + " 之间");
@@ -52,8 +72,9 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
 
         KnowledgeTestRecord record = new KnowledgeTestRecord();
         record.setAccountId(accountId);
-        record.setTypeId(type.getId());
-        record.setTypeName(type.getName());
+        record.setTypeId(type == null ? null : type.getId());
+        record.setSetId(set == null ? null : set.getId());
+        record.setTypeName(type == null ? "题集：" + set.getTitle() : type.getName());
         record.setTotalCount(vo.getTotalCount());
         record.setCorrectCount(vo.getCorrectCount());
         record.setWrongCount(vo.getTotalCount() - vo.getCorrectCount());
@@ -137,6 +158,7 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
         return new KnowledgeTestRecordVO(
                 record.getId(),
                 record.getTypeId(),
+                record.getSetId(),
                 record.getTypeName(),
                 record.getTotalCount(),
                 record.getCorrectCount(),

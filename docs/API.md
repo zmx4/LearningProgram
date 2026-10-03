@@ -438,6 +438,7 @@ Content-Type: application/json
 ```json
 {
   "typeId": 1,
+  "setId": null,
   "totalCount": 10,
   "correctCount": 8,
   "durationSeconds": 125,
@@ -449,10 +450,10 @@ Content-Type: application/json
 }
 ```
 
-- `typeId` 必填，测试类型不存在返回 `400`
+- `typeId` 与 `setId` 二选一：普通模式传 `typeId`（测试类型不存在返回 `400`）；课程题集模式传 `setId`（题集不存在返回 `400`），两者都缺省或同时传入返回 `400`
 - `totalCount` 取值范围 1 至 100；`correctCount` 介于 0 与 `totalCount` 之间，否则返回 `400`
 - `detail` 为答题明细，可缺省；服务端会清理非法项（缺少题目 id、题型非法）并截断过长答案
-- 服务端计算 `wrongCount` 和 `score`（百分制），并记录 `typeName` 快照
+- 服务端计算 `wrongCount` 和 `score`（百分制），并记录 `typeName` 快照；题集模式下 `typeName` 为 `题集：{title}`
 
 成功响应：
 
@@ -513,6 +514,47 @@ Authorization: ******
   }
 }
 ```
+
+## 课程接口
+
+课程由「课程 → 章节 / 题集关联」三级组成，题集复用「题集接口」中的集合。以下读取接口登录后即可访问。
+
+### 查询全部课程
+
+```http
+GET /api/courses
+Authorization: ******
+```
+
+响应按 `sortOrder` 升序，每项含 `chapterCount` 与 `questionSetCount` 两个统计字段。
+
+### 查询课程详情
+
+```http
+GET /api/courses/{id}
+Authorization: ******
+```
+
+课程不存在返回 `404`。响应含全部章节（按 `sortOrder` 升序）与挂载的题集 `questionSets`
+（按课程内顺序，每项含 `id`、`title`、`description` 与 `questionCount`），学习页据此渲染练习入口，
+点击后以 `/tests/knowledge?set={id}` 进入题集模式的知识测试。
+
+### 课程管理（管理员）
+
+```http
+GET    /api/admin/courses                      课程列表（含 chapterCount 与 questionSetIds，不含章节正文）
+GET    /api/admin/courses/{id}                 课程详情（含完整章节列表）
+POST   /api/admin/courses                      新建课程
+PUT    /api/admin/courses/{id}                 修改课程（全量覆盖章节与题集关联）
+DELETE /api/admin/courses/{id}                 删除课程（级联删除章节、题集关联与学员进度）
+Authorization: Bearer <admin-token>
+```
+
+请求体为 `title`（必填，≤100 字符）、`description`（≤500）、`icon`（emoji，≤16）、`sortOrder`（新建缺省排在末尾，
+修改缺省保持原值）、`chapters`（章节列表，按数组顺序排序：`title` 必填 ≤150 字符、`content` 纯文本、
+`id` 为已有章节 id 时原位更新以保留学员进度，未带 id 的新增，缺失的旧章节删除）、
+`questionSetIds`（课程挂载的题集，去重且必须已存在，按数组顺序展示）。
+参数非法返回 `400`；修改/删除不存在的课程返回 `400`，查询不存在返回 `404`。
 
 ## 管理员接口
 
