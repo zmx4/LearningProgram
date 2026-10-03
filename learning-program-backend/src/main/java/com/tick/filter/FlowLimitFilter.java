@@ -1,5 +1,6 @@
 package com.tick.filter;
 
+import com.tick.entity.RestBean;
 import com.tick.utils.Const;
 import jakarta.annotation.Resource;
 import jakarta.servlet.FilterChain;
@@ -24,8 +25,9 @@ public class FlowLimitFilter extends HttpFilter {
 
     @Override
     protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
-        String address = request.getRemoteAddr();
-        if (this.tryCount(address))
+        // CORS 预检不执行业务逻辑，不计数也不拦截，
+        // 否则被拉黑时预检返回非 2xx，浏览器只会报 CORS 错误，掩盖限流的真实原因
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || this.tryCount(request.getRemoteAddr()))
             chain.doFilter(request, response);
         else {
             this.writeBlockMessage(response);
@@ -34,9 +36,9 @@ public class FlowLimitFilter extends HttpFilter {
     }
 
     private void writeBlockMessage(HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        resp.setStatus(429);
         resp.setContentType("application/json;charset=UTF-8");
-        resp.getWriter().write("操作频繁,请稍后在试");
+        resp.getWriter().write(RestBean.failure(429, "请求过于频繁，请稍后再试").asJsonString());
     }
 
     private boolean tryCount(String ip) {
