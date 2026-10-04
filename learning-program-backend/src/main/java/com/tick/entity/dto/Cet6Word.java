@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * CET6 词表单词，对应 db_cet6。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

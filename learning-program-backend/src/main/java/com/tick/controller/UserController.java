@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * 用户主页接口：按 id 查询用户的公开基本信息（用户名、邮箱、简介）。
+ */
 @RestController
 @RequestMapping("/api/user")
 public class UserController {

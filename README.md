@@ -46,6 +46,7 @@
 LearningProgram/
 ├── docs/
 │   ├── API.md                    # 接口文档
+│   ├── DATABASE.md              # 数据库说明文档
 │   └── INSTALLATION.md          # 安装与运行文档
 ├── learning-program-backend/    # Spring Boot 后端
 │   └── src/main/java/com/tick/
@@ -67,6 +68,7 @@ LearningProgram/
 ## 文档
 
 - [安装与运行](./docs/INSTALLATION.md)：环境要求、数据库、配置、启动和构建命令。
+- [数据库说明](./docs/DATABASE.md)：表结构、表间关系、积分与级联删除约定和迁移脚本。
 - [接口文档](./docs/API.md)：认证、个人资料、通知、用户和管理员接口。
 
 ## 开发约定

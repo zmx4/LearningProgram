@@ -26,6 +26,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 课程管理服务实现。
+ */
 @Service
 public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
         implements CourseService {
@@ -61,7 +64,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
                 ? normalized.sortOrder()
                 : (int) count() + 1;
         Course course = new Course(null, normalized.title(), normalized.description(),
-                normalized.icon(), sortOrder, LocalDateTime.now());
+                normalized.icon(), sortOrder, normalized.rewardPoints(), LocalDateTime.now());
         save(course);
         saveChapters(course.getId(), normalized.chapters(), Map.of());
         saveSetLinks(course.getId(), normalized.questionSetIds());
@@ -82,6 +85,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
         if (normalized.sortOrder() != null) {
             course.setSortOrder(normalized.sortOrder());
         }
+        course.setRewardPoints(normalized.rewardPoints());
         updateById(course);
 
         // 带已有章节 id 的项原位更新以保留学员进度，其余插入；不在提交列表中的旧章节删除
@@ -163,6 +167,11 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
             throw new IllegalArgumentException("课程描述不能超过 500 个字符");
         }
 
+        Integer rewardPoints = vo.getRewardPoints() == null ? 0 : vo.getRewardPoints();
+        if (rewardPoints < 0 || rewardPoints > 100000) {
+            throw new IllegalArgumentException("奖励积分需在 0 到 100000 之间");
+        }
+
         String icon = vo.getIcon() == null ? null : vo.getIcon().trim();
         if (icon != null && icon.isEmpty()) {
             icon = null;
@@ -203,7 +212,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
             throw new IllegalArgumentException("课程中包含不存在的题集");
         }
 
-        return new Normalized(title, description, icon, vo.getSortOrder(), chapters, setIds);
+        return new Normalized(title, description, icon, vo.getSortOrder(), rewardPoints, chapters, setIds);
     }
 
     private AdminCourseVO toVO(Course course, boolean withChapters) {
@@ -222,11 +231,12 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
                 .toList()
                 : null;
         return new AdminCourseVO(course.getId(), course.getTitle(), course.getDescription(),
-                course.getIcon(), course.getSortOrder(), course.getCreatedAt(),
+                course.getIcon(), course.getSortOrder(), course.getRewardPoints(), course.getCreatedAt(),
                 (int) chapterCount, setIds, chapters);
     }
 
     private record Normalized(String title, String description, String icon, Integer sortOrder,
-                              List<CourseSaveVO.ChapterItem> chapters, List<Integer> questionSetIds) {
+                              Integer rewardPoints, List<CourseSaveVO.ChapterItem> chapters,
+                              List<Integer> questionSetIds) {
     }
 }

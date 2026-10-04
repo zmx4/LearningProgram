@@ -25,6 +25,7 @@ interface CourseDetail {
   title: string
   description: string | null
   icon: string | null
+  rewardPoints: number | null
   questionSets: QuestionSetInfo[] | null
   chapters: Chapter[]
 }
@@ -41,6 +42,7 @@ interface StudyResult {
   studiedCount: number
   totalCount: number
   status: string
+  awardedPoints: number | null
 }
 
 const route = useRoute()
@@ -125,6 +127,9 @@ function markStudied() {
           studiedIds.value = [...studiedIds.value, chapter.id]
         }
         if (data.status === 'completed') {
+          if (data.awardedPoints) {
+            ElMessage.success(t('courses.study.rewardEarnedToast', { points: data.awardedPoints }))
+          }
           justCompleted.value = true
           return
         }
@@ -173,6 +178,9 @@ loadPage()
           <p v-if="questionSets.length" class="study-practice">
             {{ t('courses.study.practiceCount', { count: questionSets.length }) }}
           </p>
+          <p v-if="(detail?.rewardPoints ?? 0) > 0" class="study-reward">
+            {{ t('courses.study.rewardHint', { points: detail?.rewardPoints }) }}
+          </p>
         </div>
         <div class="study-progress">
           <div class="study-progress-text">
@@ -197,6 +205,9 @@ loadPage()
         <el-icon class="celebrate-icon"><CircleCheckFilled /></el-icon>
         <h3>{{ t('courses.study.celebrateTitle') }}</h3>
         <p>{{ t('courses.study.celebrateDescription') }}</p>
+        <p v-if="(detail?.rewardPoints ?? 0) > 0" class="celebrate-reward">
+          {{ t('courses.study.celebrateReward', { points: detail?.rewardPoints }) }}
+        </p>
         <div class="celebrate-actions">
           <button class="secondary-button" type="button" @click="reviewAgain">
             {{ t('courses.study.reviewAgain') }}
@@ -595,6 +606,19 @@ loadPage()
 .dot.active.studied {
   border-color: var(--el-color-success-light-3);
   box-shadow: 0 0 0 2px var(--el-color-success-light-7);
+}
+
+.study-reward {
+  margin: 0;
+  color: var(--el-color-warning);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.celebrate-reward {
+  margin: -8px 0 0;
+  color: var(--el-color-success);
+  font-weight: 600;
 }
 
 .celebrate-card {

@@ -8,6 +8,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 单词测试成绩记录，对应 db_word_test_record。score 按正确率计算。
+ */
 @Data
 @TableName("db_word_test_record")
 public class WordTestRecord {

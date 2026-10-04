@@ -4,6 +4,9 @@ import jakarta.validation.constraints.Email;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
+/**
+ * 重置密码请求体（携带邮箱验证码与新密码）。
+ */
 @Data
 public class EmailRestVO  {
     @Email

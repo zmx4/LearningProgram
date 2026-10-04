@@ -8,6 +8,9 @@ import lombok.Data;
 
 import java.time.LocalDate;
 
+/**
+ * 每日签到记录，对应 db_check_in。(account_id, checkin_date) 唯一，一天一次。
+ */
 @Data
 @TableName("db_check_in")
 public class CheckInRecord {

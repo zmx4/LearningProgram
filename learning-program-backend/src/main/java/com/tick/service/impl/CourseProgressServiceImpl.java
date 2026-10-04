@@ -6,6 +6,7 @@ import com.tick.entity.dto.Course;
 import com.tick.entity.dto.CourseChapter;
 import com.tick.entity.dto.CourseProgress;
 import com.tick.entity.dto.CourseQuestionSet;
+import com.tick.entity.dto.CourseReward;
 import com.tick.entity.dto.CourseStudyLog;
 import com.tick.entity.dto.QuestionSet;
 import com.tick.entity.dto.QuestionSetItem;
@@ -22,10 +23,13 @@ import com.tick.mapper.CourseChapterMapper;
 import com.tick.mapper.CourseMapper;
 import com.tick.mapper.CourseProgressMapper;
 import com.tick.mapper.CourseQuestionSetMapper;
+import com.tick.mapper.CourseRewardMapper;
 import com.tick.mapper.CourseStudyLogMapper;
 import com.tick.mapper.QuestionSetItemMapper;
 import com.tick.mapper.QuestionSetMapper;
+import com.tick.service.AccountPointsService;
 import com.tick.service.CourseProgressService;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +43,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 课程学习进度服务实现。
+ */
 @Service
 public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper, CourseProgress>
         implements CourseProgressService {
@@ -55,19 +62,25 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
     private final CourseStudyLogMapper studyLogMapper;
     private final QuestionSetMapper setMapper;
     private final QuestionSetItemMapper setItemMapper;
+    private final CourseRewardMapper courseRewardMapper;
+    private final AccountPointsService accountPointsService;
 
     public CourseProgressServiceImpl(CourseMapper courseMapper,
                                      CourseChapterMapper chapterMapper,
                                      CourseQuestionSetMapper questionSetMapper,
                                      CourseStudyLogMapper studyLogMapper,
                                      QuestionSetMapper setMapper,
-                                     QuestionSetItemMapper setItemMapper) {
+                                     QuestionSetItemMapper setItemMapper,
+                                     CourseRewardMapper courseRewardMapper,
+                                     AccountPointsService accountPointsService) {
         this.courseMapper = courseMapper;
         this.chapterMapper = chapterMapper;
         this.questionSetMapper = questionSetMapper;
         this.studyLogMapper = studyLogMapper;
         this.setMapper = setMapper;
         this.setItemMapper = setItemMapper;
+        this.courseRewardMapper = courseRewardMapper;
+        this.accountPointsService = accountPointsService;
     }
 
     @Override
@@ -119,7 +132,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
                         .orderByAsc(CourseQuestionSet::getSortOrder).orderByAsc(CourseQuestionSet::getId))
                 .stream().map(this::toQuestionSetVO).filter(Objects::nonNull).toList();
         return new CourseDetailVO(course.getId(), course.getTitle(), course.getDescription(), course.getIcon(),
-                questionSets, chapters);
+                course.getRewardPoints(), questionSets, chapters);
     }
 
     private CourseQuestionSetVO toQuestionSetVO(CourseQuestionSet link) {
@@ -188,7 +201,35 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
         int studied = Math.toIntExact(lambdaQuery()
                 .eq(CourseProgress::getAccountId, accountId)
                 .eq(CourseProgress::getCourseId, courseId).count());
-        return new CourseStudyResultVO(studied, chapterCount, statusOf(studied, chapterCount));
+        String status = statusOf(studied, chapterCount);
+        Integer awardedPoints = STATUS_COMPLETED.equals(status)
+                ? awardCourseRewardOnce(accountId, course)
+                : null;
+        return new CourseStudyResultVO(studied, chapterCount, status, awardedPoints);
+    }
+
+    /**
+     * 课程完成时发放奖励积分；(account_id, course_id) 唯一保证只发一次，返回本次实际发放的积分。
+     */
+    private Integer awardCourseRewardOnce(Integer accountId, Course course) {
+        int reward = course.getRewardPoints() == null ? 0 : course.getRewardPoints();
+        if (reward <= 0) {
+            return null;
+        }
+        Long granted = courseRewardMapper.selectCount(new LambdaQueryWrapper<CourseReward>()
+                .eq(CourseReward::getAccountId, accountId)
+                .eq(CourseReward::getCourseId, course.getId()));
+        if (granted != null && granted > 0) {
+            return null;
+        }
+        try {
+            courseRewardMapper.insert(new CourseReward(null, accountId, course.getId(), reward, LocalDateTime.now()));
+        } catch (DuplicateKeyException alreadyGranted) {
+            // 并发上报同时触发发放时，唯一键兜底，只发一次
+            return null;
+        }
+        accountPointsService.addPoints(accountId, reward);
+        return reward;
     }
 
     private Map<Integer, List<CourseChapter>> chaptersGroupedByCourse() {

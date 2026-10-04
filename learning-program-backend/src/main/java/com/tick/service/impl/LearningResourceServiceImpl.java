@@ -22,6 +22,9 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 学习资源服务实现。
+ */
 @Service
 public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMapper, LearningResource>
         implements LearningResourceService {

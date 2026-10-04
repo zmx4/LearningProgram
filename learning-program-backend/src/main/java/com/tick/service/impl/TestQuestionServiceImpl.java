@@ -22,6 +22,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 题库题目服务实现。
+ */
 @Service
 public class TestQuestionServiceImpl extends ServiceImpl<TestQuestionMapper, TestQuestion>
         implements TestQuestionService {

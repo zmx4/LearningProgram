@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 词典词条，对应 db_dictionary。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

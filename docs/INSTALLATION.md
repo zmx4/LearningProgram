@@ -15,42 +15,24 @@
 
 ## 数据库准备
 
-后端默认使用名为 `learning` 的 MySQL 数据库。首次部署时可以执行：
+后端默认使用名为 `learning` 的 MySQL 数据库。首次部署时先创建数据库：
 
 ```sql
 CREATE DATABASE IF NOT EXISTS learning
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
-
-USE learning;
-
-CREATE TABLE IF NOT EXISTS db_account (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(32) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(128) NOT NULL UNIQUE,
-    role VARCHAR(32) NOT NULL DEFAULT 'user',
-    register_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS db_notification (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    account_id INT NOT NULL,
-    title VARCHAR(128) NOT NULL,
-    content VARCHAR(1000) NOT NULL,
-    type VARCHAR(32) NOT NULL DEFAULT 'system',
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_notification_account
-        FOREIGN KEY (account_id) REFERENCES db_account(id)
-        ON DELETE CASCADE,
-    INDEX idx_notification_account_created (account_id, created_at)
-);
 ```
 
-如果数据库中已经存在同名表，请先确认其字段与后端 `Account`、`Notification` 实体一致。`password` 字段需要能够保存 BCrypt 密文，建议使用 `VARCHAR(255)`。
+完整的表结构、表间关系和字段说明见 [数据库说明](./DATABASE.md)。初始化表结构有两种方式：
 
-项目中的数据库迁移脚本位于 `learning-program-backend/src/main/resources/db/migration/`，已有数据库升级时应按实际结构执行。
+1. **按文档建表**：在空库中执行 [DATABASE.md](./DATABASE.md) 各表定义对应的建表语句（推荐，一次性完成全部 20 张表）。
+2. **按迁移脚本升级**：`learning-program-backend/src/main/resources/db/migration/` 中的 V7–V14 脚本覆盖题库、课程、学习进度、资源和积分奖励等表；账号、通知、签到等基础表（V1–V6）未纳入仓库，同样以 [DATABASE.md](./DATABASE.md) 为准手工创建。已有数据库升级时，按序号执行缺失的脚本即可。
+
+注意事项：
+
+- `password` 字段保存 BCrypt 密文，需使用 `VARCHAR(255)`。
+- 迁移脚本未启用 Flyway 自动执行，需要手工按序号运行。
+- 如果数据库中已存在同名表，请先对照 [DATABASE.md](./DATABASE.md) 确认字段与后端实体一致，避免启动后出现字段映射错误。
 
 ## 后端配置
 

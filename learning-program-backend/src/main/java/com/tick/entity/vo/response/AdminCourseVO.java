@@ -20,6 +20,7 @@ public class AdminCourseVO {
     private String description;
     private String icon;
     private Integer sortOrder;
+    private Integer rewardPoints;
     private LocalDateTime createdAt;
     private Integer chapterCount;
     private List<Integer> questionSetIds;

@@ -12,6 +12,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 
+/**
+ * CORS 过滤器：把请求 Origin 回显到 Access-Control-Allow-Origin，放行跨域访问。
+ */
 @Component
 @Order(Const.ORDER_CORS)
 public class CorsFilter extends HttpFilter {

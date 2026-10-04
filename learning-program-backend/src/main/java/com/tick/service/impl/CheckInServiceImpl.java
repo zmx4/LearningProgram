@@ -15,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 每日签到服务实现。
+ */
 @Service
 public class CheckInServiceImpl extends ServiceImpl<CheckInRecordMapper, CheckInRecord>
         implements CheckInService {

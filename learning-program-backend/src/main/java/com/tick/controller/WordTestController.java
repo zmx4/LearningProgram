@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 单词测试接口：提交成绩并查询个人历史。成绩按正确率计分，词表来源见 V8 相关说明。
+ */
 @RestController
 @RequestMapping("/api/tests/words")
 public class WordTestController {

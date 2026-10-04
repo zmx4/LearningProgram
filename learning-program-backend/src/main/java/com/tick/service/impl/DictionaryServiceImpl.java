@@ -6,6 +6,9 @@ import com.tick.mapper.DictionaryMapper;
 import com.tick.service.DictionaryService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 词典查询服务实现。
+ */
 @Service
 public class DictionaryServiceImpl extends ServiceImpl<DictionaryMapper, Dictionary>
         implements DictionaryService {

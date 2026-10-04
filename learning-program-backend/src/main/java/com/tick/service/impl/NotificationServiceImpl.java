@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 站内通知服务实现。
+ */
 @Service
 public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Notification>
         implements NotificationService {

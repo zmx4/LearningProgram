@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * CET 词表接口，登录用户可随机拉取 CET4 / CET6 单词，供每日一词与单词测试使用。
+ */
 @RestController
 @RequestMapping("/api/dictionary")
 public class CetWordController {

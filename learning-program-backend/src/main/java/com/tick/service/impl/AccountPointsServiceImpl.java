@@ -4,6 +4,9 @@ import com.tick.mapper.AccountPointsMapper;
 import com.tick.service.AccountPointsService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 积分总账服务实现。
+ */
 @Service
 public class AccountPointsServiceImpl implements AccountPointsService {
     private final AccountPointsMapper accountPointsMapper;

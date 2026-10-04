@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 词典查词接口，支持 query 参数与路径参数两种方式查词。
+ */
 @RestController
 @RequestMapping("/api/dictionary")
 public class DictionaryController {

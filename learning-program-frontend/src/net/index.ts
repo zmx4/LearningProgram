@@ -1,7 +1,19 @@
+/**
+ * 网络请求统一封装。
+ *
+ * - 后端统一返回 ApiResponse（code/data/message），本模块负责解析并分发给回调
+ * - 登录态（token + 过期时间 + 用户名 + 角色）保存在 localStorage / sessionStorage 的 authorize 项中
+ * - 每次请求由 axios 拦截器自动注入 Authorization 头
+ * - 401 视为登录过期，清除本地登录态并跳转登录页
+ *
+ * 业务代码使用底部导出的 post / get / put / del（自动带 token）
+ * 与 publicPost / publicGet（匿名接口，不带头）。
+ */
 import axios, { type AxiosRequestConfig, isAxiosError } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+// 登录态在 storage 中的键名，值为序列化后的 AuthStorage
 const authItemName = 'authorize'
 
 interface ApiResponse<T> {
@@ -29,6 +41,7 @@ type FailureCallback = (message: string, status?: number, url?: string) => void
 type ErrorCallback = (error: unknown) => void
 type Headers = AxiosRequestConfig['headers']
 
+// 组装带 token 的请求头；无 token 时返回空对象
 const accessHeader = (): Headers => {
     const token = takeAccessToken()
     if (!token) {
@@ -45,6 +58,7 @@ axios.interceptors.request.use((config) => {
     return config
 })
 
+// 网络层错误（非业务失败）：统一弹出提示；429 展示后端限流消息
 const defaultError: ErrorCallback = (error) => {
     console.error(error)
 
@@ -61,6 +75,7 @@ const defaultFailure: FailureCallback = (message, status, url) => {
     ElMessage.warning(message)
 }
 
+// 读取本地 token；不存在或已过期时清理本地登录态并提示，返回 null
 function takeAccessToken(): string | null {
     const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
     if (!str) {
@@ -84,6 +99,7 @@ function takeAccessToken(): string | null {
     return authObj.token
 }
 
+// 保存登录态：remember 为真写 localStorage（持久），否则写 sessionStorage（随会话）
 function storeAccessToken(
     remember: boolean,
     token: string,
@@ -96,6 +112,7 @@ function storeAccessToken(
     storage.setItem(authItemName, JSON.stringify(authObj))
 }
 
+// 清除登录态；redirect 为真时跳转登录页（401 过期场景）
 function deleteAccessToken(redirect = false): void {
     localStorage.removeItem(authItemName)
     sessionStorage.removeItem(authItemName)
@@ -105,6 +122,7 @@ function deleteAccessToken(redirect = false): void {
     }
 }
 
+// 解析统一响应体：code 200 分发数据；401 清登录态并跳登录页；其余把后端 message 交给 failure
 function handleResponse<T>(
     response: ApiResponse<T>,
     url: string,
@@ -176,6 +194,7 @@ function internalDelete<T>(
         .catch(error)
 }
 
+// 登录：表单编码提交给 Spring Security 的 /api/auth/login，成功后保存登录态
 function login(
     username: string,
     password: string,
@@ -214,6 +233,7 @@ function publicPost<T>(
     internalPost<T>(url, data, {}, success, failure)
 }
 
+// 登出：请求后端把 token 加入黑名单，同时清除本地登录态
 function logout(success: () => void, failure: FailureCallback = defaultFailure): void {
     internalPost<null>(
         '/api/auth/logout',
@@ -263,10 +283,12 @@ function publicGet<T>(
     internalGet<T>(url, {}, success, failure, error)
 }
 
+// 路由守卫用：本地是否持有有效登录态
 function unauthorized(): boolean {
     return !takeAccessToken()
 }
 
+// 读取当前登录用户名（登录时缓存），未登录返回空串
 function currentUsername(): string {
     const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
     if (!str) return ''
@@ -278,6 +300,7 @@ function currentUsername(): string {
     }
 }
 
+// 读取当前登录角色（user / admin），供路由守卫判断 adminOnly 路由
 function currentRole(): string {
     const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
     if (!str) return ''

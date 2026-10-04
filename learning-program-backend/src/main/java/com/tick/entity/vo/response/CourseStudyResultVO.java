@@ -14,4 +14,6 @@ public class CourseStudyResultVO {
     private Integer studiedCount;
     private Integer totalCount;
     private String status;
+    /** 本次上报后新发放的课程奖励积分，未发放时为 null */
+    private Integer awardedPoints;
 }

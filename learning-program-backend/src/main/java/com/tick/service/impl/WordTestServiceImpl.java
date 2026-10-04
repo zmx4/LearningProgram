@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 单词测试服务实现。
+ */
 @Service
 public class WordTestServiceImpl extends ServiceImpl<WordTestRecordMapper, WordTestRecord>
         implements WordTestService {

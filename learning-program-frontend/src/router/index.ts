@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { currentRole, unauthorized } from '@/net'
 
+/** 路由表：welcome 为登录注册壳，MainView 承载登录后页面（含侧边栏），AdminView 承载管理员后台。 */
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
@@ -160,6 +161,7 @@ const router = createRouter({
     routes
 })
 
+/** 全局路由守卫：受保护路径未登录跳登录页；adminOnly 路由非 admin 拒绝；已登录用户访问 welcome 页跳首页。 */
 router.beforeEach((to) => {
     const isUnauthenticated = unauthorized()
 

@@ -23,6 +23,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * JWT 工具：签发与解析 token、计算过期时间。登出时把 token 加入 Redis 黑名单，
+ * 解析前先校验黑名单，实现无状态会话的主动失效。
+ */
 @Component
 public class JwtUtils {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);

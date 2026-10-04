@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * 积分总账查询接口，登录用户可查看自己的总积分。
+ */
 @RestController
 @RequestMapping("/api/points")
 public class AccountPointsController {

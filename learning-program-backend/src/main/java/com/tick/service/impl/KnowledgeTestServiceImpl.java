@@ -21,6 +21,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 知识测试服务实现。
+ */
 @Service
 public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMapper, KnowledgeTestRecord>
         implements KnowledgeTestService {

@@ -22,11 +22,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
+import java.security.SecureRandom;
 import java.sql.Wrapper;
 import java.util.Date;
 
+/**
+ * 账号服务实现。
+ */
 @Service
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Value("${spring.security.email}")
     boolean enabledEmailVerification;
@@ -116,6 +122,34 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         account.setPassword(encoder.encode(vo.getNewPassword()));
         if (!this.updateById(account)) return "内部错误,请联系管理员";
         return null;
+    }
+
+    @Override
+    public String resetPassword(Integer accountId) {
+        Account account = this.getById(accountId);
+        if (account == null) return null;
+        String newPassword = this.generateRandomPassword();
+        account.setPassword(encoder.encode(newPassword));
+        if (!this.updateById(account)) return null;
+        notificationService.save(new com.tick.entity.dto.Notification(
+                null,
+                account.getId(),
+                "登录密码已重置",
+                "管理员重置了你的账号密码，请使用新密码登录后及时修改。",
+                "system",
+                false,
+                new Date()
+        ));
+        return newPassword;
+    }
+
+    private String generateRandomPassword() {
+        final String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        StringBuilder password = new StringBuilder(10);
+        for (int i = 0; i < 10; i++) {
+            password.append(chars.charAt(RANDOM.nextInt(chars.length())));
+        }
+        return password.toString();
     }
 
     @Override

@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * 注册与密码重置接口。/api/auth/** 在 SecurityConfiguration 中放行匿名访问；
+ * spring.security.email 开启后注册与重置需要邮箱验证码，具体校验规则见 AccountServiceImpl。
+ */
 @Validated
 @RestController
 @RequestMapping("/api/auth")

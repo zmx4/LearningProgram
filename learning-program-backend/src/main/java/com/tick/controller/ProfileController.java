@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * 个人资料接口：当前登录用户的资料查看与更新、修改密码。
+ */
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {

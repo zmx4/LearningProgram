@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 站内通知接口：当前用户的通知列表、单条已读与全部已读。
+ */
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {

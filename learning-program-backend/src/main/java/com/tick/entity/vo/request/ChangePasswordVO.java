@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
+/**
+ * 修改密码请求体（已登录用户）。
+ */
 @Data
 public class ChangePasswordVO {
     @NotBlank(message = "当前密码不能为空")

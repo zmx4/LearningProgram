@@ -14,6 +14,9 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.util.Map;
 
+/**
+ * 每日签到接口：按月查询签到日历、连签与积分状态，签到按连签天数发放积分。
+ */
 @RestController
 @RequestMapping("/api/check-in")
 public class CheckInController {

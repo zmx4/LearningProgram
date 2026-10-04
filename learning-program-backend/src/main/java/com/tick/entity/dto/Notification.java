@@ -11,6 +11,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Date;
 
+/**
+ * 站内通知，对应 db_notification。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

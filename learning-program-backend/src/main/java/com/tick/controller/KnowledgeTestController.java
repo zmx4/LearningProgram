@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 知识测试接口：提交成绩并查询个人历史。类型模式与题集模式二选一，
+ * 成绩记录 typeId/setId 与名称快照，见 V12 迁移说明。
+ */
 @RestController
 @RequestMapping("/api/tests/knowledge")
 public class KnowledgeTestController {

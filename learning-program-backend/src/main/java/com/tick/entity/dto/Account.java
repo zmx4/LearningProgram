@@ -8,6 +8,10 @@ import lombok.Data;
 
 import java.util.Date;
 
+/**
+ * 用户账号，对应 db_account。role 取值 user / admin；
+ * points 为早期遗留字段，有效积分以 {@link AccountPoints} 为准。
+ */
 @Data
 @TableName("db_account")
 public class Account {

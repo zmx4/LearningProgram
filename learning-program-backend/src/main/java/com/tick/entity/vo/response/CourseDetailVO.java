@@ -17,6 +17,8 @@ public class CourseDetailVO {
     private String title;
     private String description;
     private String icon;
+    /** 完成课程可获得的奖励积分，0 表示不奖励 */
+    private Integer rewardPoints;
     private List<CourseQuestionSetVO> questionSets;
     private List<CourseChapterVO> chapters;
 }

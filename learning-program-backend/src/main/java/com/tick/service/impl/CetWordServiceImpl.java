@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * CET 词表服务实现。
+ */
 @Service
 public class CetWordServiceImpl implements CetWordService {
     private final Cet4WordMapper cet4WordMapper;

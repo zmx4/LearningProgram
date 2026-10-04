@@ -11,23 +11,18 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 课程，章节内容存放在 {@link CourseChapter}，练习题集通过 db_course_question_set 关联。
+ * 完成课程的积分发放记录，(account_id, course_id) 唯一，保证每门课程的奖励只发放一次。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("db_course")
-public class Course {
+@TableName("db_course_reward")
+public class CourseReward {
     @TableId(type = IdType.AUTO)
     private Integer id;
-    private String title;
-    private String description;
-    private String icon;
-    @TableField("sort_order")
-    private Integer sortOrder;
-    /** 学员学完全部章节后一次性发放的奖励积分，0 表示不奖励 */
-    @TableField("reward_points")
-    private Integer rewardPoints;
+    private Integer accountId;
+    private Integer courseId;
+    private Integer points;
     @TableField("created_at")
     private LocalDateTime createdAt;
 }

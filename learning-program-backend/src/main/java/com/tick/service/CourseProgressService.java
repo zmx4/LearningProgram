@@ -6,6 +6,10 @@ import com.tick.entity.vo.response.CourseProgressOverviewVO;
 import com.tick.entity.vo.response.CourseStudyProgressVO;
 import com.tick.entity.vo.response.CourseStudyResultVO;
 
+/**
+ * 课程学习进度服务：进度总览、课程详情、单课程进度与章节学习记录上报。
+ * 课程完成判定：学完课程内全部章节；完成时的积分奖励见实现类。
+ */
 public interface CourseProgressService {
     /**
      * 查询学习进度总览：主页统计与我的课程列表。

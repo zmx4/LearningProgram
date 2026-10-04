@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
-import {Delete, Plus, Refresh, UserFilled} from '@element-plus/icons-vue'
+import {Delete, Key, Plus, Refresh, UserFilled} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useI18n} from 'vue-i18n'
 import {del, get, post, put} from '@/net'
@@ -23,6 +23,11 @@ interface BatchCreateResult {
   createdCount: number
   failedCount: number
   errors: BatchCreateError[]
+}
+
+interface ResetPasswordResult {
+  username: string
+  password: string
 }
 
 const users = ref<AdminUser[]>([])
@@ -56,6 +61,20 @@ async function removeUser(user: AdminUser) {
     })
   } catch {
     // 用户取消确认时不执行删除
+  }
+}
+
+async function resetPassword(user: AdminUser) {
+  try {
+    await ElMessageBox.confirm(t('admin.confirmResetPassword', { username: user.username }), t('admin.resetPasswordTitle'), {type: 'warning'})
+    put<ResetPasswordResult>(`/api/admin/users/${user.id}/password`, null, (data) => {
+      ElMessageBox.alert(data.password, t('admin.resetPasswordResultTitle', { username: data.username }), {
+        confirmButtonText: t('admin.resetPasswordAck')
+      }).catch(() => {})
+      loadUsers()
+    })
+  } catch {
+    // 用户取消确认时不执行重置
   }
 }
 
@@ -153,9 +172,16 @@ onMounted(loadUsers)
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :label="t('admin.action')" width="90">
+        <el-table-column :label="t('admin.action')" width="170">
           <template #default="{ row }">
-            <el-button text type="danger" :icon="Delete" @click="removeUser(row)">{{ t('admin.delete') }}</el-button>
+            <div class="row-actions">
+              <el-button text type="primary" :icon="Key" @click="resetPassword(row)">
+                {{ t('admin.resetPassword') }}
+              </el-button>
+              <el-button text type="danger" :icon="Delete" @click="removeUser(row)">
+                {{ t('admin.delete') }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>

@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 管理员平台接口：用户列表、角色调整、删除、批量创建、随机密码重置与定向通知发送。
+ * 挂在 /api/admin 下，由 SecurityConfiguration 限定为 admin 角色。
+ */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -73,6 +77,22 @@ public class AdminController {
             return RestBean.failure(404, "用户不存在");
         }
         return RestBean.success();
+    }
+
+    @PutMapping("/users/{id}/password")
+    public RestBean<Map<String, String>> resetPassword(@PathVariable Integer id) {
+        Account account = accountService.getById(id);
+        if (account == null) {
+            return RestBean.failure(404, "用户不存在");
+        }
+        String newPassword = accountService.resetPassword(id);
+        if (newPassword == null) {
+            return RestBean.failure(500, "内部错误,请联系管理员");
+        }
+        return RestBean.success(Map.of(
+                "username", account.getUsername(),
+                "password", newPassword
+        ));
     }
 
     @PostMapping("/users/batch")

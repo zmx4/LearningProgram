@@ -6,6 +6,9 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
+/**
+ * 注册与重置密码请求体。开启邮箱验证时 code 必填。
+ */
 @Data
 public class EmailRegisterVO {
     @Email

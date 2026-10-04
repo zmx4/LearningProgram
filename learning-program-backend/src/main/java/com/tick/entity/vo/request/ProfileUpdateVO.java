@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 个人资料更新请求体。
+ */
 @Data
 public class ProfileUpdateVO {
     @NotBlank(message = "昵称不能为空")

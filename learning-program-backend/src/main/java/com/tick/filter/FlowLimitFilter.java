@@ -16,6 +16,10 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 基于 Redis 的 IP 限流过滤器：超过阈值后拉黑一段时间并返回 429。
+ * OPTIONS 预检不计数也不拦截——被拉黑时预检若返回非 2xx，浏览器只会报 CORS 错误，掩盖限流真实原因。
+ */
 @Component
 @Order(Const.ORDER_LIMIT)
 public class FlowLimitFilter extends HttpFilter {

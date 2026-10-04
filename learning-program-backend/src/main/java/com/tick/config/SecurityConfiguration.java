@@ -29,6 +29,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import java.io.IOException;
 import java.io.PrintWriter;
 
+/**
+ * Spring Security 配置：/api/auth/** 放行匿名，/api/admin/** 限定 admin 角色，其余请求需认证；
+ * 无状态会话，登录 / 登出使用自定义成功与失败处理器。
+ */
 @Configuration
 public class SecurityConfiguration {
 

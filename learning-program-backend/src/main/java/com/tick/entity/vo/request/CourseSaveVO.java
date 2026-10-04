@@ -14,6 +14,8 @@ public class CourseSaveVO {
     private String description;
     private String icon;
     private Integer sortOrder;
+    /** 学员完成全部章节后一次性发放的奖励积分，null 视为 0 */
+    private Integer rewardPoints;
     private List<ChapterItem> chapters;
     private List<Integer> questionSetIds;
 

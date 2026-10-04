@@ -7,15 +7,33 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * 学习资源服务：上传、展示范围控制与文件读取。
+ */
 public interface LearningResourceService {
+    /**
+     * 学员端资源列表，仅包含 visible 为真的资源。
+     */
     List<ResourceVO> listVisible();
 
+    /**
+     * 管理端资源列表，包含隐藏资源。
+     */
     List<ResourceVO> listAll();
 
+    /**
+     * 上传资源文件（单个上限 50MB，扩展名仅允许字母数字）并保存元信息。
+     */
     ResourceVO upload(MultipartFile file, String title, String description, boolean visible, Integer accountId);
 
+    /**
+     * 设置资源是否在学员端展示。
+     */
     void setVisible(Integer id, boolean visible);
 
+    /**
+     * 删除资源元信息并清理磁盘文件。
+     */
     void delete(Integer id);
 
     /**

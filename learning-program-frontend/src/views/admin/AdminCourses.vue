@@ -26,6 +26,7 @@ interface AdminCourse {
   description: string | null
   icon: string | null
   sortOrder: number
+  rewardPoints: number
   createdAt: string
   chapterCount: number
   questionSetIds: number[] | null
@@ -46,6 +47,7 @@ const form = reactive({
   description: '',
   icon: '',
   sortOrder: 0,
+  rewardPoints: 0,
   questionSetIds: [] as number[],
   chapters: [] as ChapterItem[],
 })
@@ -84,6 +86,7 @@ function openCreate() {
   form.description = ''
   form.icon = ''
   form.sortOrder = courses.value.length + 1
+  form.rewardPoints = 0
   form.questionSetIds = []
   form.chapters = []
   formVisible.value = true
@@ -96,6 +99,7 @@ function openEdit(course: AdminCourse) {
     form.description = detail.description ?? ''
     form.icon = detail.icon ?? ''
     form.sortOrder = detail.sortOrder
+    form.rewardPoints = detail.rewardPoints ?? 0
     form.questionSetIds = detail.questionSetIds ?? []
     form.chapters = (detail.chapters ?? []).map(chapter => ({
       id: chapter.id,
@@ -136,6 +140,7 @@ function saveCourse() {
     description: form.description,
     icon: form.icon,
     sortOrder: form.sortOrder,
+    rewardPoints: form.rewardPoints,
     questionSetIds: form.questionSetIds,
     chapters: form.chapters.map((chapter, index) => ({
       id: chapter.id,
@@ -208,6 +213,10 @@ onMounted(() => {
           </el-form-item>
           <el-form-item :label="t('admin.courseSort')">
             <el-input-number v-model="form.sortOrder" :min="0" :max="9999"/>
+          </el-form-item>
+          <el-form-item :label="t('admin.courseRewardPoints')">
+            <el-input-number v-model="form.rewardPoints" :min="0" :max="100000"/>
+            <span class="markdown-hint">{{ t('admin.courseRewardPointsHint') }}</span>
           </el-form-item>
           <el-form-item :label="t('admin.selectQuestionSets')" class="inline-grow">
             <el-select

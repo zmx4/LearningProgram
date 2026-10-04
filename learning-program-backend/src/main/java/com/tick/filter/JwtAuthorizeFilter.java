@@ -17,6 +17,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * JWT 认证过滤器：解析并校验 Authorization 头中的 token，有效时把账号 id 写入请求属性
+ * （控制器经 request.getAttribute("id") 获取当前用户），无效则放行，由安全配置决定匿名访问结果。
+ */
 @Component
 public class JwtAuthorizeFilter extends OncePerRequestFilter {
 

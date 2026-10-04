@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
 
+/**
+ * 题目类型服务实现。
+ */
 @Service
 public class TestTypeServiceImpl extends ServiceImpl<TestTypeMapper, TestType> implements TestTypeService {
     private static final Pattern CODE_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,50}");

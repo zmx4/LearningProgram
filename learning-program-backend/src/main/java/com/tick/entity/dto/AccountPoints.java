@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+/**
+ * 积分总账，对应 db_account_points，每用户一行。
+ */
 @Data
 @TableName("db_account_points")
 public class AccountPoints {
