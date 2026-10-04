@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { get, post } from '@/net'
+import { renderMarkdown } from '@/utils/markdown'
 import TestStatistics from '@/components/TestStatistics.vue'
 
 type QuestionKind = 'single' | 'multiple' | 'blank'
@@ -242,6 +243,9 @@ const reviewItems = computed(() => {
   })
 })
 
+const renderedAnalysis = (item: { question: TestQuestion }): string =>
+    renderMarkdown(item.question.content.analysis)
+
 function optionText(question: TestQuestion, key: string): string {
   const option = question.content.options?.find(item => item.key === key)
   return option ? `${key}. ${option.text}` : key
@@ -411,10 +415,10 @@ onMounted(() => {
             {{ displayAnswer(item.question, item.question.content.answer ?? []) }}
           </p>
         </div>
-        <p v-if="item.question.content.analysis" class="review-analysis">
+        <div v-if="renderedAnalysis(item)" class="review-analysis">
           <span class="review-label">{{ t('tests.knowledge.analysis') }}</span>
-          {{ item.question.content.analysis }}
-        </p>
+          <div class="markdown-body" v-html="renderedAnalysis(item)"></div>
+        </div>
       </article>
     </section>
 
@@ -783,6 +787,11 @@ onMounted(() => {
   background: var(--el-fill-color-light);
   font-size: 13px;
   line-height: 1.6;
+}
+
+/* 解析区内的 Markdown 沿用解析块的紧凑字号 */
+.review-analysis .markdown-body {
+  font-size: 13px;
 }
 
 .history-table {

@@ -378,7 +378,7 @@ Authorization: ******
 - `stem`：题干，必填
 - `options`：选项数组，元素为 `{ "key": "A", "text": "..." }`；**填空题恒为空数组**
 - `answer`：答案数组。单选恰好 1 项且为选项 `key`；多选至少 2 项且均为选项 `key`；填空题按空格顺序每空一项
-- `analysis`：解析，可选，没有时为 `null`
+- `analysis`：解析，可选，没有时为 `null`；内容为 Markdown 文本，学员端渲染时内嵌 HTML 会被转义
 
 `typeId` 不存在返回 `404`，其他参数非法返回 `400`。
 
@@ -551,8 +551,8 @@ Authorization: Bearer <admin-token>
 ```
 
 请求体为 `title`（必填，≤100 字符）、`description`（≤500）、`icon`（emoji，≤16）、`sortOrder`（新建缺省排在末尾，
-修改缺省保持原值）、`chapters`（章节列表，按数组顺序排序：`title` 必填 ≤150 字符、`content` 纯文本、
-`id` 为已有章节 id 时原位更新以保留学员进度，未带 id 的新增，缺失的旧章节删除）、
+修改缺省保持原值）、`chapters`（章节列表，按数组顺序排序：`title` 必填 ≤150 字符、`content` 为
+Markdown 文本（前端渲染，内嵌 HTML 会被转义）、`id` 为已有章节 id 时原位更新以保留学员进度，未带 id 的新增，缺失的旧章节删除）、
 `questionSetIds`（课程挂载的题集，去重且必须已存在，按数组顺序展示）。
 参数非法返回 `400`；修改/删除不存在的课程返回 `400`，查询不存在返回 `404`。
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref} from 'vue'
-import {Collection, Delete, Edit, EditPen, Plus} from '@element-plus/icons-vue'
+import {Collection, Delete, Edit, EditPen, Plus, View} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useI18n} from 'vue-i18n'
 import {del, get, post, put} from '@/net'
+import {renderMarkdown} from '@/utils/markdown'
 
 interface TestType {
   id: number
@@ -35,6 +36,7 @@ const types = ref<TestType[]>([])
 const questions = ref<TestQuestion[]>([])
 const loading = ref(false)
 const saving = ref(false)
+const analysisPreview = ref(false)
 const typeSaving = ref(false)
 const formVisible = ref(false)
 const typeFormVisible = ref(false)
@@ -163,6 +165,7 @@ function openCreate() {
   form.answerKeys = []
   form.blankAnswers = ['']
   form.analysis = ''
+  analysisPreview.value = false
   formVisible.value = true
 }
 
@@ -176,6 +179,7 @@ function openEdit(question: TestQuestion) {
   form.answerKeys = [...question.content.answer]
   form.blankAnswers = question.kind === 'blank' ? [...question.content.answer] : ['']
   form.analysis = question.content.analysis ?? ''
+  analysisPreview.value = false
   formVisible.value = true
 }
 
@@ -350,7 +354,18 @@ onMounted(() => {
         </el-form-item>
 
         <el-form-item :label="t('admin.analysis')">
-          <el-input v-model="form.analysis" type="textarea" :rows="2" maxlength="1000"/>
+          <div class="analysis-editor">
+            <el-button
+                text
+                type="primary"
+                :icon="analysisPreview ? Edit : View"
+                class="analysis-toggle"
+                @click="analysisPreview = !analysisPreview">
+              {{ analysisPreview ? t('admin.editMode') : t('admin.preview') }}
+            </el-button>
+            <el-input v-if="!analysisPreview" v-model="form.analysis" type="textarea" :rows="2" maxlength="1000"/>
+            <div v-else class="analysis-preview markdown-body" v-html="renderMarkdown(form.analysis)"></div>
+          </div>
         </el-form-item>
         <div class="form-actions">
           <el-button @click="formVisible = false">{{ t('admin.cancel') }}</el-button>
@@ -523,6 +538,26 @@ h2 {
   flex-direction: column;
   gap: 8px;
   align-items: flex-start;
+}
+
+.analysis-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.analysis-toggle {
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.analysis-preview {
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px dashed var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-bg-color);
 }
 
 .option-row {

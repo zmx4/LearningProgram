@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ArrowRight, Back, Check, CircleCheckFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { get, post } from '@/net'
+import { renderMarkdown } from '@/utils/markdown'
 
 interface Chapter {
   id: number
@@ -60,6 +61,7 @@ const chapterShownAt = ref(Date.now())
 const chapters = computed(() => detail.value?.chapters ?? [])
 const questionSets = computed(() => detail.value?.questionSets ?? [])
 const currentChapter = computed(() => chapters.value[current.value] ?? null)
+const renderedContent = computed(() => renderMarkdown(currentChapter.value?.content))
 const totalCount = computed(() => chapters.value.length)
 const studiedCount = computed(() => studiedIds.value.length)
 const allStudied = computed(() => totalCount.value > 0 && studiedCount.value >= totalCount.value)
@@ -217,7 +219,7 @@ loadPage()
             </span>
           </div>
           <h3 class="chapter-title">{{ currentChapter.title }}</h3>
-          <p class="chapter-content">{{ currentChapter.content || '' }}</p>
+          <div v-if="renderedContent" class="chapter-content markdown-body" v-html="renderedContent"></div>
 
           <div class="chapter-actions">
             <button class="secondary-button" type="button" :disabled="current === 0" @click="goPrev">
@@ -415,13 +417,12 @@ loadPage()
   font-size: 20px;
 }
 
-/* 章节正文保留数据库中的换行 */
+/* 章节正文由 Markdown 渲染，排版规则见 assets/markdown.css */
 .chapter-content {
   margin: 0 0 20px;
   color: var(--el-text-color-regular);
   font-size: 14px;
   line-height: 1.9;
-  white-space: pre-line;
 }
 
 .chapter-actions {

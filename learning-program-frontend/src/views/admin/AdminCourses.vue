@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref} from 'vue'
-import {ArrowDown, ArrowUp, Delete, Edit, Notebook, Plus, Reading} from '@element-plus/icons-vue'
+import {ArrowDown, ArrowUp, Delete, Edit, Notebook, Plus, Reading, View} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useI18n} from 'vue-i18n'
 import {del, get, post, put} from '@/net'
+import {renderMarkdown} from '@/utils/markdown'
 
 interface ChapterItem {
   id: number | null
@@ -50,6 +51,12 @@ const form = reactive({
 })
 
 const isEdit = computed(() => editingId.value !== null)
+// 正在预览正文的章节下标，同一时间只预览一章
+const previewChapter = ref<number | null>(null)
+
+function toggleChapterPreview(index: number) {
+  previewChapter.value = previewChapter.value === index ? null : index
+}
 
 function loadCourses() {
   loading.value = true
@@ -104,6 +111,9 @@ function addChapter() {
 }
 
 function removeChapter(index: number) {
+  if (previewChapter.value === index) {
+    previewChapter.value = null
+  }
   form.chapters.splice(index, 1)
 }
 
@@ -222,6 +232,12 @@ onMounted(() => {
                 <span class="chapter-index">{{ index + 1 }}</span>
                 <el-input v-model="chapter.title" :placeholder="t('admin.chapterTitle')" maxlength="150"/>
                 <div class="chapter-tools">
+                  <el-button
+                      text
+                      :icon="previewChapter === index ? Edit : View"
+                      @click="toggleChapterPreview(index)">
+                    {{ previewChapter === index ? t('admin.editMode') : t('admin.preview') }}
+                  </el-button>
                   <el-button text :icon="ArrowUp" :disabled="index === 0" @click="moveChapter(index, -1)"/>
                   <el-button text :icon="ArrowDown" :disabled="index === form.chapters.length - 1"
                              @click="moveChapter(index, 1)"/>
@@ -229,12 +245,17 @@ onMounted(() => {
                 </div>
               </div>
               <el-input
+                  v-if="previewChapter !== index"
                   v-model="chapter.content"
                   type="textarea"
                   :rows="3"
                   :placeholder="t('admin.chapterContent')"/>
+              <div v-else class="chapter-preview markdown-body" v-html="renderMarkdown(chapter.content)"></div>
             </div>
-            <el-button :icon="Plus" @click="addChapter">{{ t('admin.addChapter') }}</el-button>
+            <div class="chapter-editor-footer">
+              <el-button :icon="Plus" @click="addChapter">{{ t('admin.addChapter') }}</el-button>
+              <span class="markdown-hint">{{ t('admin.markdownSupported') }}</span>
+            </div>
           </div>
         </el-form-item>
         <div class="form-actions">
@@ -397,6 +418,25 @@ h2 {
 
 .chapter-tools .el-button + .el-button {
   margin-left: 0;
+}
+
+.chapter-preview {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px dashed var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-bg-color);
+}
+
+.chapter-editor-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.markdown-hint {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
 }
 
 .form-actions {
