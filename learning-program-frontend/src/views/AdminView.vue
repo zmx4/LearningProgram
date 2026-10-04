@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import {ArrowLeft, EditPen, Message, Notebook, Reading, UserFilled} from '@element-plus/icons-vue'
+import {ArrowLeft, EditPen, FolderOpened, Message, Notebook, Reading, UserFilled} from '@element-plus/icons-vue'
 import {useRouter, useRoute} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import {logout} from '@/net'
@@ -14,6 +14,7 @@ const navItems = computed(() => [
   {name: 'admin-questions', label: t('admin.questions'), icon: EditPen},
   {name: 'admin-sets', label: t('admin.questionSets'), icon: Notebook},
   {name: 'admin-courses', label: t('admin.courses'), icon: Reading},
+  {name: 'admin-resources', label: t('admin.resources'), icon: FolderOpened},
   {name: 'admin-notifications', label: t('admin.notifications'), icon: Message},
 ])
 

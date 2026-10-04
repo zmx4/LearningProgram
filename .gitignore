@@ -71,3 +71,7 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+upload
+upload/
+/uploads/resources/936b726454634db29c407bbba56f6c0c.png

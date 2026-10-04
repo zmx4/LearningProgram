@@ -556,6 +556,46 @@ Markdown 文本（前端渲染，内嵌 HTML 会被转义）、`id` 为已有章
 `questionSetIds`（课程挂载的题集，去重且必须已存在，按数组顺序展示）。
 参数非法返回 `400`；修改/删除不存在的课程返回 `400`，查询不存在返回 `404`。
 
+## 学习资源接口
+
+管理员在管理端上传资料文件（单文件上限 50MB），文件本体保存在后端 `learning.resources.upload-dir`
+配置的目录（默认 `./uploads/resources`），元数据存于 `db_learning_resource`。资源带 `visible` 标记：
+**只有 `visible` 为 `true` 的资源出现在学员端列表**；隐藏资源对非管理员一律按不存在处理（列表不返回、下载 `404`）。
+
+### 查询可见资源
+
+```http
+GET /api/resources
+Authorization: ******
+```
+
+按创建时间倒序返回当前登录用户可见（`visible=true`）的资源列表。
+
+### 下载资源
+
+```http
+GET /api/resources/{id}/download
+Authorization: ******
+```
+
+以 `attachment` 方式返回文件本体，文件名取自上传时的原始文件名。资源不存在、不可见或磁盘文件丢失返回 `404`。
+
+### 资源管理（管理员）
+
+```http
+GET    /api/admin/resources                    全部资源（含隐藏与上传者）
+POST   /api/admin/resources                    上传资源（multipart/form-data）
+PUT    /api/admin/resources/{id}               修改是否在页面上显示
+DELETE /api/admin/resources/{id}               删除资源（文件一并删除）
+Authorization: Bearer <admin-token>
+```
+
+上传请求体为 `multipart/form-data`：`file`（必填，≤50MB）、`title`（必填，≤100 字符）、
+`description`（≤255，可缺省）、`visible`（可缺省，默认 `true`）。服务端以 UUID 重命名落盘，
+保留原始文件名用于展示与下载。参数非法返回 `400`。
+
+修改显示状态请求体为 `{ "visible": true }`。删除时数据库记录与磁盘文件一并移除，不可恢复。
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。

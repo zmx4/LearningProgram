@@ -76,7 +76,7 @@ const routes: RouteRecordRaw[] = [
         children: [{
             path: '',
             name: 'resources',
-            component: () => import('@/views/page/FeaturePage.vue'),
+            component: () => import('@/views/page/ResourcesPage.vue'),
             meta: { title: '学习资源' }
         }]
     },{
@@ -132,6 +132,11 @@ const routes: RouteRecordRaw[] = [
             name: 'admin-courses',
             component: () => import('@/views/admin/AdminCourses.vue'),
             meta: { title: '课程管理' }
+        },{
+            path: 'resources',
+            name: 'admin-resources',
+            component: () => import('@/views/admin/AdminResources.vue'),
+            meta: { title: '资源管理' }
         },{
             path: 'notifications',
             name: 'admin-notifications',

@@ -18,5 +18,13 @@ spring:
       host: 100.120.61.73
       password: Qefzfgjreg341
       port: 6379
+  servlet:
+    multipart:
+      max-file-size: 55MB
+      max-request-size: 60MB
+learning:
+  resources:
+    # 学习资源文件的存储目录（相对路径基于后端进程工作目录）
+    upload-dir: ./uploads/resources
 server:
   port: 1231

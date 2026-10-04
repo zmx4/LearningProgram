@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 学习资源上传目录 ###
+uploads/
