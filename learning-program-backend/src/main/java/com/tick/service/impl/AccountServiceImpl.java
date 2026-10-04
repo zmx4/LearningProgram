@@ -3,6 +3,7 @@ package com.tick.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
+import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
@@ -86,6 +87,38 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    public String createAccount(String username, String email, String password) {
+        if (this.existsAccountByEmail(email)) return "此email已被其他用户注册.";
+        if (this.existsAccountByUsername(username)) return "此用户名已被其他用户注册.";
+        Account account = new Account(null, username, encoder.encode(password), email, null, null, "user", new Date());
+        if (this.save(account)) {
+            notificationService.save(new com.tick.entity.dto.Notification(
+                    null,
+                    account.getId(),
+                    "欢迎加入学习平台",
+                    "你的账号已经创建成功，开始规划今天的学习内容吧。",
+                    "system",
+                    false,
+                    new Date()
+            ));
+            return null;
+        } else {
+            return "内部错误,请联系管理员";
+        }
+    }
+
+    @Override
+    public String changePassword(Integer accountId, ChangePasswordVO vo) {
+        Account account = this.getById(accountId);
+        if (account == null) return "登录状态无效";
+        if (!encoder.matches(vo.getOldPassword(), account.getPassword())) return "当前密码不正确";
+        if (encoder.matches(vo.getNewPassword(), account.getPassword())) return "新密码不能与当前密码相同";
+        account.setPassword(encoder.encode(vo.getNewPassword()));
+        if (!this.updateById(account)) return "内部错误,请联系管理员";
+        return null;
+    }
+
+    @Override
     public String resetConfirm(ConfirmRestVO vo) {
         String email = vo.getEmail();
         if (enabledEmailVerification) {
@@ -112,6 +145,10 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     private boolean existsAccountByEmail(String email) {
         return this.baseMapper.exists(Wrappers.<Account>query().eq("email", email));
+    }
+
+    private boolean existsAccountByUsername(String username) {
+        return this.baseMapper.exists(Wrappers.<Account>query().eq("username", username));
     }
 
     @Override

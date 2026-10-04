@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import i18n, { type SupportedLocale } from './i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
+
+// Element Plus 组件文案跟随应用语言，新增语言时在此登记对应语言包
+const elementLocales = { 'zh-CN': zhCn } as const
+const elementLocale = computed(() => elementLocales[i18n.global.locale.value as SupportedLocale])
 
 const themeStorageKey = 'learning-theme-mode'
 const themeMode = ref<ThemeMode>('system')
@@ -37,7 +43,9 @@ onBeforeUnmount(() => {
 <template>
   <header>
     <div class="wrapper">
-      <router-view/>
+      <el-config-provider :locale="elementLocale">
+        <router-view/>
+      </el-config-provider>
     </div>
   </header>
 </template>

@@ -62,17 +62,6 @@ function userLogout() {
 </template>
 
 <style scoped>
-:global(*) {
-  box-sizing: border-box;
-}
-
-:global(body) {
-  margin: 0;
-  background: var(--el-bg-color-page);
-  color: var(--el-text-color-primary);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
-
 .admin-shell {
   display: flex;
   min-height: 100vh;
@@ -200,6 +189,5 @@ function userLogout() {
   .admin-nav {
     flex-direction: row;
     flex-wrap: wrap;
-  }
-}
+  }}
 </style>

@@ -2,6 +2,7 @@ package com.tick.controller;
 
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
+import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
 import com.tick.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,6 +50,19 @@ public class ProfileController {
         } catch (IllegalArgumentException exception) {
             return RestBean.failure(409, exception.getMessage());
         }
+    }
+
+    @PutMapping("/password")
+    public RestBean<Void> changePassword(
+            @Valid @RequestBody ChangePasswordVO vo,
+            HttpServletRequest request
+    ) {
+        Integer accountId = (Integer) request.getAttribute("id");
+        if (accountId == null) {
+            return RestBean.unauthorized("登录状态无效");
+        }
+        String message = accountService.changePassword(accountId, vo);
+        return message == null ? RestBean.success() : RestBean.failure(400, message);
     }
 
     private Account findAccount(HttpServletRequest request) {

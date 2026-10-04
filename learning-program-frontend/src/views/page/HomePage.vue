@@ -211,16 +211,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-:global(*) {
-  box-sizing: border-box;
-}
-
-:global(body) {
-  background: var(--el-bg-color-page);
-  color: var(--el-text-color-primary);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
-
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -706,6 +696,5 @@ h1 {
 
   .stats-grid {
     grid-template-columns: 1fr;
-  }
-}
+  }}
 </style>

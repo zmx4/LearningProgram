@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
-import {Delete, Refresh, UserFilled} from '@element-plus/icons-vue'
+import {Delete, Plus, Refresh, UserFilled} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useI18n} from 'vue-i18n'
-import {del, get, put} from '@/net'
+import {del, get, post, put} from '@/net'
 
 interface AdminUser {
   id: number
@@ -14,8 +14,23 @@ interface AdminUser {
   registerDate: string
 }
 
+interface BatchCreateError {
+  index: number
+  message: string
+}
+
+interface BatchCreateResult {
+  createdCount: number
+  failedCount: number
+  errors: BatchCreateError[]
+}
+
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
+const batchDialogVisible = ref(false)
+const batchSubmitting = ref(false)
+const batchText = ref('')
+const batchErrors = ref<string[]>([])
 const { t } = useI18n()
 
 function loadUsers() {
@@ -44,6 +59,65 @@ async function removeUser(user: AdminUser) {
   }
 }
 
+function openBatchDialog() {
+  batchText.value = ''
+  batchErrors.value = []
+  batchDialogVisible.value = true
+}
+
+function parseBatchLines(): {
+  accounts: {username: string, email: string, password: string}[],
+  lines: number[]
+} | null {
+  const accounts: {username: string, email: string, password: string}[] = []
+  const lines: number[] = []
+  const formatErrors: string[] = []
+  batchText.value.split('\n').forEach((rawLine, index) => {
+    const line = rawLine.trim()
+    if (!line) return
+    const parts = line.split(/[,，\s]+/).filter(Boolean)
+    if (parts.length !== 3) {
+      formatErrors.push(t('admin.batchInvalidLine', {line: index + 1}))
+      return
+    }
+    const [username = '', email = '', password = ''] = parts
+    accounts.push({username, email, password})
+    lines.push(index + 1)
+  })
+  if (formatErrors.length > 0) {
+    batchErrors.value = formatErrors
+    return null
+  }
+  if (accounts.length === 0) {
+    ElMessage.warning(t('admin.batchEmpty'))
+    return null
+  }
+  return {accounts, lines}
+}
+
+function submitBatch() {
+  const parsed = parseBatchLines()
+  if (!parsed) return
+  batchSubmitting.value = true
+  post<BatchCreateResult>('/api/admin/users/batch', {accounts: parsed.accounts}, (data) => {
+    batchSubmitting.value = false
+    if (data.errors.length > 0) {
+      batchErrors.value = data.errors.map(e => t('admin.batchItemError', {
+        line: parsed.lines[e.index] ?? '',
+        username: parsed.accounts[e.index]?.username ?? '',
+        message: e.message
+      }))
+      ElMessage.warning(t('admin.batchPartial', {created: data.createdCount, failed: data.failedCount}))
+    } else {
+      batchDialogVisible.value = false
+      ElMessage.success(t('admin.batchCreated', {count: data.createdCount}))
+    }
+    loadUsers()
+  }, () => {
+    batchSubmitting.value = false
+  })
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -55,7 +129,10 @@ onMounted(loadUsers)
         <h2>{{ t('admin.users') }}</h2>
         <p class="description">{{ t('admin.usersDescription') }}</p>
       </div>
-      <el-button :icon="Refresh" @click="loadUsers">{{ t('admin.refresh') }}</el-button>
+      <div class="heading-actions">
+        <el-button :icon="Plus" type="primary" @click="openBatchDialog">{{ t('admin.batchAdd') }}</el-button>
+        <el-button :icon="Refresh" @click="loadUsers">{{ t('admin.refresh') }}</el-button>
+      </div>
     </section>
 
     <section class="panel">
@@ -83,77 +160,50 @@ onMounted(loadUsers)
         </el-table-column>
       </el-table>
     </section>
+
+    <el-dialog v-model="batchDialogVisible" :title="t('admin.batchAddTitle')" width="560px">
+      <p class="batch-hint">{{ t('admin.batchFormatHint') }}</p>
+      <el-input
+          v-model="batchText"
+          type="textarea"
+          :rows="8"
+          :placeholder="t('admin.batchPlaceholder')"
+      />
+      <div v-if="batchErrors.length > 0" class="batch-errors">
+        <el-alert
+            v-for="error in batchErrors"
+            :key="error"
+            :title="error"
+            type="error"
+            :closable="false"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="batchDialogVisible = false">{{ t('admin.cancel') }}</el-button>
+        <el-button type="primary" :loading="batchSubmitting" @click="submitBatch">
+          {{ t('admin.batchSubmit') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.admin-page {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 42px 5% 60px;
-}
-
-.page-heading {
+.heading-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
 }
 
-.eyebrow {
-  margin: 0 0 7px;
-  color: var(--el-color-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .14em;
-}
-
-h2, h3, p {
-  margin-top: 0;
-}
-
-h2 {
-  margin-bottom: 8px;
-  font-size: 26px;
-}
-
-.description {
-  margin-bottom: 0;
+.batch-hint {
+  margin: 0 0 10px;
   color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
-.panel {
-  margin-bottom: 20px;
-  padding: 24px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-}
-
-.panel-title {
+.batch-errors {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  color: var(--el-color-primary);
-}
-
-.panel-title h3 {
-  margin-bottom: 0;
-  color: var(--el-text-color-primary);
-  font-size: 17px;
-}
-
-@media (max-width: 700px) {
-  .page-heading {
-    align-items: flex-start;
-    gap: 12px;
-    flex-direction: column;
-  }
-
-  .panel {
-    padding: 16px;
-  }
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
 }
 </style>

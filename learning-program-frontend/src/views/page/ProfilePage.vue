@@ -144,14 +144,9 @@ onMounted(loadProfile)
 </template>
 
 <style scoped>
-:global(*) { box-sizing: border-box; }
-:global(body) {
-  margin: 0;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color-page);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
 .profile-page { max-width: 920px; margin: 0 auto; padding: 36px 5% 64px; }
+h2, h3, p { margin-top: 0; }
+h2 { margin-bottom: 8px; font-size: 26px; }
 .back-button {
   display: inline-flex;
   align-items: center;
@@ -167,8 +162,6 @@ onMounted(loadProfile)
 }
 .back-button:hover { color: var(--el-color-primary); }
 .eyebrow { margin: 0 0 8px; color: var(--el-text-color-placeholder); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
-h2, h3, p { margin-top: 0; }
-h2 { margin-bottom: 8px; font-size: 26px; }
 .heading-copy { margin-bottom: 28px; color: var(--el-text-color-secondary); font-size: 14px; }
 .profile-card {
   padding: 30px 34px 32px;
@@ -217,6 +210,5 @@ h2 { margin-bottom: 8px; font-size: 26px; }
 @media (max-width: 620px) {
   .profile-page { padding-top: 24px; }
   .profile-card { padding: 24px 20px; }
-  .form-grid { grid-template-columns: 1fr; }
-}
+  .form-grid { grid-template-columns: 1fr; }}
 </style>

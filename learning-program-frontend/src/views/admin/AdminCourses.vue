@@ -298,64 +298,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.admin-page {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 42px 5% 60px;
-}
-
-.page-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.eyebrow {
-  margin: 0 0 7px;
-  color: var(--el-color-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .14em;
-}
-
-h2, h3, p {
-  margin-top: 0;
-}
-
-h2 {
-  margin-bottom: 8px;
-  font-size: 26px;
-}
-
-.description {
-  margin-bottom: 0;
-  color: var(--el-text-color-secondary);
-}
-
-.panel {
-  margin-bottom: 20px;
-  padding: 24px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-}
-
-.panel-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  color: var(--el-color-primary);
-}
-
-.panel-title h3 {
-  margin-bottom: 0;
-  color: var(--el-text-color-primary);
-  font-size: 17px;
-}
-
 .inline-fields {
   display: flex;
   gap: 14px;
@@ -439,34 +381,7 @@ h2 {
   font-size: 12px;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.row-actions .el-button + .el-button {
-  margin-left: 0;
-}
-
 @media (max-width: 700px) {
-  .page-heading {
-    align-items: flex-start;
-    gap: 12px;
-    flex-direction: column;
-  }
-
-  .panel {
-    padding: 16px;
-  }
-
   .inline-fields {
     flex-direction: column;
   }

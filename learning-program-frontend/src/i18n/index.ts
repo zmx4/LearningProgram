@@ -5,6 +5,11 @@ const localeStorageKey = 'learning-locale'
 const supportedLocales = ['zh-CN'] as const
 type SupportedLocale = typeof supportedLocales[number]
 
+// 语言选项以各自母语展示（语言选择器的惯例），新增语言时在此登记即可
+export const LANGUAGE_OPTIONS: ReadonlyArray<{ value: SupportedLocale, label: string }> = [
+  { value: 'zh-CN', label: '简体中文' },
+]
+
 function getInitialLocale(): SupportedLocale {
   const storedLocale = localStorage.getItem(localeStorageKey)
   return supportedLocales.includes(storedLocale as SupportedLocale)
@@ -21,5 +26,11 @@ const i18n = createI18n({
   },
 })
 
-export { localeStorageKey, supportedLocales }
+function setLocale(locale: SupportedLocale) {
+  i18n.global.locale.value = locale
+  localStorage.setItem(localeStorageKey, locale)
+}
+
+export { localeStorageKey, supportedLocales, setLocale }
+export type { SupportedLocale }
 export default i18n

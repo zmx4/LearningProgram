@@ -1,0 +1,105 @@
+/*
+ * 全局公共样式。
+ * 基础部分原先以 :global 形式分散在多个视图组件中，
+ * 管理页面骨架原先在 6 个 admin 页面组件中重复定义，现统一收敛到这里。
+ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ===== 管理页面公共骨架（统一限定在 .admin-page 下，不影响其它页面） ===== */
+.admin-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 42px 5% 60px;
+}
+
+.admin-page h2,
+.admin-page h3,
+.admin-page p {
+  margin-top: 0;
+}
+
+.admin-page h2 {
+  margin-bottom: 8px;
+  font-size: 26px;
+}
+
+.admin-page .page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.admin-page .eyebrow {
+  margin: 0 0 7px;
+  color: var(--el-color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.admin-page .description {
+  margin-bottom: 0;
+  color: var(--el-text-color-secondary);
+}
+
+.admin-page .panel {
+  margin-bottom: 20px;
+  padding: 24px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+}
+
+.admin-page .panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--el-color-primary);
+}
+
+.admin-page .panel-title h3 {
+  margin-bottom: 0;
+  color: var(--el-text-color-primary);
+  font-size: 17px;
+}
+
+.admin-page .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-page .row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.admin-page .row-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+@media (max-width: 700px) {
+  .admin-page .page-heading {
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .admin-page .panel {
+    padding: 16px;
+  }
+}

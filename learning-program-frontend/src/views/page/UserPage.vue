@@ -63,13 +63,6 @@ watch(() => route.params.id, loadUser)
 </template>
 
 <style scoped>
-:global(*) { box-sizing: border-box; }
-:global(body) {
-  margin: 0;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color-page);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
 .user-page { max-width: 760px; margin: 0 auto; padding: 36px 5% 64px; }
 .back-button {
   display: inline-flex;
@@ -127,6 +120,5 @@ h2 { margin: 0 0 6px; font-size: 25px; }
 @media (max-width: 560px) {
   .user-card { padding: 32px 20px; }
   .detail-item { display: grid; gap: 7px; }
-  .detail-item strong { max-width: none; text-align: left; }
-}
+  .detail-item strong { max-width: none; text-align: left; }}
 </style>

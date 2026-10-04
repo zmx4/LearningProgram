@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,38 @@ public class AdminController {
         return RestBean.success();
     }
 
+    @PostMapping("/users/batch")
+    public RestBean<Map<String, Object>> createUsers(@RequestBody BatchCreateRequest request) {
+        List<BatchAccountItem> items = request.accounts();
+        if (items == null || items.isEmpty()) {
+            return RestBean.failure(400, "请提供要创建的账号列表");
+        }
+        List<BatchCreateError> errors = new ArrayList<>();
+        int created = 0;
+        for (int i = 0; i < items.size(); i++) {
+            BatchAccountItem item = items.get(i);
+            String username = item.username() == null ? "" : item.username().trim();
+            String email = item.email() == null ? "" : item.email().trim();
+            String password = item.password() == null ? "" : item.password().trim();
+            String error;
+            if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                error = "用户名、邮箱和密码不能为空";
+            } else {
+                error = accountService.createAccount(username, email, password);
+            }
+            if (error != null) {
+                errors.add(new BatchCreateError(i, error));
+            } else {
+                created++;
+            }
+        }
+        return RestBean.success(Map.of(
+                "createdCount", created,
+                "failedCount", errors.size(),
+                "errors", errors
+        ));
+    }
+
     @PostMapping("/notifications")
     public RestBean<Map<String, Integer>> sendNotification(
             @RequestBody AdminNotificationRequest request) {
@@ -122,5 +155,14 @@ public class AdminController {
             String targetRole,
             List<Integer> userIds
     ) {
+    }
+
+    public record BatchCreateRequest(List<BatchAccountItem> accounts) {
+    }
+
+    public record BatchAccountItem(String username, String email, String password) {
+    }
+
+    public record BatchCreateError(int index, String message) {
     }
 }

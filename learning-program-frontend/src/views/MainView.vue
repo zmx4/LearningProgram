@@ -5,7 +5,6 @@ import {
   Bell,
   Avatar,
   Collection,
-  DataAnalysis,
   HomeFilled,
   Reading,
   Setting,
@@ -44,7 +43,6 @@ const navigationItems = [
   {name: 'index', label: 'navigation.home', icon: HomeFilled},
   {name: 'courses', label: 'navigation.courses', icon: Reading},
   {name: 'resources', label: 'navigation.resources', icon: Collection},
-  {name: 'progress', label: 'navigation.progress', icon: DataAnalysis},
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
 ]
 
@@ -242,17 +240,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-:global(*) {
-  box-sizing: border-box;
-}
-
-:global(body) {
-  margin: 0;
-  background: var(--el-bg-color-page);
-  color: var(--el-text-color-primary);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
-
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -636,6 +623,5 @@ onUnmounted(() => {
 
   .topbar-actions {
     gap: 12px;
-  }
-}
+  }}
 </style>

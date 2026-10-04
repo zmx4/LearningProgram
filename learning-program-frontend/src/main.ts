@@ -7,6 +7,7 @@ import axios from "axios";
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@/assets/markdown.css'
+import '@/assets/common.css'
 
 axios.defaults.baseURL = 'http://127.0.0.1:1231'
 

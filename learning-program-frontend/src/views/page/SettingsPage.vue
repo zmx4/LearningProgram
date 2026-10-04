@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Monitor, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { ThemeMode } from '@/App.vue'
 import { useI18n } from 'vue-i18n'
+import i18n, { LANGUAGE_OPTIONS, setLocale, type SupportedLocale } from '@/i18n'
+import { put } from '@/net'
 import {
   readDailyWordSettings,
   saveDailyWordSettings,
@@ -43,6 +45,44 @@ function updateDailyWordEnabled(enabled: boolean) {
 function updateDailyWordSource(source: DailyWordSource) {
   dailyWordSettings.value.source = source
   saveDailyWordSettings(dailyWordSettings.value)
+}
+
+const languageOptions = LANGUAGE_OPTIONS
+const currentLocale = computed(() => i18n.global.locale.value)
+
+function updateLocale(lang: string | number | boolean | undefined) {
+  if (typeof lang !== 'string' || lang === currentLocale.value) return
+  const selected = languageOptions.find(option => option.value === lang)
+  setLocale(lang as SupportedLocale)
+  ElMessage.success(t('settings.languageSwitched', { language: selected?.label ?? lang }))
+}
+
+const emptyPasswordForm = () => ({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const passwordForm = ref(emptyPasswordForm())
+const changingPassword = ref(false)
+
+function submitChangePassword() {
+  const { oldPassword, newPassword, confirmPassword } = passwordForm.value
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    ElMessage.warning(t('settings.fillPasswordFields'))
+    return
+  }
+  if (newPassword.length < 6) {
+    ElMessage.warning(t('settings.passwordTooShort'))
+    return
+  }
+  if (newPassword !== confirmPassword) {
+    ElMessage.warning(t('settings.passwordMismatch'))
+    return
+  }
+  changingPassword.value = true
+  put('/api/profile/password', { oldPassword, newPassword }, () => {
+    changingPassword.value = false
+    passwordForm.value = emptyPasswordForm()
+    ElMessage.success(t('settings.passwordChanged'))
+  }, () => {
+    changingPassword.value = false
+  })
 }
 </script>
 
@@ -109,21 +149,85 @@ function updateDailyWordSource(source: DailyWordSource) {
         </el-radio-group>
       </div>
     </section>
+
+    <section class="settings-card">
+      <div class="setting-title">
+        <div>
+          <h3>{{ t('settings.language') }}</h3>
+          <p>{{ t('settings.languageDescription') }}</p>
+        </div>
+      </div>
+
+      <div class="language-options">
+        <el-radio-group
+          :model-value="currentLocale"
+          :aria-label="t('settings.language')"
+          @update:model-value="updateLocale"
+        >
+          <el-radio-button
+            v-for="lang in languageOptions"
+            :key="lang.value"
+            :label="lang.value"
+          >
+            {{ lang.label }}
+          </el-radio-button>
+        </el-radio-group>
+        <p v-if="languageOptions.length === 1" class="language-hint">
+          {{ t('settings.languageComingSoon') }}
+        </p>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <div class="setting-title">
+        <div>
+          <h3>{{ t('settings.changePassword') }}</h3>
+          <p>{{ t('settings.changePasswordDescription') }}</p>
+        </div>
+      </div>
+
+      <el-form label-position="top" class="password-form" @submit.prevent="submitChangePassword">
+        <el-form-item :label="t('settings.oldPassword')">
+          <el-input
+            v-model="passwordForm.oldPassword"
+            type="password"
+            show-password
+            :placeholder="t('settings.oldPasswordPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('settings.newPassword')">
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            show-password
+            maxlength="20"
+            :placeholder="t('settings.newPasswordPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('settings.confirmPassword')">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            show-password
+            maxlength="20"
+            :placeholder="t('settings.confirmPasswordPlaceholder')"
+          />
+        </el-form-item>
+        <div class="form-actions">
+          <el-button type="primary" :loading="changingPassword" native-type="submit">
+            {{ t('settings.confirmChange') }}
+          </el-button>
+        </div>
+      </el-form>
+    </section>
   </main>
 </template>
 
 <style scoped>
-:global(*) { box-sizing: border-box; }
-:global(body) {
-  margin: 0;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color-page);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
 .settings-page { max-width: 920px; margin: 0 auto; padding: 42px 5% 64px; }
-.eyebrow { margin: 0 0 8px; color: var(--el-text-color-placeholder); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
 h2, h3, p { margin-top: 0; }
 h2 { margin-bottom: 8px; font-size: 26px; }
+.eyebrow { margin: 0 0 8px; color: var(--el-text-color-placeholder); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
 .settings-heading > p:last-child { margin-bottom: 30px; color: var(--el-text-color-secondary); font-size: 14px; }
 .settings-card {
   margin-bottom: 20px;
@@ -138,6 +242,8 @@ h2 { margin-bottom: 8px; font-size: 26px; }
 .setting-title p { margin-bottom: 0; color: var(--el-text-color-secondary); font-size: 13px; }
 .current-mode { color: var(--el-color-primary); font-size: 13px; }
 .daily-word-source { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--el-text-color-secondary); font-size: 13px; }
+.language-options { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.language-hint { margin: 0; color: var(--el-text-color-placeholder); font-size: 12px; }
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .theme-option {
   display: flex;
@@ -175,9 +281,10 @@ h2 { margin-bottom: 8px; font-size: 26px; }
   height: 0;
   overflow: hidden;
 }
+.password-form { max-width: 420px; }
+.password-form .form-actions { display: flex; justify-content: flex-end; }
 @media (max-width: 680px) {
   .settings-card { padding: 24px 20px; }
   .theme-options { grid-template-columns: 1fr; }
-  .theme-option { min-height: auto; flex-direction: row; align-items: center; }
-}
+  .theme-option { min-height: auto; flex-direction: row; align-items: center; }}
 </style>

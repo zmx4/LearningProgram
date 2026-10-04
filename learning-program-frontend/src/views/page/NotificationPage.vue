@@ -99,13 +99,6 @@ onMounted(loadNotifications)
 </template>
 
 <style scoped>
-:global(*) { box-sizing: border-box; }
-:global(body) {
-  margin: 0;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color-page);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
 .notification-page { min-height: 100vh; }
 .notification-header {
   display: flex;
@@ -183,6 +176,5 @@ h1 { margin-bottom: 0; font-size: 22px; }
   .back-button { font-size: 0; }
   .back-button .el-icon { font-size: 18px; }
   .read-all-button { font-size: 0; }
-  .read-all-button .el-icon { font-size: 18px; }
-}
+  .read-all-button .el-icon { font-size: 18px; }}
 </style>
