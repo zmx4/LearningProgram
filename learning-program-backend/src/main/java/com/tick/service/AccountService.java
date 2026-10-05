@@ -57,4 +57,5 @@ public interface AccountService extends IService<Account> , UserDetailsService {
      * 账号不存在返回 null。
      */
     Account updateProfile(Integer accountId, ProfileUpdateVO vo);
+
 }

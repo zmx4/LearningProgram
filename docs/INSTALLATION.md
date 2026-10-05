@@ -42,35 +42,61 @@ CREATE DATABASE IF NOT EXISTS learning
 learning-program-backend/src/main/resources/application.yaml
 ```
 
-启动前请配置以下内容：
+MySQL 与 Redis 的连接信息通过环境变量注入，仓库内的 `application.yaml` 不保存真实账号密码。启动后端前需设置以下环境变量：
 
-- MySQL 地址、端口、数据库名、用户名和密码
-- Redis 地址、端口和密码（如果启用密码）
-- JWT 签名密钥和有效期
-- 后端端口
+| 环境变量 | 用途 | 未设置时的默认值 |
+| --- | --- | --- |
+| `MYSQL_USERNAME` | MySQL 用户名 | 空（连接会失败，必填） |
+| `MYSQL_PASSWORD` | MySQL 密码 | 空（连接会失败，必填） |
+| `MYSQL_HOST` | MySQL 地址 | `127.0.0.1` |
+| `MYSQL_PORT` | MySQL 端口 | `3306` |
+| `REDIS_HOST` | Redis 地址 | `127.0.0.1` |
+| `REDIS_PORT` | Redis 端口 | `6379` |
+| `REDIS_PASSWORD` | Redis 密码 | 空（视为无密码） |
 
-本地开发配置示例：
+bash / zsh 设置示例：
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://127.0.0.1:3306/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: your_mysql_user
-    password: your_mysql_password
-  data:
-    redis:
-      host: 127.0.0.1
-      port: 6379
-  security:
-    jwt:
-      key: replace-with-a-long-random-secret
-      expire: 144
-    email: false
-server:
-  port: 1231
+```bash
+export MYSQL_USERNAME=your_mysql_user
+export MYSQL_PASSWORD=your_mysql_password
+export MYSQL_HOST=127.0.0.1
+export REDIS_HOST=127.0.0.1
+export REDIS_PASSWORD=your_redis_password
 ```
 
-请勿把真实密码、JWT 密钥或生产环境地址提交到仓库。生产环境应使用环境变量、外部配置中心或部署平台的 Secret。
+PowerShell 设置示例：
+
+```powershell
+$env:MYSQL_USERNAME = "your_mysql_user"
+$env:MYSQL_PASSWORD = "your_mysql_password"
+$env:MYSQL_HOST = "127.0.0.1"
+$env:REDIS_HOST = "127.0.0.1"
+$env:REDIS_PASSWORD = "your_redis_password"
+```
+
+环境变量只在当前终端会话有效，建议写入 IDE 运行配置或系统的环境变量设置中。生产环境应使用部署平台的 Secret、环境变量或外部配置中心注入。
+
+### 使用 .env 文件（推荐）
+
+后端目录提供了 `.env.example` 模板。首次配置时：
+
+```bash
+cd learning-program-backend
+cp .env.example .env
+# 编辑 .env，填入真实的 MySQL / Redis 连接信息
+```
+
+`.env` 已被 `.gitignore` 忽略，不会提交到仓库。启动后端时先加载它：
+
+```bash
+source .env && mvn spring-boot:run
+```
+
+Windows PowerShell 用户可以复制 `.env` 中的值到 `$env:` 设置，或使用 IDEA EnvFile 插件直接引用 `.env` 文件。
+
+JWT 签名密钥（`spring.security.jwt.key`）和有效期目前仍写在 `application.yaml` 中，公开发布前建议一并改为环境变量注入。
+
+请勿把真实密码、JWT 密钥或生产环境地址提交到仓库。
 
 `spring.security.email` 当前设置为 `false` 时，注册流程不会强制校验邮箱验证码。启用邮箱校验前，需要同时配置邮件服务和验证码流程。
 

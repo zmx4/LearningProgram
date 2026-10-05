@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.sql.Wrapper;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 账号服务实现。
@@ -59,11 +60,11 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     public Account findAccountByUsernameOrEmail(String text) {
-        return this.query()
+        List<Account> rows = this.query()
                 .eq("username", text).or()
                 .eq("email", text)
-                .one();
-
+                .list();
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     @Override

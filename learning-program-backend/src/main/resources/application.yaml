@@ -9,15 +9,17 @@ spring:
   banner:
     charset: utf-8
   datasource:
-    username: learning
-    password: h4pfFiEZFAn8CWBD
+    # MySQL 连接信息通过环境变量注入，真实账号密码不入库（见 docs/INSTALLATION.md 的环境变量清单）
+    username: ${MYSQL_USERNAME:}
+    password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://100.120.61.73:3306/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
   data:
     redis:
-      host: 100.120.61.73
-      password: Qefzfgjreg341
-      port: 6379
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      # 未设置时视为无密码
+      password: ${REDIS_PASSWORD:}
   servlet:
     multipart:
       max-file-size: 55MB

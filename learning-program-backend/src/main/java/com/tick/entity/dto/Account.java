@@ -13,7 +13,7 @@ import java.util.Date;
  * points 为早期遗留字段，有效积分以 {@link AccountPoints} 为准。
  */
 @Data
-@TableName("db_account")
+@TableName(value = "db_account", autoResultMap = true)
 public class Account {
     @TableId(type = IdType.AUTO)
     Integer id;
