@@ -32,13 +32,14 @@ public interface AccountService extends IService<Account> , UserDetailsService {
     String createAccount(String username, String email, String password);
 
     /**
-     * 已登录用户修改密码：校验旧密码正确、新密码不得与当前相同。
+     * 已登录用户修改密码：校验旧密码正确、新密码不得与当前相同，且需满足 {@link com.tick.security.password.PasswordPolicy}。
      */
     String changePassword(Integer accountId, ChangePasswordVO vo);
 
     /**
-     * 管理员重置密码：生成 10 位随机密码并加密落库，给用户发送重置通知，
-     * 返回新密码明文（仅经重置接口返回给管理员展示）；账号不存在或更新失败返回 null。
+     * 管理员重置密码：按 {@link com.tick.security.password.PasswordPolicy} 生成随机密码并加密落库，
+     * 给用户发送重置通知，返回新密码明文（仅经重置接口返回给管理员展示，只出现这一次）；
+     * 账号不存在或更新失败返回 null。
      */
     String resetPassword(Integer accountId);
 

@@ -2,6 +2,7 @@ package com.tick.controller;
 
 import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.EmailRegisterVO;
+import com.tick.security.password.PasswordPolicy;
 import com.tick.service.AccountService;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 class AuthorizeControllerTest {
 
     private final AccountService accountService = mock(AccountService.class);
+    private final PasswordPolicy passwordPolicy = mock(PasswordPolicy.class);
     private final AuthorizeController controller = createController();
 
     @Test
@@ -40,7 +42,7 @@ class AuthorizeControllerTest {
     }
 
     private AuthorizeController createController() {
-        return new AuthorizeController(accountService);
+        return new AuthorizeController(accountService, passwordPolicy);
     }
 
     private EmailRegisterVO validRequest() {

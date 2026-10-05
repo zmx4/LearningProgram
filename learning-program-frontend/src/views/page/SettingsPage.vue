@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Monitor, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { ThemeMode } from '@/App.vue'
 import { useI18n } from 'vue-i18n'
 import i18n, { LANGUAGE_OPTIONS, setLocale, type SupportedLocale } from '@/i18n'
-import { put } from '@/net'
+import { currentUsername, put } from '@/net'
+import PasswordPolicyHint from '@/components/PasswordPolicyHint.vue'
+import { fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy } from '@/utils/passwordPolicy'
 import {
   readDailyWordSettings,
   saveDailyWordSettings,
@@ -21,6 +23,12 @@ const themeMode = ref<ThemeMode>(
     : 'system',
 )
 const dailyWordSettings = ref(readDailyWordSettings())
+
+// 密码规则来自后端策略，前端只负责即时提示
+const policy = ref(fallbackPasswordPolicy)
+onMounted(async () => {
+  policy.value = await loadPasswordPolicy()
+})
 
 const themeOptions = [
   { value: 'light' as const, label: 'settings.light', description: 'settings.lightDescription', icon: Sunny },
@@ -67,8 +75,10 @@ function submitChangePassword() {
     ElMessage.warning(t('settings.fillPasswordFields'))
     return
   }
-  if (newPassword.length < 6) {
-    ElMessage.warning(t('settings.passwordTooShort'))
+  // 规则与阈值都来自后端策略，服务端提交时还会再校验一次
+  const unmet = firstUnmetRequirement(newPassword, policy.value, { username: currentUsername() })
+  if (unmet) {
+    ElMessage.warning(unmet)
     return
   }
   if (newPassword !== confirmPassword) {
@@ -182,7 +192,7 @@ function submitChangePassword() {
       <div class="setting-title">
         <div>
           <h3>{{ t('settings.changePassword') }}</h3>
-          <p>{{ t('settings.changePasswordDescription') }}</p>
+          <p>{{ t('settings.changePasswordDescription', { min: policy.minLength, max: policy.maxLength }) }}</p>
         </div>
       </div>
 
@@ -200,16 +210,17 @@ function submitChangePassword() {
             v-model="passwordForm.newPassword"
             type="password"
             show-password
-            maxlength="20"
-            :placeholder="t('settings.newPasswordPlaceholder')"
+            :maxlength="policy.maxLength"
+            :placeholder="t('settings.newPasswordPlaceholder', { min: policy.minLength, max: policy.maxLength })"
           />
+          <PasswordPolicyHint :requirements="policy.requirements" />
         </el-form-item>
         <el-form-item :label="t('settings.confirmPassword')">
           <el-input
             v-model="passwordForm.confirmPassword"
             type="password"
             show-password
-            maxlength="20"
+            :maxlength="policy.maxLength"
             :placeholder="t('settings.confirmPasswordPlaceholder')"
           />
         </el-form-item>

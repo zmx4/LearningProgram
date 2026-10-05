@@ -76,6 +76,59 @@ Content-Type: application/json
 ```
 
 请求体包含用户名、密码、重复密码、邮箱和验证码等注册字段，具体校验以 `EmailRegisterVO` 为准。
+密码强度要求见下方「密码强度策略」，不满足时返回 `400`，`message` 里会列出所有不满足的项。
+
+### 查询密码强度策略
+
+```http
+GET /api/auth/password-policy
+```
+
+匿名可访问。返回当前生效的密码要求，供前端展示规则并做即时校验；
+规则由后端的 `PasswordPolicy` 责任链决定，改配置后本接口即随之变化，前端无需改动。
+
+```json
+{
+  "code": 200,
+  "data": {
+    "minLength": 8,
+    "maxLength": 32,
+    "requirements": [
+      { "code": "length", "message": "长度需在 8 到 32 个字符之间", "min": 8, "max": 32 },
+      { "code": "require-uppercase", "message": "至少包含一个大写字母", "characterClass": "uppercase" },
+      { "code": "require-lowercase", "message": "至少包含一个小写字母", "characterClass": "lowercase" },
+      { "code": "require-digit", "message": "至少包含一个数字", "characterClass": "digit" },
+      { "code": "require-special", "message": "至少包含一个特殊字符", "characterClass": "special" },
+      { "code": "no-whitespace", "message": "不能包含空格等空白字符" },
+      { "code": "no-account-info", "message": "不能包含用户名或邮箱" },
+      { "code": "not-common", "message": "不能是常见弱密码" }
+    ]
+  },
+  "message": "success"
+}
+```
+
+`requirements[].code` 为规则标识，前端按它决定用哪段逻辑做即时校验；未知规则码应视为通过、留给服务端判定
+（例如 `not-common` 就用的是服务端词表）。
+
+### 密码强度策略
+
+所有「设置密码」的入口都走同一条 `PasswordPolicy` 责任链，包括注册、忘记密码重置、
+修改密码与管理员的批量建号；管理员重置密码时由 `PasswordGenerator` 按同一策略生成随机密码。
+默认要求（可在 `application.yaml` 的 `learning.password.policy` 下调整）：
+
+| 规则 | 默认 |
+| --- | --- |
+| 长度 | 8 到 32 个字符 |
+| 大写字母 | 至少 1 个 |
+| 小写字母 | 至少 1 个 |
+| 数字 | 至少 1 个 |
+| 特殊字符 | 至少 1 个（非字母、非数字、非空白，按 Unicode 判断） |
+| 空白字符 | 不允许 |
+| 账号信息 | 密码中不能出现用户名或邮箱（含 `@` 前的部分，少于 3 个字符时不参与判断） |
+| 弱密码词表 | 精确匹配（忽略大小写）即拒绝 |
+
+校验不通过时返回 `400`，`message` 会把所有不满足的项用 `；` 连成一句，便于一次改完。
 
 ### 确认重置密码
 
@@ -152,6 +205,23 @@ Content-Type: application/json
 ```
 
 角色不接受前端修改，由管理员接口管理。
+
+### 修改密码
+
+```http
+PUT /api/profile/password
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "oldPassword": "OldPass123!",
+  "newPassword": "NewPass123!"
+}
+```
+
+新密码需满足「密码强度策略」，校验不通过返回 `400`；旧密码不正确或新密码与当前密码相同时同样返回 `400`。
 
 ## 通知接口
 
@@ -772,6 +842,62 @@ Authorization: Bearer <admin-token>
 ```
 
 管理员不能删除当前登录账号。
+
+### 重置用户密码
+
+```http
+PUT /api/admin/users/{id}/password
+Authorization: Bearer <admin-token>
+```
+
+服务端按当前密码强度策略生成随机密码并加密保存，明文只在本次响应中返回一次：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "username": "alice",
+    "password": "oRewHa2YvHg7K"
+  },
+  "message": "success"
+}
+```
+
+生成字符集剔除了 `I/O/l/0/1` 等易混淆字符；长度由 `learning.password.policy.generated-length` 决定（默认 12）。
+用户不存在返回 `404`。
+
+### 批量创建账号
+
+```http
+POST /api/admin/users/batch
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+```json
+{
+  "accounts": [
+    { "username": "alice", "email": "alice@example.com", "password": "Str0ng!Pass1" },
+    { "username": "bob", "email": "bob@example.com", "password": "123456" }
+  ]
+}
+```
+
+逐条创建，单条失败不影响其他条目。密码同样受「密码强度策略」约束，不合规的条目会出现在 `errors` 中：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "createdCount": 1,
+    "failedCount": 1,
+    "errors": [
+      { "index": 1, "message": "长度需在 8 到 32 个字符之间；至少包含一个大写字母；…；不能是常见弱密码" }
+    ]
+  },
+  "message": "success"
+}
+```
 
 ### 发送通知
 

@@ -100,6 +100,32 @@ JWT 签名密钥（`spring.security.jwt.key`）和有效期目前仍写在 `appl
 
 `spring.security.email` 当前设置为 `false` 时，注册流程不会强制校验邮箱验证码。启用邮箱校验前，需要同时配置邮件服务和验证码流程。
 
+## 密码强度策略
+
+所有设置密码的入口（注册、忘记密码重置、修改密码、管理员批量建号）都经过同一条密码规则责任链，
+规则与阈值在 `application.yaml` 的 `learning.password.policy` 下配置，调整后无需改代码：
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `min-length` / `max-length` | `8` / `32` | 密码长度区间（含端点） |
+| `require-uppercase` / `require-lowercase` | `true` | 是否必须包含大写 / 小写字母 |
+| `require-digit` | `true` | 是否必须包含数字 |
+| `require-special` | `true` | 是否必须包含特殊字符（非字母、非数字、非空白） |
+| `forbid-whitespace` | `true` | 禁止空格等空白字符 |
+| `forbid-account-info` | `true` | 禁止密码包含用户名或邮箱 |
+| `reject-common-passwords` | `true` | 拒绝常见弱密码（词表见 `PasswordPolicyProperties`，可覆盖） |
+| `generated-length` | `12` | 管理员重置密码时生成的随机密码长度 |
+| `special-characters` | `!@#$%^&*()-_=+[]{};:,.?/|~` | 生成随机密码时可选的特殊字符 |
+
+当前生效的规则可以通过 `GET /api/auth/password-policy` 查看；前端注册 / 重置 / 改密页面会读取它来展示要求并做即时校验。
+
+临时调整（不改配置文件，仅本次运行有效）：
+
+```powershell
+Set-Location .\learning-program-backend
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--learning.password.policy.min-length=10 --learning.password.policy.require-special=false"
+```
+
 ## 启动后端
 
 在项目根目录执行：

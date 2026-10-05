@@ -8,6 +8,8 @@ import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
 import com.tick.mapper.AccountMapper;
+import com.tick.security.password.PasswordGenerator;
+import com.tick.security.password.PasswordPolicy;
 import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
 import jakarta.annotation.Resource;
@@ -22,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
-import java.security.SecureRandom;
 import java.sql.Wrapper;
 import java.util.Date;
 import java.util.List;
@@ -33,8 +34,6 @@ import java.util.List;
 @Service
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountService {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     @Value("${spring.security.email}")
     boolean enabledEmailVerification;
 
@@ -44,6 +43,19 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private NotificationService notificationService;
+    @Resource
+    private PasswordPolicy passwordPolicy;
+    @Resource
+    private PasswordGenerator passwordGenerator;
+
+    /**
+     * 统一的密码强度校验：所有写密码的入口都先过这里，规则本身见 PasswordPolicy。
+     *
+     * @return 通过返回 null，否则返回可直接展示给用户的提示
+     */
+    private String checkPasswordPolicy(String password, String username, String email) {
+        return passwordPolicy.violationMessage(password, username, email).orElse(null);
+    }
 
     @Override
     public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
@@ -75,6 +87,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         if (enabledEmailVerification) {
             return null;
         }
+        String policyMessage = checkPasswordPolicy(vo.getPassword(), username, email);
+        if (policyMessage != null) return policyMessage;
         String password = encoder.encode(vo.getPassword());
         Account account = new Account(null, username, password, email, null, null, "user", new Date());
         if (this.save(account)) {
@@ -98,6 +112,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     public String createAccount(String username, String email, String password) {
         if (this.existsAccountByEmail(email)) return "此email已被其他用户注册.";
         if (this.existsAccountByUsername(username)) return "此用户名已被其他用户注册.";
+        String policyMessage = checkPasswordPolicy(password, username, email);
+        if (policyMessage != null) return policyMessage;
         Account account = new Account(null, username, encoder.encode(password), email, null, null, "user", new Date());
         if (this.save(account)) {
             notificationService.save(new com.tick.entity.dto.Notification(
@@ -122,6 +138,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         if (account == null) return "登录状态无效";
         if (!encoder.matches(vo.getOldPassword(), account.getPassword())) return "当前密码不正确";
         if (encoder.matches(vo.getNewPassword(), account.getPassword())) return "新密码不能与当前密码相同";
+        String policyMessage = checkPasswordPolicy(vo.getNewPassword(), account.getUsername(), account.getEmail());
+        if (policyMessage != null) return policyMessage;
         account.setPassword(encoder.encode(vo.getNewPassword()));
         if (!this.updateById(account)) return "内部错误,请联系管理员";
         return null;
@@ -131,7 +149,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     public String resetPassword(Integer accountId) {
         Account account = this.getById(accountId);
         if (account == null) return null;
-        String newPassword = this.generateRandomPassword();
+        // 由生成器保证新密码满足当前策略
+        String newPassword = passwordGenerator.generate();
         account.setPassword(encoder.encode(newPassword));
         if (!this.updateById(account)) return null;
         notificationService.save(new com.tick.entity.dto.Notification(
@@ -145,15 +164,6 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 new Date()
         ));
         return newPassword;
-    }
-
-    private String generateRandomPassword() {
-        final String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-        StringBuilder password = new StringBuilder(10);
-        for (int i = 0; i < 10; i++) {
-            password.append(chars.charAt(RANDOM.nextInt(chars.length())));
-        }
-        return password.toString();
     }
 
     @Override
@@ -173,6 +183,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String email = vo.getEmail();
         String verify = this.resetConfirm(new ConfirmRestVO(email, vo.getCode()));
         if (verify == null) return verify;
+        String policyMessage = checkPasswordPolicy(vo.getPassword(), null, email);
+        if (policyMessage != null) return policyMessage;
         String password = encoder.encode(vo.getPassword());
         boolean result = this.update().eq("email", email).set("password", password).update();
         if (result && enabledEmailVerification) {

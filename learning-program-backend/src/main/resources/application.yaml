@@ -28,5 +28,25 @@ learning:
   resources:
     # 学习资源文件的存储目录（相对路径基于后端进程工作目录）
     upload-dir: ./uploads/resources
+  password:
+    # 密码强度策略：规则链的启用开关与阈值都在这里，改策略不需要改代码。
+    # 完整的规则清单可通过 GET /api/auth/password-policy 查看。
+    policy:
+      min-length: 8
+      max-length: 32
+      require-uppercase: true
+      require-lowercase: true
+      require-digit: true
+      require-special: true
+      # 禁止密码中出现空格等空白字符
+      forbid-whitespace: true
+      # 禁止密码包含用户名 / 邮箱
+      forbid-account-info: true
+      # 拒绝常见弱密码（词表默认写在 PasswordPolicyProperties 里，可在此覆盖）
+      reject-common-passwords: true
+      # 管理员重置密码时生成的随机密码长度
+      generated-length: 12
+      # 生成随机密码可用的特殊字符
+      special-characters: "!@#$%^&*()-_=+[]{};:,.?/|~"
 server:
   port: 1231

@@ -14,14 +14,15 @@
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" :maxlength="16" type="password" :placeholder="$t('welcome.password')">
+          <el-input v-model="form.password" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.password')">
             <template #prefix>
               <el-icon><Lock /></el-icon>
             </template>
           </el-input>
+          <PasswordPolicyHint :requirements="policy.requirements" />
         </el-form-item>
         <el-form-item prop="password_repeat">
-          <el-input v-model="form.password_repeat" :maxlength="16" type="password" :placeholder="$t('welcome.repeatPassword')">
+          <el-input v-model="form.password_repeat" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.repeatPassword')">
             <template #prefix>
               <el-icon><Lock /></el-icon>
             </template>
@@ -66,12 +67,20 @@
 <script setup>
 import {EditPen, Lock, Message, User} from "@element-plus/icons-vue";
 import router from "@/router";
-import {reactive, ref} from "vue";
+import {onMounted, reactive, ref} from "vue";
 import {useI18n} from 'vue-i18n'
 import {ElMessage} from "element-plus";
 import {publicGet, publicPost} from "@/net";
+import PasswordPolicyHint from "@/components/PasswordPolicyHint.vue";
+import {fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy} from "@/utils/passwordPolicy";
 
 const { t } = useI18n()
+
+// 密码规则来自后端策略，避免前后端各写一份
+const policy = ref(fallbackPasswordPolicy)
+onMounted(async () => {
+  policy.value = await loadPasswordPolicy()
+})
 const form = reactive({
   username: '',
   password: '',
@@ -90,6 +99,19 @@ const validateUsername = (rule, value, callback) => {
   }
 }
 
+const validatePasswordStrength = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error(t('validation.requiredPassword')))
+    return
+  }
+  const unmet = firstUnmetRequirement(value, policy.value, { username: form.username, email: form.email })
+  if (unmet) {
+    callback(new Error(unmet))
+    return
+  }
+  callback()
+}
+
 const validatePassword = (rule, value, callback) => {
   if (value === '') {
     callback(new Error(t('validation.repeatPassword')))
@@ -106,8 +128,7 @@ const rules = {
     { min: 2, max: 8, message: t('validation.usernameLength'), trigger: ['blur', 'change'] },
   ],
   password: [
-    { required: true, message: t('validation.requiredPassword'), trigger: 'blur' },
-    { min: 6, max: 16, message: t('validation.passwordLength'), trigger: ['blur', 'change'] }
+    { validator: validatePasswordStrength, trigger: ['blur', 'change'] }
   ],
   password_repeat: [
     { validator: validatePassword, trigger: ['blur', 'change'] },

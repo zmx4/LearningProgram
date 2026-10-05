@@ -54,14 +54,15 @@
                 <div style="margin-top: 50px">
                     <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
                         <el-form-item prop="password">
-                            <el-input v-model="form.password" :maxlength="16" type="password" :placeholder="$t('welcome.newPassword')">
+                            <el-input v-model="form.password" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.newPassword')">
                                 <template #prefix>
                                     <el-icon><Lock /></el-icon>
                                 </template>
                             </el-input>
+                            <PasswordPolicyHint :requirements="policy.requirements" />
                         </el-form-item>
                         <el-form-item prop="password_repeat">
-                            <el-input v-model="form.password_repeat" :maxlength="16" type="password" :placeholder="$t('welcome.repeatNewPassword')">
+                            <el-input v-model="form.password_repeat" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.repeatNewPassword')">
                                 <template #prefix>
                                     <el-icon><Lock /></el-icon>
                                 </template>
@@ -78,15 +79,23 @@
 </template>
 
 <script setup>
-import {reactive, ref} from "vue";
+import {onMounted, reactive, ref} from "vue";
 import {useI18n} from 'vue-i18n'
 import {EditPen, Lock, Message} from "@element-plus/icons-vue";
 import {get, post} from "@/net";
 import {ElMessage} from "element-plus";
 import router from "@/router";
+import PasswordPolicyHint from "@/components/PasswordPolicyHint.vue";
+import {fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy} from "@/utils/passwordPolicy";
 
 const { t } = useI18n()
 const active = ref(0)
+
+// 密码规则来自后端策略
+const policy = ref(fallbackPasswordPolicy)
+onMounted(async () => {
+    policy.value = await loadPasswordPolicy()
+})
 
 const form = reactive({
     email: '',
@@ -94,6 +103,19 @@ const form = reactive({
     password: '',
     password_repeat: '',
 })
+
+const validatePasswordStrength = (rule, value, callback) => {
+    if (!value) {
+        callback(new Error(t('validation.requiredPassword')))
+        return
+    }
+    const unmet = firstUnmetRequirement(value, policy.value, { email: form.email })
+    if (unmet) {
+        callback(new Error(unmet))
+        return
+    }
+    callback()
+}
 
 const validatePassword = (rule, value, callback) => {
     if (value === '') {
@@ -114,8 +136,7 @@ const rules = {
         { required: true, message: t('validation.requiredCode'), trigger: 'blur' },
     ],
     password: [
-        { required: true, message: t('validation.requiredPassword'), trigger: 'blur' },
-        { min: 6, max: 16, message: t('validation.passwordLength'), trigger: ['blur'] }
+        { validator: validatePasswordStrength, trigger: ['blur', 'change'] }
     ],
     password_repeat: [
         { validator: validatePassword, trigger: ['blur', 'change'] },
