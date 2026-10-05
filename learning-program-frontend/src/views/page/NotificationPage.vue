@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
 import { useI18n } from 'vue-i18n'
@@ -8,6 +9,7 @@ interface NotificationItem {
   id: number
   title: string
   content: string
+  link: string | null
   type: string
   read: boolean
   createdAt: string
@@ -21,6 +23,7 @@ interface NotificationResponse {
 const notifications = ref<NotificationItem[]>([])
 const unreadCount = ref(0)
 const loading = ref(true)
+const router = useRouter()
 const { t } = useI18n()
 
 function loadNotifications() {
@@ -40,6 +43,14 @@ function markRead(notification: NotificationItem) {
     notification.read = true
     unreadCount.value = Math.max(0, unreadCount.value - 1)
   })
+}
+
+/** 点击通知：先标记已读，带 link 的（例如「文章被评论」）再跳到对应页面。 */
+function openNotification(notification: NotificationItem) {
+  markRead(notification)
+  if (notification.link) {
+    void router.push(notification.link)
+  }
 }
 
 function markAllRead() {
@@ -79,7 +90,7 @@ onMounted(loadNotifications)
           :key="notification.id"
           class="notification-card"
           :class="{ unread: !notification.read }"
-          @click="markRead(notification)"
+          @click="openNotification(notification)"
         >
           <div class="message-icon"><el-icon><Message /></el-icon></div>
           <div class="message-body">

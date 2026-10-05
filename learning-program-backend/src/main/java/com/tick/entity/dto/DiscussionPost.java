@@ -7,30 +7,25 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
- * 站内通知，对应 db_notification。
+ * 讨论区文章。comment_count 为冗余计数，由 DiscussionService 在增删评论时同步维护。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("db_notification")
-public class Notification {
+@TableName("db_discussion_post")
+public class DiscussionPost {
     @TableId(type = IdType.AUTO)
     private Integer id;
     @TableField("account_id")
     private Integer accountId;
     private String title;
     private String content;
-    /** 点击通知后跳转的前端路由，可为 null（例如管理员群发通知）。 */
-    private String link;
-    private String type;
-    @TableField("is_read")
-    @JsonProperty("read")
-    private Boolean readStatus;
+    @TableField("comment_count")
+    private Integer commentCount;
     @TableField("created_at")
-    private Date createdAt;
+    private LocalDateTime createdAt;
 }

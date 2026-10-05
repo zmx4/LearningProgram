@@ -148,7 +148,7 @@ public class AdminController {
         }
         List<Notification> notifications = recipients.stream()
                 .map(account -> new Notification(
-                        null, account.getId(), request.title().trim(), request.content().trim(),
+                        null, account.getId(), request.title().trim(), request.content().trim(), null,
                         request.type() == null || request.type().isBlank() ? "system" : request.type().trim(),
                         false, new Date()))
                 .toList();

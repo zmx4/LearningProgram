@@ -83,6 +83,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                     account.getId(),
                     "欢迎加入学习平台",
                     "你的账号已经创建成功，开始规划今天的学习内容吧。",
+                    null,
                     "system",
                     false,
                     new Date()
@@ -104,6 +105,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                     account.getId(),
                     "欢迎加入学习平台",
                     "你的账号已经创建成功，开始规划今天的学习内容吧。",
+                    null,
                     "system",
                     false,
                     new Date()
@@ -137,6 +139,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 account.getId(),
                 "登录密码已重置",
                 "管理员重置了你的账号密码，请使用新密码登录后及时修改。",
+                null,
                 "system",
                 false,
                 new Date()

@@ -162,7 +162,21 @@ GET /api/notifications
 Authorization: Bearer <token>
 ```
 
-响应数据包含 `items` 和 `unreadCount`。
+响应数据包含 `items` 和 `unreadCount`。每条通知的结构：
+
+```json
+{
+  "id": 12,
+  "title": "你的文章有新评论",
+  "content": "tick 评论了你的文章《如何学习 Java》：建议先看官方教程",
+  "link": "/discussions/3",
+  "type": "discussion",
+  "read": false,
+  "createdAt": "2026-10-01T17:20:00"
+}
+```
+
+`link` 为点击通知后前端跳转的路由，管理员群发通知时为 `null`。
 
 ### 标记单条通知已读
 
@@ -595,6 +609,131 @@ Authorization: Bearer <admin-token>
 保留原始文件名用于展示与下载。参数非法返回 `400`。
 
 修改显示状态请求体为 `{ "visible": true }`。删除时数据库记录与磁盘文件一并移除，不可恢复。
+
+## 讨论区接口
+
+任何登录用户都可以发表文章和评论。文章的评论数由服务端维护；**有人评论你的文章时会收到一条站内通知**
+（自己评论自己的文章不通知），通知带 `link`，点击可直接跳到该文章。
+
+### 分页查询文章
+
+```http
+GET /api/discussions?page=1&size=20
+Authorization: Bearer <token>
+```
+
+`page` 从 `1` 开始，缺省 `1`；`size` 缺省 `20`，上限 `50`。按发表时间倒序，返回摘要而非全文：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "items": [
+      {
+        "id": 3,
+        "title": "如何学习 Java",
+        "summary": "先把语法过一遍，然后动手写小项目……",
+        "authorId": 1,
+        "authorName": "tick",
+        "commentCount": 2,
+        "createdAt": "2026-10-01T17:00:00"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 20
+  },
+  "message": "success"
+}
+```
+
+### 查询文章详情
+
+```http
+GET /api/discussions/{id}
+Authorization: Bearer <token>
+```
+
+返回同上结构但含 `content` 全文（不含 `summary`）。文章不存在返回 `404`。
+
+### 发表文章
+
+```http
+POST /api/discussions
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "title": "如何学习 Java",
+  "content": "先把语法过一遍，然后动手写小项目。"
+}
+```
+
+`title` 必填且不超过 150 字符，`content` 必填且不超过 5000 字符，不满足返回 `400`。
+
+### 删除文章
+
+```http
+DELETE /api/discussions/{id}
+Authorization: Bearer <token>
+```
+
+仅作者本人或管理员可以删除，否则返回 `403`；文章不存在返回 `404`。
+文章下的评论由外键级联删除。
+
+### 查询文章的评论
+
+```http
+GET /api/discussions/{id}/comments
+Authorization: Bearer <token>
+```
+
+按发表时间正序返回全部评论（不分页）；文章不存在返回 `404`。
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 7,
+      "postId": 3,
+      "authorId": 2,
+      "authorName": "someone",
+      "content": "建议先看官方教程。",
+      "createdAt": "2026-10-01T17:20:00"
+    }
+  ],
+  "message": "success"
+}
+```
+
+### 发表评论
+
+```http
+POST /api/discussions/{id}/comments
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "content": "建议先看官方教程。"
+}
+```
+
+`content` 必填且不超过 1000 字符。评论成功后给文章作者写入一条站内通知（`type` 为 `discussion`，
+`link` 为 `/discussions/{id}`）；评论者就是作者本人时不发通知。文章不存在返回 `404`，内容非法返回 `400`。
+
+### 删除评论
+
+```http
+DELETE /api/discussions/{postId}/comments/{commentId}
+Authorization: Bearer <token>
+```
+
+仅评论作者本人或管理员可以删除，否则返回 `403`。
 
 ## 管理员接口
 

@@ -81,6 +81,20 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '学习资源' }
         }]
     },{
+        path: '/discussions',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'discussions',
+            component: () => import('@/views/page/DiscussionPage.vue'),
+            meta: { title: '讨论区' }
+        },{
+            path: ':id',
+            name: 'discussion-detail',
+            component: () => import('@/views/page/DiscussionDetailPage.vue'),
+            meta: { title: '文章详情' }
+        }]
+    },{
         path: '/progress',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -169,6 +183,7 @@ router.beforeEach((to) => {
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
         || to.path.startsWith('/settings') || to.path.startsWith('/tests')
+        || to.path.startsWith('/discussions')
         || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }

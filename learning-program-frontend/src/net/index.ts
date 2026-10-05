@@ -25,11 +25,13 @@ interface ApiResponse<T> {
 interface AuthStorage {
     token: string
     expire: string | number | Date
+    id?: number
     username?: string
     role?: string
 }
 
 interface LoginResponse {
+    id?: number
     token: string
     expireTime: string | number | Date
     username: string
@@ -106,8 +108,9 @@ function storeAccessToken(
     expire: string | number | Date,
     username: string,
     role: string,
+    id?: number,
 ): void {
-    const authObj: AuthStorage = { token, expire, username, role }
+    const authObj: AuthStorage = { token, expire, id, username, role }
     const storage = remember ? localStorage : sessionStorage
     storage.setItem(authItemName, JSON.stringify(authObj))
 }
@@ -207,7 +210,7 @@ function login(
         { username, password },
         { 'Content-Type': 'application/x-www-form-urlencoded' },
         (data) => {
-            storeAccessToken(remember, data.token, data.expireTime, data.username, data.role)
+            storeAccessToken(remember, data.token, data.expireTime, data.username, data.role, data.id)
             ElMessage.success(`登录成功，欢迎 ${data.username} 来到我们的系统`)
             success(data)
         },
@@ -312,4 +315,29 @@ function currentRole(): string {
     }
 }
 
-export { post, publicPost, get, put, del, publicGet, login, logout, unauthorized, currentUsername, currentRole }
+// 读取当前登录账号 id，未登录或旧登录态（无 id）返回 null
+function currentUserId(): number | null {
+    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    if (!str) return null
+    try {
+        const authObj = JSON.parse(str) as AuthStorage
+        return typeof authObj.id === 'number' ? authObj.id : null
+    } catch {
+        return null
+    }
+}
+
+export {
+    post,
+    publicPost,
+    get,
+    put,
+    del,
+    publicGet,
+    login,
+    logout,
+    unauthorized,
+    currentUsername,
+    currentRole,
+    currentUserId,
+}

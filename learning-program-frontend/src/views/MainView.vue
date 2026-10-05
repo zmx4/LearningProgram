@@ -5,6 +5,7 @@ import {
   Bell,
   Avatar,
   Collection,
+  ChatDotRound,
   HomeFilled,
   Reading,
   Setting,
@@ -44,6 +45,7 @@ const navigationItems = [
   {name: 'courses', label: 'navigation.courses', icon: Reading},
   {name: 'resources', label: 'navigation.resources', icon: Collection},
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
+  {name: 'discussions', label: 'navigation.discussions', icon: ChatDotRound},
 ]
 
 // Sub-pages (for example /tests/words) keep their parent entry highlighted.
@@ -53,6 +55,7 @@ const navigationSections: Record<string, string> = {
   '/resources': 'resources',
   '/progress': 'progress',
   '/tests': 'tests',
+  '/discussions': 'discussions',
 }
 
 const activeSection = computed(() => {
