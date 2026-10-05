@@ -52,6 +52,10 @@ public class SecurityConfiguration {
                         conf
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
+                                // 未处理的错误会被转发到 /error。这里若要求认证，任何错误最终都会
+                                // 变成 401「Full authentication is required to access this resource」，
+                                // 前端会误判成登录过期并清除登录态，真正的错误信息也丢失了。
+                                .requestMatchers("/error").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("admin")
                                 .anyRequest().authenticated())
                 .formLogin(conf ->

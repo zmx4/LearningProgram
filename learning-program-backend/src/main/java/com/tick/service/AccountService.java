@@ -49,7 +49,8 @@ public interface AccountService extends IService<Account> , UserDetailsService {
     String resetConfirm(ConfirmRestVO vo);
 
     /**
-     * 验证码通过后重置密码：按邮箱更新密码并清除验证码缓存。
+     * 验证码通过后按邮箱重置密码：新密码需满足 {@link com.tick.security.password.PasswordPolicy}，
+     * 更新成功后清除验证码缓存。验证码有误、密码不合规或邮箱未注册时返回对应提示，成功返回 null。
      */
     String restEmailAccountPassword(EmailRegisterVO vo);
 

@@ -182,12 +182,21 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     public String restEmailAccountPassword(EmailRegisterVO vo) {
         String email = vo.getEmail();
         String verify = this.resetConfirm(new ConfirmRestVO(email, vo.getCode()));
-        if (verify == null) return verify;
+        // 原先写成 if (verify == null) return verify;：验证码通过（null）时提前返回、根本没改密码，
+        // 反倒是验证失败才继续往下走。这里改成只有失败才中断。
+        if (verify != null) {
+            return verify;
+        }
         String policyMessage = checkPasswordPolicy(vo.getPassword(), null, email);
-        if (policyMessage != null) return policyMessage;
+        if (policyMessage != null) {
+            return policyMessage;
+        }
         String password = encoder.encode(vo.getPassword());
-        boolean result = this.update().eq("email", email).set("password", password).update();
-        if (result && enabledEmailVerification) {
+        boolean updated = this.update().eq("email", email).set("password", password).update();
+        if (!updated) {
+            return "该邮箱尚未注册";
+        }
+        if (enabledEmailVerification) {
             stringRedisTemplate.delete(email);
         }
         return null;

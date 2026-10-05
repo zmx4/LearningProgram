@@ -53,9 +53,14 @@ public class AuthorizeController {
         return this.messageHandle(vo, accountService::resetConfirm);
     }
 
+    /**
+     * 验证码通过后按邮箱重置密码。
+     * 原先这里错接到了 registerEmailAccount，导致对已注册邮箱只会回「此email已被其他用户注册.」，
+     * 忘记密码流程实际走不通。
+     */
     @PostMapping("/reset-password")
-    public RestBean<Void> resetConfirm(@RequestBody @Valid EmailRegisterVO vo) {
-        return this.messageHandle(vo, accountService::registerEmailAccount);
+    public RestBean<Void> resetPassword(@RequestBody @Valid EmailRegisterVO vo) {
+        return this.messageHandle(vo, accountService::restEmailAccountPassword);
     }
 
     private <T> RestBean<Void> messageHandle(T vo, Function<T, String> function) {
