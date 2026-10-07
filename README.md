@@ -46,6 +46,7 @@
 LearningProgram/
 ├── docs/
 │   ├── API.md                    # 接口文档
+│   ├── CLASS_DIAGRAM.puml        # 后端类图（PlantUML 源文件，附渲染 PNG）
 │   ├── DATABASE.md              # 数据库说明文档
 │   └── INSTALLATION.md          # 安装与运行文档
 ├── learning-program-backend/    # Spring Boot 后端
@@ -70,6 +71,7 @@ LearningProgram/
 - [安装与运行](./docs/INSTALLATION.md)：环境要求、数据库、配置、启动和构建命令。
 - [数据库说明](./docs/DATABASE.md)：表结构、表间关系、积分与级联删除约定和迁移脚本。
 - [接口文档](./docs/API.md)：认证、个人资料、通知、用户和管理员接口。
+- [后端类图](./docs/CLASS_DIAGRAM.puml)：controller / service / mapper / entity 分层与领域实体关系（[渲染 PNG](./docs/CLASS_DIAGRAM.png)）。
 
 ## 开发约定
 

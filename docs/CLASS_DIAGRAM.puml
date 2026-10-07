@@ -1,0 +1,532 @@
+@startuml
+title LearningProgram 后端类图（Spring Boot + MyBatis-Plus 分层架构）
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+' ============================ controller 层 ============================
+package "controller · REST 接口层" #E8F0FE {
+
+  class AuthorizeController
+  class UserController
+  class ProfileController
+  class NotificationController
+  class AccountPointsController
+  class CheckInController
+  class DictionaryController
+  class CetWordController
+  class CourseProgressController
+  class QuestionSetController
+  class TestTypeController
+  class TestQuestionController
+  class KnowledgeTestController
+  class WordTestController
+  class ResourceController
+  class TestController
+
+  package "管理员接口（/api/admin，admin 角色）" #F5F5F5 {
+    class AdminController
+    class AdminCourseController
+    class AdminQuestionSetController
+    class AdminTestBankController
+    class AdminResourceController
+  }
+}
+
+' ============================ service 接口层 ============================
+package "service · 业务接口层" #E6F4EA {
+
+  interface AccountService {
+    +findAccountByUsernameOrEmail(text): Account
+    +registerEmailAccount(vo): String
+    +createAccount(username, email, password): String
+    +changePassword(accountId, vo): String
+    +resetPassword(accountId): String
+    +updateProfile(accountId, vo): Account
+    +resetConfirm(vo): String
+    +restEmailAccountPassword(vo): String
+  }
+  interface AccountPointsService {
+    +getTotalPoints(accountId): int
+    +addPoints(accountId, points): void
+  }
+  interface CheckInService {
+    +getStatus(accountId, year, month): Map
+    +checkIn(accountId): CheckInRecord
+  }
+  interface NotificationService {
+    +findByAccountId(accountId): List
+    +markRead(accountId, id): boolean
+    +markAllRead(accountId): boolean
+  }
+  interface CourseProgressService {
+    +getOverview(accountId): CourseProgressOverviewVO
+    +getCourseDetail(courseId): CourseDetailVO
+    +getCourseProgress(accountId, courseId): CourseStudyProgressVO
+    +recordStudy(accountId, courseId, vo): CourseStudyResultVO
+  }
+  interface CourseService {
+    +listCourses(): List
+    +getCourse(id): AdminCourseVO
+    +createCourse(vo): AdminCourseVO
+    +updateCourse(id, vo): AdminCourseVO
+    +deleteCourse(id): void
+  }
+  interface QuestionSetService {
+    +listSets(): List
+    +getSetDetail(id): QuestionSetDetailVO
+    +createSet(vo): QuestionSetVO
+    +updateSet(id, vo): QuestionSetVO
+    +deleteSet(id): void
+  }
+  interface TestTypeService {
+    +listTypes(): List
+    +getType(id): TestType
+    +createType(vo): TestType
+    +updateType(id, vo): TestType
+    +deleteType(id): void
+  }
+  interface TestQuestionService {
+    +getQuestions(typeId, kind, count): List
+    +listByIds(ids): List
+    +createQuestion(typeId, vo): TestQuestionVO
+    +updateQuestion(id, vo): TestQuestionVO
+    +deleteQuestion(id): void
+  }
+  interface KnowledgeTestService {
+    +saveResult(accountId, vo): KnowledgeTestRecordVO
+    +getSummary(accountId): Map
+    +getHistory(accountId): List
+  }
+  interface WordTestService {
+    +saveResult(accountId, record): WordTestRecord
+    +getSummary(accountId): Map
+    +getHistory(accountId): List
+  }
+  interface LearningResourceService {
+    +listVisible(): List
+    +listAll(): List
+    +upload(file, title, description, visible, accountId): ResourceVO
+    +setVisible(id, visible): void
+    +delete(id): void
+    +getResource(id): LearningResource
+    +resolveStoredPath(storedName): Path
+  }
+  interface DictionaryService
+  interface CetWordService {
+    +findRandomCet4(count): List
+    +findRandomCet6(count): List
+  }
+}
+
+' ============================ service 实现层 ============================
+package "service.impl · 业务实现层" #FFF9E6 {
+
+  class AccountServiceImpl
+  class AccountPointsServiceImpl
+  class CheckInServiceImpl
+  class NotificationServiceImpl
+  class CourseProgressServiceImpl
+  class CourseServiceImpl
+  class QuestionSetServiceImpl
+  class TestTypeServiceImpl
+  class TestQuestionServiceImpl
+  class KnowledgeTestServiceImpl
+  class WordTestServiceImpl
+  class LearningResourceServiceImpl
+  class DictionaryServiceImpl
+  class CetWordServiceImpl
+}
+
+' ============================ mapper 层 ============================
+package "mapper · 数据访问层（MyBatis-Plus）" #FDECEC {
+
+  interface AccountMapper
+  interface AccountPointsMapper
+  interface CheckInRecordMapper
+  interface NotificationMapper
+  interface CourseMapper
+  interface CourseChapterMapper
+  interface CourseQuestionSetMapper
+  interface CourseProgressMapper
+  interface CourseStudyLogMapper
+  interface CourseRewardMapper
+  interface QuestionSetMapper
+  interface QuestionSetItemMapper
+  interface TestTypeMapper
+  interface TestQuestionMapper
+  interface KnowledgeTestRecordMapper
+  interface WordTestRecordMapper
+  interface LearningResourceMapper
+  interface DictionaryMapper
+  interface Cet4WordMapper
+  interface Cet6WordMapper
+}
+
+' ============================ 领域实体层 ============================
+package "entity.dto · 领域实体" #F3E8FD {
+
+  class Account {
+    -id: Integer
+    -username: String
+    -password: String
+    -email: String
+    -phone: String
+    -bio: String
+    -role: String
+    -points: Integer
+    -registerDate: Date
+  }
+
+  class AccountPoints {
+    -id: Integer
+    -accountId: Integer
+    -totalPoints: Integer
+  }
+
+  class CheckInRecord {
+    -id: Integer
+    -accountId: Integer
+    -checkinDate: LocalDate
+    -points: Integer
+    -streak: Integer
+  }
+
+  class Notification {
+    -id: Integer
+    -accountId: Integer
+    -title: String
+    -content: String
+    -type: String
+    -isRead: boolean
+    -createdAt: LocalDateTime
+  }
+
+  class Course {
+    -id: Integer
+    -title: String
+    -description: String
+    -icon: String
+    -sortOrder: Integer
+    -rewardPoints: Integer
+    -createdAt: LocalDateTime
+  }
+
+  class CourseChapter {
+    -id: Integer
+    -courseId: Integer
+    -title: String
+    -content: String
+    -sortOrder: Integer
+  }
+
+  class CourseQuestionSet {
+    -id: Integer
+    -courseId: Integer
+    -setId: Integer
+    -sortOrder: Integer
+  }
+
+  class CourseProgress {
+    -id: Integer
+    -accountId: Integer
+    -courseId: Integer
+    -chapterId: Integer
+    -durationSeconds: Integer
+    -studiedCount: Integer
+  }
+
+  class CourseStudyLog {
+    -id: Integer
+    -accountId: Integer
+    -courseId: Integer
+    -chapterId: Integer
+    -durationSeconds: Integer
+    -createdAt: LocalDateTime
+  }
+
+  class CourseReward {
+    -id: Integer
+    -accountId: Integer
+    -courseId: Integer
+    -points: Integer
+    -createdAt: LocalDateTime
+  }
+
+  class TestType {
+    -id: Integer
+    -code: String
+    -name: String
+    -description: String
+  }
+
+  class TestQuestion {
+    -id: Integer
+    -typeId: Integer
+    -kind: String
+    -content: String «JSON»
+    -createdAt: LocalDateTime
+  }
+
+  class QuestionSet {
+    -id: Integer
+    -title: String
+    -description: String
+  }
+
+  class QuestionSetItem {
+    -id: Integer
+    -setId: Integer
+    -questionId: Integer
+  }
+
+  class KnowledgeTestRecord {
+    -id: Integer
+    -accountId: Integer
+    -typeId: Integer
+    -setId: Integer
+    -typeName: String
+    -totalCount: Integer
+    -correctCount: Integer
+    -wrongCount: Integer
+    -score: Integer
+    -durationSeconds: Integer
+    -detail: String «JSON»
+  }
+
+  class KnowledgeTestAnswer {
+    -questionId: Integer
+    -kind: String
+    -userAnswer: List
+    -correct: boolean
+  }
+
+  class WordTestRecord {
+    -id: Integer
+    -accountId: Integer
+    -source: String
+    -totalCount: Integer
+    -correctCount: Integer
+    -wrongCount: Integer
+    -score: Integer
+  }
+
+  class LearningResource {
+    -id: Integer
+    -title: String
+    -fileName: String
+    -storedName: String
+    -contentType: String
+    -fileSize: Long
+    -visible: boolean
+    -accountId: Integer «软引用»
+  }
+
+  class Dictionary {
+    -id: Integer
+    -word: String
+    -translation: String
+  }
+
+  class Cet4Word {
+    -id: Integer
+    -word: String
+    -translation: String
+  }
+
+  class Cet6Word {
+    -id: Integer
+    -word: String
+    -translation: String
+  }
+
+  class TestQuestionContent {
+    -stem: String
+    -options: List<QuestionOption>
+    -answer: List<String>
+    -analysis: String
+    +normalizeAndValidate(kind): void
+  }
+
+  class QuestionOption {
+    -key: String
+    -text: String
+  }
+
+  enum TestQuestionKind {
+    SINGLE
+    MULTIPLE
+    BLANK
+    --
+    -code: String
+    -label: String
+  }
+}
+
+' ============================ 安全与基础设施 ============================
+package "config · filter · utils" #FFF3E0 {
+
+  class SecurityConfiguration {
+    +filterChain(HttpSecurity): SecurityFilterChain
+    -onAuthenticationSuccess(...)
+    -onAuthenticationFailure(...)
+  }
+  class JwtAuthorizeFilter {
+    +doFilterInternal(request, response, chain): void
+  }
+  class CorsFilter
+  class FlowLimitFilter {
+    -tryCount(ip): boolean
+  }
+  class JwtUtils {
+    +createJwt(details, id, username): String
+    +resolveJwt(token): DecodedJWT
+    +expireTime(): Date
+    +invalidateToken(token): boolean
+  }
+}
+
+' ============================ MyBatis-Plus 框架基类 ============================
+package "MyBatis-Plus（框架基类）" #DDDDDD {
+  abstract class "BaseMapper<T>" as BaseMapper
+  abstract class "ServiceImpl<M, T>" as MPServiceImpl
+}
+
+' ============================ 继承与实现 ============================
+
+AccountMapper ..|> BaseMapper
+AccountPointsMapper ..|> BaseMapper
+CheckInRecordMapper ..|> BaseMapper
+NotificationMapper ..|> BaseMapper
+CourseMapper ..|> BaseMapper
+CourseChapterMapper ..|> BaseMapper
+CourseQuestionSetMapper ..|> BaseMapper
+CourseProgressMapper ..|> BaseMapper
+CourseStudyLogMapper ..|> BaseMapper
+CourseRewardMapper ..|> BaseMapper
+QuestionSetMapper ..|> BaseMapper
+QuestionSetItemMapper ..|> BaseMapper
+TestTypeMapper ..|> BaseMapper
+TestQuestionMapper ..|> BaseMapper
+KnowledgeTestRecordMapper ..|> BaseMapper
+WordTestRecordMapper ..|> BaseMapper
+LearningResourceMapper ..|> BaseMapper
+DictionaryMapper ..|> BaseMapper
+Cet4WordMapper ..|> BaseMapper
+Cet6WordMapper ..|> BaseMapper
+
+AccountServiceImpl ..|> AccountService
+AccountPointsServiceImpl ..|> AccountPointsService
+CheckInServiceImpl ..|> CheckInService
+NotificationServiceImpl ..|> NotificationService
+CourseProgressServiceImpl ..|> CourseProgressService
+CourseServiceImpl ..|> CourseService
+QuestionSetServiceImpl ..|> QuestionSetService
+TestTypeServiceImpl ..|> TestTypeService
+TestQuestionServiceImpl ..|> TestQuestionService
+KnowledgeTestServiceImpl ..|> KnowledgeTestService
+WordTestServiceImpl ..|> WordTestService
+LearningResourceServiceImpl ..|> LearningResourceService
+DictionaryServiceImpl ..|> DictionaryService
+CetWordServiceImpl ..|> CetWordService
+
+AccountServiceImpl --|> MPServiceImpl
+CheckInServiceImpl --|> MPServiceImpl
+NotificationServiceImpl --|> MPServiceImpl
+CourseServiceImpl --|> MPServiceImpl
+CourseProgressServiceImpl --|> MPServiceImpl
+QuestionSetServiceImpl --|> MPServiceImpl
+TestTypeServiceImpl --|> MPServiceImpl
+TestQuestionServiceImpl --|> MPServiceImpl
+KnowledgeTestServiceImpl --|> MPServiceImpl
+WordTestServiceImpl --|> MPServiceImpl
+LearningResourceServiceImpl --|> MPServiceImpl
+DictionaryServiceImpl --|> MPServiceImpl
+
+AccountServiceImpl ..> AccountMapper : «bind» M/T
+AccountServiceImpl ..> BaseMapper
+CheckInServiceImpl ..> AccountPointsService : 签到发积分
+CourseProgressServiceImpl ..> AccountPointsService : 完成课程发积分
+QuestionSetServiceImpl ..> TestQuestionService
+KnowledgeTestServiceImpl ..> TestTypeService
+TestQuestionServiceImpl ..> QuestionSetItemMapper : 引用校验
+TestTypeServiceImpl ..> TestQuestionMapper : 删除前校验
+LearningResourceServiceImpl ..> AccountMapper
+
+' ============================ controller → service ============================
+
+AuthorizeController ..> AccountService
+UserController ..> AccountService
+ProfileController ..> AccountService
+AdminController ..> AccountService
+AdminController ..> NotificationService
+NotificationController ..> NotificationService
+AccountPointsController ..> AccountPointsService
+CheckInController ..> CheckInService
+DictionaryController ..> DictionaryService
+CetWordController ..> CetWordService
+CourseProgressController ..> CourseProgressService
+AdminCourseController ..> CourseService
+QuestionSetController ..> QuestionSetService
+AdminQuestionSetController ..> QuestionSetService
+TestTypeController ..> TestTypeService
+TestQuestionController ..> TestQuestionService
+TestQuestionController ..> TestTypeService
+AdminTestBankController ..> TestTypeService
+AdminTestBankController ..> TestQuestionService
+KnowledgeTestController ..> KnowledgeTestService
+WordTestController ..> WordTestService
+ResourceController ..> LearningResourceService
+AdminResourceController ..> LearningResourceService
+
+' ============================ 安全链路 ============================
+
+SecurityConfiguration ..> JwtUtils
+SecurityConfiguration ..> JwtAuthorizeFilter
+SecurityConfiguration ..> AccountService
+JwtAuthorizeFilter ..> JwtUtils
+
+note bottom of JwtUtils
+  JWT 签发与解析；
+  登出 token 写入 Redis 黑名单
+end note
+note bottom of FlowLimitFilter
+  基于 Redis 的 IP 限流，
+  超阈值返回 429
+end note
+
+' ============================ 实体关系（外键） ============================
+
+Account "1" --> "0..1" AccountPoints : 积分总账
+Account "1" --> "*" CheckInRecord : 每日签到
+Account "1" --> "*" Notification : 站内通知
+Account "1" --> "*" WordTestRecord : 测试成绩
+Account "1" --> "*" KnowledgeTestRecord : 测试成绩
+Account "1" --> "*" CourseProgress : 学习进度
+Account "1" --> "*" CourseStudyLog : 学习流水
+Account "1" --> "*" CourseReward : 课程奖励
+
+Course "1" *-- "*" CourseChapter : 章节（级联删除）
+Course "1" *-- "*" CourseQuestionSet : 关联题集
+Course "1" *-- "*" CourseReward : 奖励发放
+QuestionSet "1" *-- "*" QuestionSetItem
+QuestionSetItem "*" --> "1" TestQuestion
+
+TestType "1" --> "*" TestQuestion
+
+TestQuestion ..> TestQuestionContent : content 列 «JSON»
+TestQuestionContent o-- QuestionOption
+TestQuestionContent ..> TestQuestionKind
+
+KnowledgeTestRecord ..> KnowledgeTestAnswer : detail 列 «JSON»
+KnowledgeTestRecord "*" --> "0..1" QuestionSet : 题集模式
+LearningResource ..> Account : accountId 软引用
+
+note bottom of TestQuestionContent
+  题干/选项/答案/解析以 JSON
+  存于 db_test_question.content，
+  kind 决定结构与校验规则
+end note
+
+@enduml
