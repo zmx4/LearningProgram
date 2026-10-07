@@ -832,6 +832,79 @@ Authorization: Bearer <token>
 
 仅评论作者本人或管理员可以删除，否则返回 `403`。
 
+## 排行榜接口
+
+登录后即可查看，所有维度都是**累计口径（总榜）**：
+
+| 维度 `metric` | 名称 | 数据来源 | `value` 单位 |
+| --- | --- | --- | --- |
+| `points` | 积分 | `db_account_points.total_points` | 分 |
+| `study` | 学习时长 | `db_course_study_log.duration_seconds` 按用户求和 | **秒** |
+| `check-in` | 签到天数 | `db_check_in` 记录数 | 天 |
+
+> 积分账本只保存累计值、没有流水时间字段，所以积分无法按周/月统计；学习时长、签到、
+> 完成课程、测试成绩虽然有时间字段，但当前统一按总榜口径返回，避免各维度时间范围不一致。
+
+### 查询可选维度
+
+```http
+GET /api/leaderboard/metrics
+Authorization: Bearer <token>
+```
+
+前端据此渲染切换标签，维度写在后端，新增维度不需要改前端：
+
+```json
+{
+  "code": 200,
+  "data": [
+    { "code": "points", "label": "积分", "unit": "分" },
+    { "code": "study", "label": "学习时长", "unit": "秒" },
+    { "code": "check-in", "label": "签到天数", "unit": "天" }
+  ],
+  "message": "success"
+}
+```
+
+### 查询排行榜
+
+```http
+GET /api/leaderboard?metric=points&limit=20
+Authorization: Bearer <token>
+```
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `metric` | 否 | 维度，缺省 `points`；不支持的取值返回 `400` |
+| `limit` | 否 | 榜单条数，缺省 `20`，上限 `100`（超出按 100 截断，小于 1 按缺省处理） |
+
+```json
+{
+  "code": 200,
+  "data": {
+    "metric": "points",
+    "metricLabel": "积分",
+    "unit": "分",
+    "limit": 20,
+    "rankedUsers": 2,
+    "entries": [
+      { "rank": 1, "accountId": 1, "username": "test", "value": 16, "rankedUsers": 2 },
+      { "rank": 2, "accountId": 21, "username": "alice", "value": 9, "rankedUsers": 2 }
+    ],
+    "me": { "rank": 2, "accountId": 21, "username": "alice", "value": 9, "rankedUsers": 2 }
+  },
+  "message": "success"
+}
+```
+
+说明：
+
+- `entries` 是前 `limit` 名，按名次升序；并列时按 `accountId` 升序错开，所以名次不会重复
+- `me` 是**当前用户自己的那一行**，即使排在 `limit` 之外也会返回（一次查询同时取回），
+  前端因此能显示「我的排名」而不用额外请求
+- 当前用户在该维度还没有任何记录时 `me` 为 `null`；`rankedUsers` 是参与该维度排名的总人数
+- `study` 维度的 `value` 是秒，由前端格式化成「x 分钟 / x 小时 y 分钟」
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。

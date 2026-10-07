@@ -95,6 +95,15 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '文章详情' }
         }]
     },{
+        path: '/leaderboard',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'leaderboard',
+            component: () => import('@/views/page/LeaderboardPage.vue'),
+            meta: { title: '排行榜' }
+        }]
+    },{
         path: '/progress',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -183,7 +192,7 @@ router.beforeEach((to) => {
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
         || to.path.startsWith('/settings') || to.path.startsWith('/tests')
-        || to.path.startsWith('/discussions')
+        || to.path.startsWith('/discussions') || to.path.startsWith('/leaderboard')
         || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }

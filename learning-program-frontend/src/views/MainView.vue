@@ -11,6 +11,7 @@ import {
   Setting,
   Notebook,
   EditPen,
+  Trophy,
   UserFilled,
 } from '@element-plus/icons-vue'
 import {computed, onMounted, onUnmounted, ref} from 'vue'
@@ -46,6 +47,7 @@ const navigationItems = [
   {name: 'resources', label: 'navigation.resources', icon: Collection},
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
   {name: 'discussions', label: 'navigation.discussions', icon: ChatDotRound},
+  {name: 'leaderboard', label: 'navigation.leaderboard', icon: Trophy},
 ]
 
 // Sub-pages (for example /tests/words) keep their parent entry highlighted.
@@ -56,6 +58,7 @@ const navigationSections: Record<string, string> = {
   '/progress': 'progress',
   '/tests': 'tests',
   '/discussions': 'discussions',
+  '/leaderboard': 'leaderboard',
 }
 
 const activeSection = computed(() => {
