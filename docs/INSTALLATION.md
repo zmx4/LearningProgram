@@ -206,3 +206,6 @@ pnpm run build
 pnpm run preview
 ```
 
+`pnpm run build` 会先做类型检查再打包，产物在 `dist/`。生产环境的托管方式（nginx 配置、
+SPA 路由回退、接口反向代理、HTTPS 与常见问题）见 [DEPLOYMENT.md](./DEPLOYMENT.md)。
+

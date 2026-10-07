@@ -50,3 +50,8 @@ learning:
       special-characters: "!@#$%^&*()-_=+[]{};:,.?/|~"
 server:
   port: 1231
+  # 部署在 nginx 等反向代理后面时，按 X-Forwarded-For 还原真实客户端 IP。
+  # FlowLimitFilter 用 request.getRemoteAddr() 做限流，若不还原，
+  # 所有用户都会被当成代理的 IP、共享同一份限流额度（10 次 / 3 秒）。
+  # 本地直连（没有该请求头）时行为不变；只有可信代理发来的头才会被采纳。
+  forward-headers-strategy: native

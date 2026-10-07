@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      vueDevTools(),
+      // vueDevTools(),
       AutoImport({
         resolvers: [ElementPlusResolver()],
       }),

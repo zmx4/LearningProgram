@@ -40,3 +40,14 @@ npm run dev
 ```sh
 npm run build
 ```
+
+## 部署
+
+构建产物（`dist/`）是纯静态文件，生产环境推荐用 nginx 托管静态资源并把 `/api` 反向代理到后端，
+做到前后端同源、不涉及跨域。
+
+- 现成的 nginx 站点配置：[`deploy/nginx.conf`](./deploy/nginx.conf)
+- 完整部署步骤与常见问题：[`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)
+
+本地想先验证构建产物，用 `pnpm run preview`（已配置 `/api` 代理，等价于生产环境的同源行为）。
+
