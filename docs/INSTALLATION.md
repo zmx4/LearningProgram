@@ -166,13 +166,36 @@ npm install
 npm run dev
 ```
 
-Vite 通常会使用：
+Vite 启动后会同时打印本机地址和局域网地址：
 
 ```text
-http://localhost:5173
+➜  Local:   http://localhost:5173/
+➜  Network: http://192.168.1.10:5173/
 ```
 
-前端 API 地址目前在 `learning-program-frontend/src/main.ts` 中配置。修改后端地址时，请同步检查 CORS 配置。
+`Network` 一行的地址可供同一局域网内的其他设备（手机、别的电脑）直接访问。
+
+### 前后端连接方式
+
+前端所有请求都走**同源相对路径** `/api/...`（见 `src/main.ts` 的 `axios.defaults.baseURL`），
+开发时由 Vite 代理转发到后端，因此换 IP、换设备访问都不需要改代码，也不会触发跨域。
+
+代理目标地址通过环境变量配置，默认 `http://127.0.0.1:1231`：
+
+```powershell
+Copy-Item .\learning-program-frontend\.env.example .\learning-program-frontend\.env.local
+```
+
+| 变量 | 作用 | 默认值 |
+| --- | --- | --- |
+| `VITE_DEV_API_TARGET` | `pnpm dev` / `pnpm preview` 时 `/api` 转发到的后端地址 | `http://127.0.0.1:1231` |
+| `VITE_API_BASE_URL` | 构建产物中前端直连的后端地址，留空表示同源 | 空（同源） |
+
+后端与前端不在同一台机器上时，把 `VITE_DEV_API_TARGET` 改成后端的实际地址即可，
+改完需要重启 dev server。
+
+生产部署推荐用 nginx 等反向代理把前端静态资源和 `/api` 挂在同一个域名下，
+`VITE_API_BASE_URL` 保持留空；确实要前后端分域名部署时再填写它，并同步检查后端 CORS 配置。
 
 ## 前端构建
 

@@ -37,3 +37,8 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+### 本地环境变量（含机器地址，勿提交） ###
+.env
+.env.*
+!.env.example

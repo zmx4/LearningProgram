@@ -79,7 +79,8 @@ LearningProgram/
 - 需要登录的后端请求必须经过 JWT 过滤器校验。
 - 管理员接口由 Spring Security 强制校验 `admin` 角色。
 - 前端认证信息保存在 `localStorage` 或 `sessionStorage` 的 `authorize` 项中。
-- 修改端口、数据库或 Redis 配置后，请同步检查前端请求地址和跨域配置。
+- 前端统一请求同源相对路径 `/api`，开发时由 Vite 代理转发到后端，地址在 `learning-program-frontend/.env.local` 中配置。
+- 修改后端端口、数据库或 Redis 配置后，请同步检查前端 `VITE_DEV_API_TARGET` 和跨域配置。
 
 ## 参考资料
 
