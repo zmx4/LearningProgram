@@ -1,5 +1,6 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createMemoryHistory, createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { currentRole, unauthorized } from '@/net'
+import { isBrowser } from '@/utils/storage'
 
 /** 路由表：welcome 为登录注册壳，MainView 承载登录后页面（含侧边栏），AdminView 承载管理员后台。 */
 const routes: RouteRecordRaw[] = [
@@ -180,7 +181,11 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
+    // 服务端（预渲染）没有 window/history，必须用内存历史；
+    // 浏览器里仍然用 history 模式，地址栏与刷新行为不变。
+    history: isBrowser
+        ? createWebHistory(import.meta.env.BASE_URL)
+        : createMemoryHistory(import.meta.env.BASE_URL),
     routes
 })
 

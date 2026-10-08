@@ -13,10 +13,11 @@ import {
   saveDailyWordSettings,
   type DailyWordSource,
 } from '@/utils/dailyWord'
+import { readLocal, writeLocal } from '@/utils/storage'
 
 const themeStorageKey = 'learning-theme-mode'
 const { t } = useI18n()
-const storedMode = localStorage.getItem(themeStorageKey)
+const storedMode = readLocal(themeStorageKey)
 const themeMode = ref<ThemeMode>(
   storedMode === 'light' || storedMode === 'dark' || storedMode === 'system'
     ? storedMode
@@ -38,7 +39,7 @@ const themeOptions = [
 
 function updateTheme(mode: ThemeMode) {
   themeMode.value = mode
-  localStorage.setItem(themeStorageKey, mode)
+  writeLocal(themeStorageKey, mode)
   const media = window.matchMedia('(prefers-color-scheme: dark)')
   document.documentElement.classList.toggle('dark', mode === 'dark' || (mode === 'system' && media.matches))
   const selectedOption = themeOptions.find((option) => option.value === mode)

@@ -46,8 +46,18 @@ npm run build
 构建产物（`dist/`）是纯静态文件，生产环境推荐用 nginx 托管静态资源并把 `/api` 反向代理到后端，
 做到前后端同源、不涉及跨域。
 
+`pnpm run build` 会依次执行类型检查、客户端打包、SSR bundle 打包、公开页预渲染（SSG）：
+
+```
+type-check → build-only → build-ssr → prerender
+```
+
+预渲染只覆盖不需要登录态的 `/` 与 `/register`（token 存在浏览器本地，服务端看不到），
+其余路由回退到未预渲染的 `dist/spa.html`，由前端路由接管。
+
 - 现成的 nginx 站点配置：[`deploy/nginx.conf`](./deploy/nginx.conf)
-- 完整部署步骤与常见问题：[`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)
+- 完整部署步骤、预渲染说明与常见问题：[`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)
 
 本地想先验证构建产物，用 `pnpm run preview`（已配置 `/api` 代理，等价于生产环境的同源行为）。
+注意 `preview` 不会套用 nginx 的预渲染/兜底规则，它只用于确认页面能跑起来。
 

@@ -1,5 +1,6 @@
 import { createI18n } from 'vue-i18n'
 import zhCN from './locales/zh-CN'
+import { readLocal, writeLocal } from '@/utils/storage'
 
 const localeStorageKey = 'learning-locale'
 const supportedLocales = ['zh-CN'] as const
@@ -11,7 +12,8 @@ export const LANGUAGE_OPTIONS: ReadonlyArray<{ value: SupportedLocale, label: st
 ]
 
 function getInitialLocale(): SupportedLocale {
-  const storedLocale = localStorage.getItem(localeStorageKey)
+  // 走 SSR 安全的读取：服务端没有 localStorage，此时回落默认语言
+  const storedLocale = readLocal(localeStorageKey)
   return supportedLocales.includes(storedLocale as SupportedLocale)
     ? storedLocale as SupportedLocale
     : 'zh-CN'
@@ -28,7 +30,7 @@ const i18n = createI18n({
 
 function setLocale(locale: SupportedLocale) {
   i18n.global.locale.value = locale
-  localStorage.setItem(localeStorageKey, locale)
+  writeLocal(localeStorageKey, locale)
 }
 
 export { localeStorageKey, supportedLocales, setLocale }

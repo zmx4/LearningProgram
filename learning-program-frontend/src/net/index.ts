@@ -12,6 +12,7 @@
 import axios, { type AxiosRequestConfig, isAxiosError } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { readLocalOrSession, removeFromBoth, writeLocal, writeSession } from '@/utils/storage'
 
 // 登录态在 storage 中的键名，值为序列化后的 AuthStorage
 const authItemName = 'authorize'
@@ -79,7 +80,7 @@ const defaultFailure: FailureCallback = (message, status, url) => {
 
 // 读取本地 token；不存在或已过期时清理本地登录态并提示，返回 null
 function takeAccessToken(): string | null {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const str = readLocalOrSession(authItemName)
     if (!str) {
         return null
     }
@@ -111,14 +112,14 @@ function storeAccessToken(
     id?: number,
 ): void {
     const authObj: AuthStorage = { token, expire, id, username, role }
-    const storage = remember ? localStorage : sessionStorage
-    storage.setItem(authItemName, JSON.stringify(authObj))
+    const serialized = JSON.stringify(authObj)
+    if (remember) writeLocal(authItemName, serialized)
+    else writeSession(authItemName, serialized)
 }
 
 // 清除登录态；redirect 为真时跳转登录页（401 过期场景）
 function deleteAccessToken(redirect = false): void {
-    localStorage.removeItem(authItemName)
-    sessionStorage.removeItem(authItemName)
+    removeFromBoth(authItemName)
 
     if (redirect) {
         void router.push({ name: 'welcome-login' })
@@ -291,9 +292,17 @@ function unauthorized(): boolean {
     return !takeAccessToken()
 }
 
+/**
+ * 本地是否存有登录态（不校验是否过期）。
+ * 客户端入口用它判断预渲染出来的「未登录」DOM 能否直接复用。
+ */
+function hasStoredSession(): boolean {
+    return readLocalOrSession(authItemName) !== null
+}
+
 // 读取当前登录用户名（登录时缓存），未登录返回空串
 function currentUsername(): string {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const str = readLocalOrSession(authItemName)
     if (!str) return ''
     try {
         const authObj = JSON.parse(str) as AuthStorage
@@ -305,7 +314,7 @@ function currentUsername(): string {
 
 // 读取当前登录角色（user / admin），供路由守卫判断 adminOnly 路由
 function currentRole(): string {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const str = readLocalOrSession(authItemName)
     if (!str) return ''
     try {
         const authObj = JSON.parse(str) as AuthStorage
@@ -317,7 +326,7 @@ function currentRole(): string {
 
 // 读取当前登录账号 id，未登录或旧登录态（无 id）返回 null
 function currentUserId(): number | null {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const str = readLocalOrSession(authItemName)
     if (!str) return null
     try {
         const authObj = JSON.parse(str) as AuthStorage
@@ -337,6 +346,7 @@ export {
     login,
     logout,
     unauthorized,
+    hasStoredSession,
     currentUsername,
     currentRole,
     currentUserId,

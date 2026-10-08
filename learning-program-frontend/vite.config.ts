@@ -42,5 +42,11 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy,
     },
+    // 预渲染要用 `vite build --ssr src/entry-server.ts` 产出一份 Node 端 bundle。
+    // element-plus 由 Vite 一起打包（而不是留给 Node 去 import），
+    // 否则它在 SSR 运行时会去加载 .css 子路径，Node 直接报错。
+    ssr: {
+      noExternal: ['element-plus'],
+    },
   }
 })

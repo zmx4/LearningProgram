@@ -24,6 +24,7 @@ import {
   type DailyWordSettings,
   type DailyWordSource,
 } from '@/utils/dailyWord'
+import { readLocal, removeFromBoth, writeLocal } from '@/utils/storage'
 
 interface DailyWord {
   id: number
@@ -84,13 +85,13 @@ function loadDailyWord() {
   if (!dailyWordSettings.value.enabled) return
 
   const cacheKey = dailyWordCacheKey(dailyWordSettings.value.source)
-  const cached = localStorage.getItem(cacheKey)
+  const cached = readLocal(cacheKey)
   if (cached) {
     try {
       dailyWord.value = JSON.parse(cached) as DailyWord
       return
     } catch {
-      localStorage.removeItem(cacheKey)
+      removeFromBoth(cacheKey)
     }
   }
 
@@ -102,7 +103,7 @@ function loadDailyWord() {
         const word = words[0]
         if (!word) return
         dailyWord.value = word
-        localStorage.setItem(cacheKey, JSON.stringify(word))
+        writeLocal(cacheKey, JSON.stringify(word))
       },
       () => {
         dailyWordLoading.value = false

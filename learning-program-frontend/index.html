@@ -12,7 +12,9 @@
     </style>
 </head>
 <body>
+<!-- 预渲染时 scripts/prerender.mjs 会把渲染结果填进这个 div，并写入 data-prerendered-route；
+     普通 SPA 兜底页保持为空，由 entry-client.ts 判断后走 mount。 -->
 <div id="app"></div>
-<script type="module" src="./src/main.ts"></script>
+<script type="module" src="/src/entry-client.ts"></script>
 </body>
 </html>

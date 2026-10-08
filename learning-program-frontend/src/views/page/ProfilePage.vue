@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { get, put } from '@/net'
 import { useI18n } from 'vue-i18n'
+import { readLocal, removeFromBoth, writeLocal } from '@/utils/storage'
 
 interface Profile {
   nickname: string
@@ -18,14 +19,14 @@ const profileStorageKey = 'learning-profile'
 const router = useRouter()
 const { t } = useI18n()
 const defaultProfile: Profile = { nickname: t('common.learner'), email: '', phone: '', bio: '', role: 'user' }
-const saved = localStorage.getItem(profileStorageKey)
+const saved = readLocal(profileStorageKey)
 let initialProfile = defaultProfile
 if (saved) {
   try {
     const parsed = JSON.parse(saved) as Partial<Profile>
     initialProfile = { ...defaultProfile, ...parsed }
   } catch {
-    localStorage.removeItem(profileStorageKey)
+    removeFromBoth(profileStorageKey)
     ElMessage.warning(t('profile.readFailed'))
   }
 }
@@ -52,7 +53,7 @@ function saveProfile() {
       bio: data.bio,
       role: data.role,
     })
-    localStorage.setItem(profileStorageKey, JSON.stringify(form))
+    writeLocal(profileStorageKey, JSON.stringify(form))
     saving.value = false
     ElMessage.success(t('profile.saved'))
   }, () => { saving.value = false })
@@ -60,7 +61,7 @@ function saveProfile() {
 
 function resetProfile() {
   Object.assign(form, defaultProfile)
-  localStorage.removeItem(profileStorageKey)
+  removeFromBoth(profileStorageKey)
   ElMessage.info(t('profile.restored'))
 }
 
@@ -74,7 +75,7 @@ function loadProfile() {
       bio: data.bio,
       role: data.role,
     })
-    localStorage.setItem(profileStorageKey, JSON.stringify(form))
+    writeLocal(profileStorageKey, JSON.stringify(form))
     loading.value = false
   }, () => { loading.value = false })
 }
