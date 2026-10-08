@@ -59,7 +59,7 @@
                                     <el-icon><Lock /></el-icon>
                                 </template>
                             </el-input>
-                            <PasswordPolicyHint :requirements="policy.requirements" />
+                            <PasswordPolicyHint :requirements="policy.requirements" :value="form.password" :email="form.email" />
                         </el-form-item>
                         <el-form-item prop="password_repeat">
                             <el-input v-model="form.password_repeat" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.repeatNewPassword')">

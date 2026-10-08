@@ -17,6 +17,13 @@ export interface PasswordRequirement {
   max?: number
 }
 
+/** 用于界面展示的「条件 + 是否满足」状态。 */
+export interface PasswordRequirementStatus {
+  code: string
+  message: string
+  satisfied: boolean
+}
+
 export interface PasswordPolicy {
   minLength: number
   maxLength: number
@@ -122,4 +129,63 @@ export function firstUnmetRequirement(
     }
   }
   return null
+}
+
+/** 四个字符类规则的短标签，用于合并展示成一条「至少包含…」的条件。 */
+const CHARACTER_CLASS_LABELS: Record<string, string> = {
+  'require-uppercase': '大写字母',
+  'require-lowercase': '小写字母',
+  'require-digit': '数字',
+  'require-special': '特殊字符',
+}
+
+/** 不在前端展示的规则码：弱密码词表只在服务端校验。 */
+const HIDDEN_CODES = new Set(['not-common'])
+
+/**
+ * 生成用于界面展示的条件列表，并计算每条是否已满足。
+ *
+ * - 大写/小写/数字/特殊字符合并为一条「至少包含…」，全部满足才算达标；
+ * - 过滤掉 `not-common`（弱密码），前端不展示、不校验，交给服务端；
+ * - 其余规则按后端返回顺序逐条展示。
+ */
+export function describeRequirements(
+  requirements: PasswordRequirement[],
+  value: string,
+  account: { username?: string, email?: string } = {},
+): PasswordRequirementStatus[] {
+  const username = account.username ?? ''
+  const email = account.email ?? ''
+  const result: PasswordRequirementStatus[] = []
+  const charLabels: string[] = []
+  let charSatisfied = true
+  let charCondition: PasswordRequirementStatus | null = null
+
+  for (const requirement of requirements) {
+    if (HIDDEN_CODES.has(requirement.code)) continue
+
+    const label = CHARACTER_CLASS_LABELS[requirement.code]
+    if (label) {
+      if (!charCondition) {
+        charCondition = { code: 'require-characters', message: '', satisfied: true }
+        result.push(charCondition)
+      }
+      charLabels.push(label)
+      if (!satisfies(requirement, value, username, email)) charSatisfied = false
+      continue
+    }
+
+    result.push({
+      code: requirement.code,
+      message: requirement.message,
+      satisfied: satisfies(requirement, value, username, email),
+    })
+  }
+
+  if (charCondition) {
+    charCondition.message = `至少包含${charLabels.join('、')}`
+    charCondition.satisfied = charSatisfied
+  }
+
+  return result
 }

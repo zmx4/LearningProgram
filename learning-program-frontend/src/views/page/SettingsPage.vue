@@ -213,7 +213,7 @@ function submitChangePassword() {
             :maxlength="policy.maxLength"
             :placeholder="t('settings.newPasswordPlaceholder', { min: policy.minLength, max: policy.maxLength })"
           />
-          <PasswordPolicyHint :requirements="policy.requirements" />
+          <PasswordPolicyHint :requirements="policy.requirements" :value="passwordForm.newPassword" :username="currentUsername()" />
         </el-form-item>
         <el-form-item :label="t('settings.confirmPassword')">
           <el-input
