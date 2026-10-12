@@ -7,11 +7,40 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--el-bg-color-page);
   color: var(--el-text-color-primary);
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow-x: hidden;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Nicer touch behaviour: no tap highlight, no accidental double-tap zoom on controls. */
+button,
+a,
+.el-button,
+.nav-item {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Keep long unbroken strings (urls, code) from forcing horizontal scroll. */
+.el-table__cell,
+.markdown-body,
+p,
+td {
+  overflow-wrap: anywhere;
 }
 
 /* ===== 管理页面公共骨架（统一限定在 .admin-page 下，不影响其它页面） ===== */
@@ -93,6 +122,14 @@ body {
 }
 
 @media (max-width: 700px) {
+  .admin-page {
+    padding: 24px 4% 40px;
+  }
+
+  .admin-page h2 {
+    font-size: 22px;
+  }
+
   .admin-page .page-heading {
     align-items: flex-start;
     gap: 12px;

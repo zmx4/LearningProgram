@@ -180,14 +180,41 @@ function userLogout() {
   }
 
   .admin-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 12px;
     width: 100%;
     height: auto;
+    padding: 14px 16px;
     border-right: none;
     border-bottom: 1px solid var(--el-border-color-light);
+    background: var(--el-bg-color);
   }
 
+  /* Nav becomes a single horizontally scrollable strip instead of wrapping. */
   .admin-nav {
     flex-direction: row;
-    flex-wrap: wrap;
-  }}
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .back-button,
+  .logout-button {
+    flex: 0 0 auto;
+  }
+}
 </style>

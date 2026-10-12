@@ -15,6 +15,8 @@ export default {
     navigationPlaceholder: '导航占位区域',
     openProfile: '打开个人信息',
     userAvatar: '用户头像',
+    openMenu: '打开菜单',
+    closeMenu: '关闭菜单',
   },
   navigation: {
     home: '首页',

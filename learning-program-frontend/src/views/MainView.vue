@@ -13,9 +13,11 @@ import {
   EditPen,
   Trophy,
   UserFilled,
+  Menu,
 } from '@element-plus/icons-vue'
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
+import {useMediaQuery} from '@vueuse/core'
 import {currentRole, currentUsername, get, logout} from '@/net'
 import {useI18n} from 'vue-i18n'
 import {
@@ -34,9 +36,20 @@ interface DailyWord {
 const route = useRoute()
 const router = useRouter()
 const {t} = useI18n()
+const isMobile = useMediaQuery('(max-width: 760px)')
 const sidebarExpanded = ref(false)
+const mobileNavOpen = ref(false)
 const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
+
+// On mobile the sidebar is an off-canvas drawer driven by mobileNavOpen;
+// on desktop it keeps the hover/click-to-expand rail behaviour.
+const navExpanded = computed(() => (isMobile.value ? mobileNavOpen.value : sidebarExpanded.value))
+
+// Close the drawer whenever the user navigates on mobile.
+watch(() => route.fullPath, () => {
+  mobileNavOpen.value = false
+})
 const dailyWordSettings = ref<DailyWordSettings>(readDailyWordSettings())
 const dailyWord = ref<DailyWord | null>(null)
 const dailyWordLoading = ref(false)
@@ -72,7 +85,23 @@ function userLogout() {
 }
 
 function toggleSidebar() {
+  if (isMobile.value) {
+    mobileNavOpen.value = !mobileNavOpen.value
+    return
+  }
   sidebarExpanded.value = !sidebarExpanded.value
+}
+
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
+
+function onSidebarEnter() {
+  if (!isMobile.value) sidebarExpanded.value = true
+}
+
+function onSidebarLeave() {
+  if (!isMobile.value) sidebarExpanded.value = false
 }
 
 function dailyWordCacheKey(source: DailyWordSource): string {
@@ -128,11 +157,16 @@ onUnmounted(() => {
 
 <template>
   <div class="app-shell">
+    <div
+        v-if="isMobile && mobileNavOpen"
+        class="nav-overlay"
+        @click="closeMobileNav"
+    ></div>
     <aside
         class="sidebar"
-        :class="{ expanded: sidebarExpanded }"
-        @mouseenter="sidebarExpanded = true"
-        @mouseleave="sidebarExpanded = false"
+        :class="{ expanded: navExpanded, 'is-mobile': isMobile }"
+        @mouseenter="onSidebarEnter"
+        @mouseleave="onSidebarLeave"
     >
       <div class="brand">
         <div class="brand-mark">学</div>
@@ -140,11 +174,11 @@ onUnmounted(() => {
         <button
             class="sidebar-toggle"
             type="button"
-            :aria-label="sidebarExpanded ? t('common.collapseSidebar') : t('common.expandSidebar')"
+            :aria-label="navExpanded ? t('common.collapseSidebar') : t('common.expandSidebar')"
             @click="toggleSidebar"
         >
           <el-icon>
-            <ArrowLeft v-if="sidebarExpanded"/>
+            <ArrowLeft v-if="navExpanded"/>
             <ArrowRight v-else/>
           </el-icon>
         </button>
@@ -211,9 +245,21 @@ onUnmounted(() => {
 
     <section class="page">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">LEARNING SPACE</p>
-          <h1>{{ t('common.welcomeBack') }}</h1>
+        <div class="topbar-title">
+          <button
+              class="menu-button"
+              type="button"
+              :aria-label="t('common.openMenu')"
+              @click="toggleSidebar"
+          >
+            <el-icon>
+              <Menu/>
+            </el-icon>
+          </button>
+          <div>
+            <p class="eyebrow">LEARNING SPACE</p>
+            <h1>{{ t('common.welcomeBack') }}</h1>
+          </div>
         </div>
         <div class="topbar-actions">
           <button class="icon-button" type="button" :aria-label="t('common.notifications')"
@@ -594,33 +640,112 @@ onUnmounted(() => {
   background: var(--el-color-primary-light-9);
 }
 
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.menu-button {
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0;
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  color: var(--el-text-color-regular);
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, .45);
+  animation: overlay-fade .2s ease;
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 760px) {
   .sidebar {
-    width: 64px;
-    flex-basis: 64px;
-    padding: 22px 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1001;
+    width: 264px;
+    flex-basis: 264px;
+    height: 100vh;
+    padding: 22px 16px;
+    box-shadow: var(--el-box-shadow-light);
+    transform: translateX(-100%);
+    transition: transform .25s ease;
   }
 
   .sidebar.expanded {
-    width: 220px;
-    flex-basis: 220px;
+    width: 264px;
+    flex-basis: 264px;
+    transform: translateX(0);
+  }
+
+  /* The drawer always shows labels; the desktop collapse toggle is not needed. */
+  .sidebar .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar .brand > span,
+  .sidebar .nav-item span {
+    display: inline;
+    opacity: 1;
+  }
+
+  .sidebar .daily-word {
+    max-height: 180px;
+    margin: 24px 0;
+    padding: 14px;
+    border-width: 1px;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
   }
 
   .brand {
-    padding: 0;
-  }
-
-  .sidebar:not(.expanded) .sidebar-toggle {
-    top: 64px;
+    padding: 0 6px;
   }
 
   .nav-item {
     padding: 13px 14px;
   }
 
+  .menu-button {
+    display: grid;
+  }
+
   .topbar {
-    align-items: flex-start;
-    gap: 16px;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 16px 4%;
+  }
+
+  .topbar h1 {
+    font-size: 19px;
+  }
+
+  .eyebrow {
+    margin-bottom: 4px;
   }
 
   .profile-name {
@@ -628,6 +753,12 @@ onUnmounted(() => {
   }
 
   .topbar-actions {
-    gap: 12px;
-  }}
+    gap: 10px;
+  }
+
+  .logout-button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
 </style>
