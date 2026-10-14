@@ -292,7 +292,10 @@ h2 { margin-bottom: 8px; font-size: 26px; }
   height: 0;
   overflow: hidden;
 }
-.password-form { max-width: 420px; }
+.password-form { 
+  /* max-width: 420px;  */
+  max-width: 100%;
+}
 .password-form .form-actions { display: flex; justify-content: flex-end; }
 @media (max-width: 680px) {
   .settings-card { padding: 24px 20px; }

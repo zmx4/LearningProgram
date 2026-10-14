@@ -357,7 +357,8 @@ loadPage()
 }
 
 .study-progress {
-  max-width: 420px;
+  /* max-width: 420px; */
+  max-width: 100%;
 }
 
 .study-progress-text {
