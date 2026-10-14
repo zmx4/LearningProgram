@@ -28,8 +28,7 @@
 | 题库与测试 | `db_test_question` | 题库题目 |
 | 题库与测试 | `db_question_set` | 题集 |
 | 题库与测试 | `db_question_set_item` | 题集 ↔ 题目关联 |
-| 题库与测试 | `db_knowledge_test_record` | 知识测试成绩记录 |
-| 题库与测试 | `db_word_test_record` | 单词测试成绩记录 |
+| 题库与测试 | `db_test_record` | 测试成绩记录（单词测试与知识测试统一存储，`category` 区分） |
 | 词典与资源 | `db_dictionary` | 英文词典（word ↔ translation） |
 | 词典与资源 | `db_cet4` / `db_cet6` | CET4 / CET6 词表 |
 | 词典与资源 | `db_learning_resource` | 学习资源文件元信息 |
@@ -41,11 +40,10 @@ erDiagram
     db_account ||--o| db_account_points : "积分总账"
     db_account ||--o{ db_check_in : "签到"
     db_account ||--o{ db_notification : "通知"
-    db_account ||--o{ db_word_test_record : "单词测试"
+    db_account ||--o{ db_test_record : "测试成绩"
     db_account ||--o{ db_course_progress : "学习进度"
     db_account ||--o{ db_course_study_log : "学习流水"
     db_account ||--o{ db_course_reward : "课程奖励"
-    db_account ||--o{ db_knowledge_test_record : "知识测试"
 
     db_course ||--o{ db_course_chapter : "章节"
     db_course ||--o{ db_course_question_set : "关联题集"
@@ -54,7 +52,7 @@ erDiagram
     db_question_set ||--o{ db_question_set_item : "包含题目"
     db_test_question ||--o{ db_question_set_item : ""
     db_test_type ||--o{ db_test_question : "题目类型"
-    db_question_set ||--o{ db_knowledge_test_record : "题集模式成绩"
+    db_question_set ||--o{ db_test_record : "题集模式成绩"
     db_course_chapter ||--o{ db_course_progress : ""
     db_course_chapter ||--o{ db_course_study_log : ""
 ```
@@ -228,31 +226,23 @@ erDiagram
 
 `(set_id, question_id)` 唯一；删除题目不级联删除关联项，需先自行清理。
 
-### db_knowledge_test_record 知识测试成绩
+### db_test_record 测试成绩
+
+单词测试与知识测试成绩统一存储在一张表中，`category` 区分测试大类（V15 起，取代原 `db_word_test_record` 与 `db_knowledge_test_record`）。
 
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | id | INT | PK, AUTO_INCREMENT | |
-| account_id | INT | NOT NULL | 不带外键，索引 `(account_id, created_at)` |
-| type_id | INT | NULL | 类型模式下的题目类型；题集模式下为空。曾经的外键已随 V12 迁移移除 |
-| type_name | VARCHAR(100) | NOT NULL | 类型名快照；题集模式下为「题集：{title}」 |
-| set_id | INT | NULL, FK → db_question_set(id) | 题集模式下的题集 |
+| account_id | INT | NOT NULL | 不带外键，索引 `(account_id, category, created_at)` |
+| category | VARCHAR(20) | NOT NULL | 测试大类：`word`（单词测试）/ `knowledge`（知识测试） |
+| source | VARCHAR(10) | NULL | 单词测试的词表来源 `cet4` / `cet6`；知识测试为空 |
+| type_id | INT | NULL | 知识测试普通模式的题目类型，索引 `(type_id)`；其他情况为空 |
+| set_id | INT | NULL, FK → db_question_set(id) | 知识测试题集模式的题集 |
+| type_name | VARCHAR(100) | NULL | 知识测试的类型名快照；题集模式下为「题集：{title}」 |
 | total_count / correct_count / wrong_count | INT | NOT NULL | 答题统计 |
-| score | INT | NOT NULL | 得分 |
-| duration_seconds | INT | NOT NULL | 用时 |
-| detail | LONGTEXT (JSON, CHECK json_valid) | NULL | 答题明细，结构见迁移脚本 V8 注释 |
-| created_at | DATETIME | NOT NULL | |
-
-### db_word_test_record 单词测试成绩
-
-| 字段 | 类型 | 约束 | 说明 |
-| --- | --- | --- | --- |
-| id | INT | PK, AUTO_INCREMENT | |
-| account_id | INT | NOT NULL, FK → db_account(id) | |
-| source | VARCHAR(10) | NOT NULL | 词表来源 `cet4` / `cet6` |
-| total_count / correct_count / wrong_count | INT | NOT NULL | 答题统计 |
-| score | INT | NOT NULL | 得分 |
+| score | INT | NOT NULL | 得分（按正确率计算） |
 | duration_seconds | INT | NOT NULL DEFAULT 0 | 用时 |
+| detail | LONGTEXT | NULL, CHECK json_valid | 知识测试的答题明细 JSON，结构见迁移脚本 V8 注释 |
 | created_at | DATETIME | NOT NULL | |
 
 ## 词典与资源
@@ -290,5 +280,6 @@ erDiagram
 | V12 | 知识测试支持课程题集模式（`type_id` 允许 NULL 并移除其外键） |
 | V13 | 学习资源 `db_learning_resource` |
 | V14 | 课程奖励积分：`db_course.reward_points` 列 + `db_course_reward` 表 |
+| V15 | 测试成绩合表：`db_test_record` 统一存储单词/知识测试成绩（迁入两旧表数据后删除旧表） |
 
 V1–V6（账号、通知、签到、积分、词典等基础表）未纳入仓库，其结构见本文档各表定义与 [INSTALLATION.md](./INSTALLATION.md) 的建表语句；新建环境时可以按“表清单”一节逐表创建，已有环境升级时执行缺失的迁移脚本即可。

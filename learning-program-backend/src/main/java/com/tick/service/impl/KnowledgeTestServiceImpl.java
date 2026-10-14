@@ -1,32 +1,28 @@
 package com.tick.service.impl;
 
 import com.alibaba.fastjson2.JSON;
-import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.KnowledgeTestAnswer;
-import com.tick.entity.dto.KnowledgeTestRecord;
 import com.tick.entity.dto.QuestionSet;
+import com.tick.entity.dto.TestCategory;
 import com.tick.entity.dto.TestQuestionKind;
+import com.tick.entity.dto.TestRecord;
 import com.tick.entity.dto.TestType;
 import com.tick.entity.vo.request.KnowledgeTestResultVO;
 import com.tick.entity.vo.response.KnowledgeTestRecordVO;
-import com.tick.mapper.KnowledgeTestRecordMapper;
 import com.tick.mapper.QuestionSetMapper;
 import com.tick.service.KnowledgeTestService;
 import com.tick.service.TestTypeService;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 知识测试服务实现。
+ * 知识测试服务实现。公共的成绩校验、计分、历史与汇总逻辑见父类 {@link BaseTestService}。
  */
 @Service
-public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMapper, KnowledgeTestRecord>
-        implements KnowledgeTestService {
+public class KnowledgeTestServiceImpl extends BaseTestService implements KnowledgeTestService {
     private static final int MAX_TOTAL_COUNT = 100;
     private static final int MAX_ANSWER_LENGTH = 200;
     private static final int MAX_ANSWER_ITEMS = 10;
@@ -37,6 +33,11 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
     public KnowledgeTestServiceImpl(TestTypeService testTypeService, QuestionSetMapper questionSetMapper) {
         this.testTypeService = testTypeService;
         this.questionSetMapper = questionSetMapper;
+    }
+
+    @Override
+    protected TestCategory category() {
+        return TestCategory.KNOWLEDGE;
     }
 
     @Override
@@ -64,51 +65,26 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
                 throw new IllegalArgumentException("测试类型不存在");
             }
         }
-        if (vo.getTotalCount() == null || vo.getTotalCount() < 1 || vo.getTotalCount() > MAX_TOTAL_COUNT) {
-            throw new IllegalArgumentException("题目数量必须在 1 到 " + MAX_TOTAL_COUNT + " 之间");
-        }
-        if (vo.getCorrectCount() == null
-                || vo.getCorrectCount() < 0
-                || vo.getCorrectCount() > vo.getTotalCount()) {
-            throw new IllegalArgumentException("测试数据无效");
-        }
+        validateCounts(vo.getTotalCount(), vo.getCorrectCount(), MAX_TOTAL_COUNT);
 
-        KnowledgeTestRecord record = new KnowledgeTestRecord();
-        record.setAccountId(accountId);
+        TestRecord record = buildRecord(accountId, vo.getTotalCount(), vo.getCorrectCount(),
+                vo.getDurationSeconds());
         record.setTypeId(type == null ? null : type.getId());
         record.setSetId(set == null ? null : set.getId());
         record.setTypeName(type == null ? "题集：" + set.getTitle() : type.getName());
-        record.setTotalCount(vo.getTotalCount());
-        record.setCorrectCount(vo.getCorrectCount());
-        record.setWrongCount(vo.getTotalCount() - vo.getCorrectCount());
-        record.setScore(vo.getCorrectCount() * 100 / vo.getTotalCount());
-        record.setDurationSeconds(Math.max(0, vo.getDurationSeconds() == null ? 0 : vo.getDurationSeconds()));
         record.setDetail(toDetailJson(vo.getDetail()));
-        record.setCreatedAt(LocalDateTime.now());
         save(record);
         return toVO(record);
     }
 
     @Override
     public Map<String, Object> getSummary(Integer accountId) {
-        List<KnowledgeTestRecordVO> history = getHistory(accountId);
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("testCount", history.size());
-        summary.put("averageScore", history.stream().mapToInt(KnowledgeTestRecordVO::getScore).average().orElse(0));
-        summary.put("bestScore", history.stream().mapToInt(KnowledgeTestRecordVO::getScore).max().orElse(0));
-        summary.put("totalQuestions", history.stream().mapToInt(KnowledgeTestRecordVO::getTotalCount).sum());
-        summary.put("totalCorrect", history.stream().mapToInt(KnowledgeTestRecordVO::getCorrectCount).sum());
-        return summary;
+        return summarize(history(accountId));
     }
 
     @Override
     public List<KnowledgeTestRecordVO> getHistory(Integer accountId) {
-        return query().eq("account_id", accountId)
-                .orderByDesc("created_at")
-                .list()
-                .stream()
-                .map(this::toVO)
-                .toList();
+        return history(accountId).stream().map(this::toVO).toList();
     }
 
     private String toDetailJson(List<KnowledgeTestAnswer> detail) {
@@ -150,7 +126,7 @@ public class KnowledgeTestServiceImpl extends ServiceImpl<KnowledgeTestRecordMap
         return answers;
     }
 
-    private KnowledgeTestRecordVO toVO(KnowledgeTestRecord record) {
+    private KnowledgeTestRecordVO toVO(TestRecord record) {
         List<KnowledgeTestAnswer> detail = new ArrayList<>();
         if (record.getDetail() != null && !record.getDetail().isBlank()) {
             List<KnowledgeTestAnswer> parsed = JSON.parseArray(record.getDetail(), KnowledgeTestAnswer.class);

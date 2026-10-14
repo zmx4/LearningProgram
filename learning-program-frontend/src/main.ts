@@ -1,4 +1,5 @@
-import { createApp } from 'vue'
+import {createApp} from 'vue'
+import {ID_INJECTION_KEY, ZINDEX_INJECTION_KEY} from 'element-plus'
 import App from './App.vue'
 import router from '@/router'
 import i18n from '@/i18n'
@@ -14,7 +15,11 @@ import '@/assets/common.css'
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 const app = createApp(App)
-
+app.provide(ID_INJECTION_KEY, {
+    prefix: 1024,
+    current: 0,
+})
+app.provide(ZINDEX_INJECTION_KEY, {current: 0})
 app.use(router)
 app.use(i18n)
 

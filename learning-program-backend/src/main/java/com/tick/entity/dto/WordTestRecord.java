@@ -1,33 +1,17 @@
 package com.tick.entity.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
- * 单词测试成绩记录，对应 db_word_test_record。score 按正确率计算。
+ * 单词测试成绩记录，仅作为 /api/tests/words 接口的出入参使用。
+ * 持久化统一走 db_test_record（category = word），见 {@link TestRecord}。
  */
 @Data
-@TableName("db_word_test_record")
-public class WordTestRecord {
-    @TableId(type = IdType.AUTO)
-    private Integer id;
-    @TableField("account_id")
-    private Integer accountId;
+@EqualsAndHashCode(callSuper = true)
+public class WordTestRecord extends BaseTestRecord {
+    /**
+     * 词表来源：cet4 / cet6。
+     */
     private String source;
-    @TableField("total_count")
-    private Integer totalCount;
-    @TableField("correct_count")
-    private Integer correctCount;
-    @TableField("wrong_count")
-    private Integer wrongCount;
-    private Integer score;
-    @TableField("duration_seconds")
-    private Integer durationSeconds;
-    @TableField("created_at")
-    private LocalDateTime createdAt;
 }

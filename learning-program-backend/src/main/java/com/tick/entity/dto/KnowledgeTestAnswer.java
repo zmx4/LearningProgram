@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * 知识测试的答题明细项，序列化后存放在 db_knowledge_test_record.detail 这个 JSON 列中。
+ * 知识测试的答题明细项，序列化后存放在 db_test_record.detail 这个 JSON 列中。
  * <ul>
  *     <li>single：{@code userAnswer} 恰好 1 项，为选中的选项 key</li>
  *     <li>multiple：{@code userAnswer} 为选中的全部选项 key</li>

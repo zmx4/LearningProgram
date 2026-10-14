@@ -2,12 +2,13 @@ package com.tick.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import com.tick.entity.dto.KnowledgeTestRecord;
+import com.tick.entity.dto.TestCategory;
 import com.tick.entity.dto.TestQuestion;
+import com.tick.entity.dto.TestRecord;
 import com.tick.entity.dto.TestType;
 import com.tick.entity.vo.request.TestTypeCreateVO;
-import com.tick.mapper.KnowledgeTestRecordMapper;
 import com.tick.mapper.TestQuestionMapper;
+import com.tick.mapper.TestRecordMapper;
 import com.tick.mapper.TestTypeMapper;
 import com.tick.service.TestTypeService;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,12 @@ public class TestTypeServiceImpl extends ServiceImpl<TestTypeMapper, TestType> i
     private static final Pattern CODE_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,50}");
 
     private final TestQuestionMapper testQuestionMapper;
-    private final KnowledgeTestRecordMapper knowledgeTestRecordMapper;
+    private final TestRecordMapper testRecordMapper;
 
     public TestTypeServiceImpl(TestQuestionMapper testQuestionMapper,
-                               KnowledgeTestRecordMapper knowledgeTestRecordMapper) {
+                               TestRecordMapper testRecordMapper) {
         this.testQuestionMapper = testQuestionMapper;
-        this.knowledgeTestRecordMapper = knowledgeTestRecordMapper;
+        this.testRecordMapper = testRecordMapper;
     }
 
     @Override
@@ -85,9 +86,10 @@ public class TestTypeServiceImpl extends ServiceImpl<TestTypeMapper, TestType> i
         if (questionCount > 0) {
             throw new IllegalArgumentException("该类型下仍有题目，请先删除或转移题目");
         }
-        Long recordCount = knowledgeTestRecordMapper.selectCount(
-                new LambdaQueryWrapper<KnowledgeTestRecord>()
-                        .eq(KnowledgeTestRecord::getTypeId, id));
+        Long recordCount = testRecordMapper.selectCount(
+                new LambdaQueryWrapper<TestRecord>()
+                        .eq(TestRecord::getCategory, TestCategory.KNOWLEDGE.getCode())
+                        .eq(TestRecord::getTypeId, id));
         if (recordCount > 0) {
             throw new IllegalArgumentException("该类型已有测试记录，无法删除");
         }

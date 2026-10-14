@@ -134,6 +134,7 @@ package "service.impl · 业务实现层" #FFF9E6 {
   class TestQuestionServiceImpl
   class KnowledgeTestServiceImpl
   class WordTestServiceImpl
+  abstract class BaseTestService
   class LearningResourceServiceImpl
   class DictionaryServiceImpl
   class CetWordServiceImpl
@@ -156,8 +157,7 @@ package "mapper · 数据访问层（MyBatis-Plus）" #FDECEC {
   interface QuestionSetItemMapper
   interface TestTypeMapper
   interface TestQuestionMapper
-  interface KnowledgeTestRecordMapper
-  interface WordTestRecordMapper
+  interface TestRecordMapper
   interface LearningResourceMapper
   interface DictionaryMapper
   interface Cet4WordMapper
@@ -281,18 +281,28 @@ package "entity.dto · 领域实体" #F3E8FD {
     -questionId: Integer
   }
 
-  class KnowledgeTestRecord {
+  class BaseTestRecord {
     -id: Integer
     -accountId: Integer
-    -typeId: Integer
-    -setId: Integer
-    -typeName: String
     -totalCount: Integer
     -correctCount: Integer
     -wrongCount: Integer
     -score: Integer
     -durationSeconds: Integer
+  }
+
+  class TestRecord {
+    -category: String
+    -source: String
+    -typeId: Integer
+    -setId: Integer
+    -typeName: String
     -detail: String «JSON»
+  }
+
+  enum TestCategory {
+    WORD
+    KNOWLEDGE
   }
 
   class KnowledgeTestAnswer {
@@ -303,13 +313,7 @@ package "entity.dto · 领域实体" #F3E8FD {
   }
 
   class WordTestRecord {
-    -id: Integer
-    -accountId: Integer
     -source: String
-    -totalCount: Integer
-    -correctCount: Integer
-    -wrongCount: Integer
-    -score: Integer
   }
 
   class LearningResource {
@@ -409,8 +413,7 @@ QuestionSetMapper ..|> BaseMapper
 QuestionSetItemMapper ..|> BaseMapper
 TestTypeMapper ..|> BaseMapper
 TestQuestionMapper ..|> BaseMapper
-KnowledgeTestRecordMapper ..|> BaseMapper
-WordTestRecordMapper ..|> BaseMapper
+TestRecordMapper ..|> BaseMapper
 LearningResourceMapper ..|> BaseMapper
 DictionaryMapper ..|> BaseMapper
 Cet4WordMapper ..|> BaseMapper
@@ -439,8 +442,9 @@ CourseProgressServiceImpl --|> MPServiceImpl
 QuestionSetServiceImpl --|> MPServiceImpl
 TestTypeServiceImpl --|> MPServiceImpl
 TestQuestionServiceImpl --|> MPServiceImpl
-KnowledgeTestServiceImpl --|> MPServiceImpl
-WordTestServiceImpl --|> MPServiceImpl
+KnowledgeTestServiceImpl --|> BaseTestService
+WordTestServiceImpl --|> BaseTestService
+BaseTestService --|> MPServiceImpl
 LearningResourceServiceImpl --|> MPServiceImpl
 DictionaryServiceImpl --|> MPServiceImpl
 
@@ -452,6 +456,8 @@ QuestionSetServiceImpl ..> TestQuestionService
 KnowledgeTestServiceImpl ..> TestTypeService
 TestQuestionServiceImpl ..> QuestionSetItemMapper : 引用校验
 TestTypeServiceImpl ..> TestQuestionMapper : 删除前校验
+TestTypeServiceImpl ..> TestRecordMapper : 删除前校验
+BaseTestService ..> TestRecordMapper : «bind» M/T
 LearningResourceServiceImpl ..> AccountMapper
 
 ' ============================ controller → service ============================
@@ -501,8 +507,7 @@ end note
 Account "1" --> "0..1" AccountPoints : 积分总账
 Account "1" --> "*" CheckInRecord : 每日签到
 Account "1" --> "*" Notification : 站内通知
-Account "1" --> "*" WordTestRecord : 测试成绩
-Account "1" --> "*" KnowledgeTestRecord : 测试成绩
+Account "1" --> "*" TestRecord : 测试成绩
 Account "1" --> "*" CourseProgress : 学习进度
 Account "1" --> "*" CourseStudyLog : 学习流水
 Account "1" --> "*" CourseReward : 课程奖励
@@ -519,8 +524,11 @@ TestQuestion ..> TestQuestionContent : content 列 «JSON»
 TestQuestionContent o-- QuestionOption
 TestQuestionContent ..> TestQuestionKind
 
-KnowledgeTestRecord ..> KnowledgeTestAnswer : detail 列 «JSON»
-KnowledgeTestRecord "*" --> "0..1" QuestionSet : 题集模式
+TestRecord --|> BaseTestRecord
+WordTestRecord --|> BaseTestRecord : 接口出入参
+TestRecord ..> TestCategory : category 列
+TestRecord ..> KnowledgeTestAnswer : detail 列 «JSON»
+TestRecord "*" --> "0..1" QuestionSet : 题集模式
 LearningResource ..> Account : accountId 软引用
 
 note bottom of TestQuestionContent
