@@ -29,6 +29,9 @@
 | 题库与测试 | `db_question_set` | 题集 |
 | 题库与测试 | `db_question_set_item` | 题集 ↔ 题目关联 |
 | 题库与测试 | `db_test_record` | 测试成绩记录（单词测试与知识测试统一存储，`category` 区分） |
+| 学习小组 | `db_study_group` | 学习小组本身（名称、组长、邀请码） |
+| 学习小组 | `db_study_group_member` | 小组成员，一个人可加入多个小组 |
+| 学习小组 | `db_study_group_message` | 小组消息，含组长发布的学习任务 |
 | 词典与资源 | `db_dictionary` | 英文词典（word ↔ translation） |
 | 词典与资源 | `db_cet4` / `db_cet6` | CET4 / CET6 词表 |
 | 词典与资源 | `db_learning_resource` | 学习资源文件元信息 |
@@ -55,6 +58,9 @@ erDiagram
     db_question_set ||--o{ db_test_record : "题集模式成绩"
     db_course_chapter ||--o{ db_course_progress : ""
     db_course_chapter ||--o{ db_course_study_log : ""
+
+    db_study_group ||--o{ db_study_group_member : "成员（含组长）"
+    db_study_group ||--o{ db_study_group_message : "消息与任务"
 ```
 
 级联删除链：删除 `db_course` 会级联删除其章节、题集关联和奖励记录；章节删除会级联删除对应的学习进度与流水；删除 `db_account` 会级联删除通知、签到、积分总账和测试记录。例外：`db_learning_resource.account_id` 是不带外键的软引用，删除账号后资源的“上传者”显示为空。
@@ -266,6 +272,44 @@ erDiagram
 | account_id | INT | NULL | 上传者，软引用 db_account，不带外键 |
 | created_at | DATETIME | NOT NULL | 索引 `(visible, created_at)` |
 
+## 学习小组
+
+### db_study_group 学习小组
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| name | VARCHAR(50) | NOT NULL | 小组名称 |
+| owner_id | INT | NOT NULL | 组长（组长同时占一行成员记录），软引用 db_account，不带外键 |
+| invite_code | VARCHAR(8) | NOT NULL, UNIQUE | 邀请码，组员凭此加入 |
+| created_at | DATETIME | NOT NULL | |
+
+### db_study_group_member 小组成员
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| group_id | INT | NOT NULL, FK → db_study_group(id) ON DELETE CASCADE | 删除小组级联清理成员 |
+| account_id | INT | NOT NULL | 软引用 db_account，不带外键，索引 `(account_id)` |
+| role | VARCHAR(10) | NOT NULL | `owner`（组长）/ `member`（组员） |
+| joined_at | DATETIME | NOT NULL | 加入时间 |
+
+`(group_id, account_id)` 唯一，一个人可以加入或创建多个小组。
+
+### db_study_group_message 小组消息
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| group_id | INT | NOT NULL, FK → db_study_group(id) ON DELETE CASCADE | 索引 `(group_id, id)` |
+| account_id | INT | NOT NULL | 发送者，软引用 db_account，不带外键 |
+| type | VARCHAR(10) | NOT NULL | `text` 普通消息 / `task` 学习任务 |
+| title | VARCHAR(100) | NULL | 任务标题，`type = task` 时有值 |
+| content | VARCHAR(2000) | NOT NULL | 消息或任务内容 |
+| created_at | DATETIME | NOT NULL | |
+
+聊天区按 `(group_id, id)` 倒序取最近 200 条再正序展示；删除小组会级联删除消息。
+
 ## 迁移脚本
 
 `learning-program-backend/src/main/resources/db/migration/` 中的脚本按序号递增，未启用 Flyway，需手工执行：
@@ -281,5 +325,6 @@ erDiagram
 | V13 | 学习资源 `db_learning_resource` |
 | V14 | 课程奖励积分：`db_course.reward_points` 列 + `db_course_reward` 表 |
 | V15 | 测试成绩合表：`db_test_record` 统一存储单词/知识测试成绩（迁入两旧表数据后删除旧表） |
+| V16 | 学习小组：`db_study_group`、`db_study_group_member`、`db_study_group_message` |
 
 V1–V6（账号、通知、签到、积分、词典等基础表）未纳入仓库，其结构见本文档各表定义与 [INSTALLATION.md](./INSTALLATION.md) 的建表语句；新建环境时可以按“表清单”一节逐表创建，已有环境升级时执行缺失的迁移脚本即可。

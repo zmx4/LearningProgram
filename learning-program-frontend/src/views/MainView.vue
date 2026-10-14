@@ -12,6 +12,7 @@ import {
   Notebook,
   EditPen,
   Trophy,
+  User,
   UserFilled,
   Menu,
 } from '@element-plus/icons-vue'
@@ -60,6 +61,7 @@ const navigationItems = [
   {name: 'resources', label: 'navigation.resources', icon: Collection},
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
   {name: 'discussions', label: 'navigation.discussions', icon: ChatDotRound},
+  {name: 'groups', label: 'navigation.groups', icon: User},
   {name: 'leaderboard', label: 'navigation.leaderboard', icon: Trophy},
 ]
 
@@ -71,6 +73,7 @@ const navigationSections: Record<string, string> = {
   '/progress': 'progress',
   '/tests': 'tests',
   '/discussions': 'discussions',
+  '/groups': 'groups',
   '/leaderboard': 'leaderboard',
 }
 

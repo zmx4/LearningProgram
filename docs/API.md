@@ -832,6 +832,150 @@ Authorization: Bearer <token>
 
 仅评论作者本人或管理员可以删除，否则返回 `403`。
 
+## 学习小组接口
+
+登录后即可创建小组或用邀请码加入；一个人可以加入或创建多个小组。小组的成员、消息与学习任务**仅成员可见**，
+发布学习任务（`tasks`）与移除组员仅限组长，组长退出即解散小组（成员与消息级联删除）。
+
+### 查询我的小组
+
+```http
+GET /api/groups
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 7,
+      "name": "四级冲刺小分队",
+      "ownerId": 1,
+      "ownerName": "tick",
+      "inviteCode": "AB23CD45",
+      "memberCount": 3,
+      "role": "owner",
+      "createdAt": "2026-10-14T20:00:00"
+    }
+  ],
+  "message": "success"
+}
+```
+
+`role` 为当前用户在该小组的身份：`owner` / `member`，按小组创建时间倒序。
+
+### 创建小组
+
+```http
+POST /api/groups
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "name": "四级冲刺小分队" }
+```
+
+创建者成为组长，服务端生成 8 位不重复邀请码并返回同上结构。名称为空或超过 50 字返回 `400`。
+
+### 通过邀请码加入小组
+
+```http
+POST /api/groups/join
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "inviteCode": "AB23CD45" }
+```
+
+邀请码无效返回 `400`「邀请码无效」，已在组内返回 `400`「你已经在该小组中」。
+
+### 查询小组详情
+
+```http
+GET /api/groups/{id}
+Authorization: Bearer <token>
+```
+
+返回小组概要与右侧组员列表：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "group": { "id": 7, "name": "四级冲刺小分队", "ownerName": "tick", "inviteCode": "AB23CD45", "role": "owner" },
+    "members": [
+      { "accountId": 1, "username": "tick", "role": "owner", "joinedAt": "2026-10-14T20:00:00" },
+      { "accountId": 5, "username": "alice", "role": "member", "joinedAt": "2026-10-14T20:05:00" }
+    ]
+  },
+  "message": "success"
+}
+```
+
+非成员或小组不存在返回 `404`。
+
+### 查询小组消息
+
+```http
+GET /api/groups/{id}/messages
+Authorization: Bearer <token>
+```
+
+返回最近 200 条，按时间正序。`type` 为 `text`（普通消息）或 `task`（组长发布的学习任务，带 `title`）：
+
+```json
+{
+  "code": 200,
+  "data": [
+    { "id": 12, "accountId": 1, "username": "tick", "role": "owner", "type": "task", "title": "本周背完 List 1-3", "content": "周五前打卡", "createdAt": "2026-10-14T20:10:00" },
+    { "id": 13, "accountId": 5, "username": "alice", "role": "member", "type": "text", "title": null, "content": "收到！", "createdAt": "2026-10-14T20:11:00" }
+  ],
+  "message": "success"
+}
+```
+
+### 发布普通消息
+
+```http
+POST /api/groups/{id}/messages
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "content": "收到！" }
+```
+
+组长组员均可发布，内容为空或超过 2000 字返回 `400`，非成员返回 `404`。
+
+### 发布学习任务
+
+```http
+POST /api/groups/{id}/tasks
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "title": "本周背完 List 1-3", "content": "周五前打卡" }
+```
+
+仅组长可发布，非组长返回 `403`；标题为空或超过 100 字、内容为空或超过 2000 字返回 `400`。
+
+### 退出 / 解散小组
+
+```http
+POST /api/groups/{id}/leave
+Authorization: Bearer <token>
+```
+
+普通成员退出；组长调用即解散小组（成员与消息级联删除）。非成员返回 `404`。
+
+### 移除组员
+
+```http
+DELETE /api/groups/{id}/members/{memberId}
+Authorization: Bearer <token>
+```
+
+仅组长可调用，不能移除自己；不是组长或无该组员返回 `403`。
+
 ## 排行榜接口
 
 登录后即可查看，所有维度都是**累计口径（总榜）**：

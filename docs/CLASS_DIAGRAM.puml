@@ -23,6 +23,7 @@ package "controller · REST 接口层" #E8F0FE {
   class KnowledgeTestController
   class WordTestController
   class ResourceController
+  class StudyGroupController
   class TestController
 
   package "管理员接口（/api/admin，admin 角色）" #F5F5F5 {
@@ -104,6 +105,17 @@ package "service · 业务接口层" #E6F4EA {
     +getSummary(accountId): Map
     +getHistory(accountId): List
   }
+  interface StudyGroupService {
+    +listMyGroups(accountId): List
+    +createGroup(accountId, vo): StudyGroupVO
+    +joinByCode(accountId, vo): StudyGroupVO
+    +getDetail(accountId, groupId): StudyGroupDetailVO
+    +listMessages(accountId, groupId): List
+    +postMessage(accountId, groupId, vo): GroupMessageVO
+    +postTask(accountId, groupId, vo): GroupMessageVO
+    +leaveGroup(accountId, groupId): boolean
+    +removeMember(accountId, groupId, memberAccountId): boolean
+  }
   interface LearningResourceService {
     +listVisible(): List
     +listAll(): List
@@ -137,6 +149,7 @@ package "service.impl · 业务实现层" #FFF9E6 {
   abstract class BaseTestService
   class LearningResourceServiceImpl
   class DictionaryServiceImpl
+  class StudyGroupServiceImpl
   class CetWordServiceImpl
 }
 
@@ -158,6 +171,9 @@ package "mapper · 数据访问层（MyBatis-Plus）" #FDECEC {
   interface TestTypeMapper
   interface TestQuestionMapper
   interface TestRecordMapper
+  interface StudyGroupMapper
+  interface StudyGroupMemberMapper
+  interface StudyGroupMessageMapper
   interface LearningResourceMapper
   interface DictionaryMapper
   interface Cet4WordMapper
@@ -316,6 +332,32 @@ package "entity.dto · 领域实体" #F3E8FD {
     -source: String
   }
 
+  class StudyGroup {
+    -id: Integer
+    -name: String
+    -ownerId: Integer
+    -inviteCode: String
+    -createdAt: LocalDateTime
+  }
+
+  class StudyGroupMember {
+    -id: Integer
+    -groupId: Integer
+    -accountId: Integer
+    -role: String
+    -joinedAt: LocalDateTime
+  }
+
+  class StudyGroupMessage {
+    -id: Integer
+    -groupId: Integer
+    -accountId: Integer
+    -type: String
+    -title: String
+    -content: String
+    -createdAt: LocalDateTime
+  }
+
   class LearningResource {
     -id: Integer
     -title: String
@@ -414,6 +456,9 @@ QuestionSetItemMapper ..|> BaseMapper
 TestTypeMapper ..|> BaseMapper
 TestQuestionMapper ..|> BaseMapper
 TestRecordMapper ..|> BaseMapper
+StudyGroupMapper ..|> BaseMapper
+StudyGroupMemberMapper ..|> BaseMapper
+StudyGroupMessageMapper ..|> BaseMapper
 LearningResourceMapper ..|> BaseMapper
 DictionaryMapper ..|> BaseMapper
 Cet4WordMapper ..|> BaseMapper
@@ -432,6 +477,7 @@ KnowledgeTestServiceImpl ..|> KnowledgeTestService
 WordTestServiceImpl ..|> WordTestService
 LearningResourceServiceImpl ..|> LearningResourceService
 DictionaryServiceImpl ..|> DictionaryService
+StudyGroupServiceImpl ..|> StudyGroupService
 CetWordServiceImpl ..|> CetWordService
 
 AccountServiceImpl --|> MPServiceImpl
@@ -446,6 +492,7 @@ KnowledgeTestServiceImpl --|> BaseTestService
 WordTestServiceImpl --|> BaseTestService
 BaseTestService --|> MPServiceImpl
 LearningResourceServiceImpl --|> MPServiceImpl
+StudyGroupServiceImpl --|> MPServiceImpl
 DictionaryServiceImpl --|> MPServiceImpl
 
 AccountServiceImpl ..> AccountMapper : «bind» M/T
@@ -458,6 +505,10 @@ TestQuestionServiceImpl ..> QuestionSetItemMapper : 引用校验
 TestTypeServiceImpl ..> TestQuestionMapper : 删除前校验
 TestTypeServiceImpl ..> TestRecordMapper : 删除前校验
 BaseTestService ..> TestRecordMapper : «bind» M/T
+StudyGroupController ..> StudyGroupService
+StudyGroupServiceImpl ..> AccountService : 成员用户名
+StudyGroupServiceImpl ..> StudyGroupMemberMapper : 成员关系
+StudyGroupServiceImpl ..> StudyGroupMessageMapper : 消息与任务
 LearningResourceServiceImpl ..> AccountMapper
 
 ' ============================ controller → service ============================
@@ -527,6 +578,8 @@ TestQuestionContent ..> TestQuestionKind
 TestRecord --|> BaseTestRecord
 WordTestRecord --|> BaseTestRecord : 接口出入参
 TestRecord ..> TestCategory : category 列
+StudyGroup "1" *-- "*" StudyGroupMember : 成员（含组长，级联删除）
+StudyGroup "1" *-- "*" StudyGroupMessage : 消息与任务（级联删除）
 TestRecord ..> KnowledgeTestAnswer : detail 列 «JSON»
 TestRecord "*" --> "0..1" QuestionSet : 题集模式
 LearningResource ..> Account : accountId 软引用

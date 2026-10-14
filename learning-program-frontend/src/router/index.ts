@@ -95,6 +95,20 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '文章详情' }
         }]
     },{
+        path: '/groups',
+        component: () => import('@/views/MainView.vue'),
+        children: [{
+            path: '',
+            name: 'groups',
+            component: () => import('@/views/page/GroupsPage.vue'),
+            meta: { title: '学习小组' }
+        },{
+            path: ':id',
+            name: 'group-detail',
+            component: () => import('@/views/page/GroupDetailPage.vue'),
+            meta: { title: '小组聊天' }
+        }]
+    },{
         path: '/leaderboard',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -193,6 +207,7 @@ router.beforeEach((to) => {
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
         || to.path.startsWith('/settings') || to.path.startsWith('/tests')
         || to.path.startsWith('/discussions') || to.path.startsWith('/leaderboard')
+        || to.path.startsWith('/groups')
         || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
         return { name: 'welcome-login' }
     }
