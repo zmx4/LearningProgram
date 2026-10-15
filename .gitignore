@@ -51,7 +51,6 @@ coverage
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
 *.suo
 *.ntvs*
 *.njsproj
@@ -74,4 +73,6 @@ __screenshots__/
 
 upload
 upload/
+.workbuddy/
 /uploads/resources/936b726454634db29c407bbba56f6c0c.png
+/.workbuddy/memory/2026-10-15.md

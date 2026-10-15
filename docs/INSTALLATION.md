@@ -2,6 +2,60 @@
 
 本文档说明 LearningProgram 的本地开发环境准备、配置和启动方式。
 
+## 一键安装脚本（推荐）
+
+仓库根目录的 `scripts/` 下提供两个行为一致的安装脚本：
+
+| 脚本 | 适用环境 | 运行方式 |
+| --- | --- | --- |
+| `scripts/install.sh` | Git Bash / WSL / Linux / macOS | `bash scripts/install.sh` |
+| `scripts/install.ps1` | Windows PowerShell（5.1+） | `powershell -ExecutionPolicy Bypass -File scripts\install.ps1` |
+
+脚本依次完成：
+
+1. 检查 JDK 21+、Maven（优先用 `mvnw`）、Node 22.18+、包管理器（有 `pnpm-lock.yaml` 时优先 pnpm）、`mysql` 客户端；
+2. 收集 MySQL / Redis 连接信息：**环境变量里已有的直接沿用，没有指定的会逐个提示手动输入**；
+3. 生成 `learning-program-backend/.env` 与 `learning-program-frontend/.env.local`（已存在的文件先备份为 `*.bak.时间戳`）；
+4. 创建数据库 `learning` 并按序号执行 `db/migration/*.sql`（脚本之间有依赖时自动重试一轮，并列出仍失败的脚本）；
+5. 打包后端（`mvnw -DskipTests package`）与构建前端（`pnpm/npm run build`）。
+
+### 环境变量的指定规则
+
+| 情况 | 脚本行为 |
+| --- | --- |
+| 环境变量已设置且非示例值 | 直接沿用，不再提问（密码只显示位数） |
+| 未设置，且是必填项（`MYSQL_USERNAME`、`MYSQL_PASSWORD`） | **交互模式逐个提示手动输入**；非交互模式直接报错退出 |
+| 未设置，且有默认值（`MYSQL_HOST`、`MYSQL_PORT`、`REDIS_HOST`、`REDIS_PORT`） | 回车即采用默认值 |
+| 密码类变量被显式设为空字符串（`export MYSQL_PASSWORD=`） | 视为「明确使用空密码」，不再提问 |
+| `.env` 中仍是占位符（如 `your_mysql_user`） | 视为未配置，转去提问 |
+
+交互模式下密码输入不回显；MySQL 密码连续 3 次为空会中止安装。
+
+### 常用参数
+
+bash 版（`--help` 查看全部）：
+
+```bash
+bash scripts/install.sh                 # 交互式安装
+bash scripts/install.sh -y              # 非交互：缺少必填环境变量时直接报错
+bash scripts/install.sh -i              # 强制交互（即使 stdin 不是终端）
+bash scripts/install.sh --no-db         # 跳过建库与迁移
+bash scripts/install.sh --no-build      # 只做配置与数据库
+bash scripts/install.sh --no-frontend   # 跳过前端依赖安装与构建
+bash scripts/install.sh --no-write-env  # 不写文件，只打印 export 语句
+bash scripts/install.sh --force-migrate # 基础表不存在时仍强制执行迁移
+bash scripts/install.sh --start         # 安装完成后前台启动后端
+```
+
+PowerShell 版参数名一致，用开关形式：`-Yes`、`-NoDb`、`-NoBuild`、`-NoFrontend`、`-NoWriteEnv`、`-ForceMigrate`、`-Start`、`-ForceEnv`。
+
+### 注意事项
+
+- **仓库不包含 V1–V6 基础表脚本**。若数据库中没有 `db_account` 等基础表，脚本会提示先按
+  [DATABASE.md](./DATABASE.md) 建基础表，并跳过迁移（也可用 `--force-migrate` / `-ForceMigrate` 强制执行并查看失败清单）。
+- 未安装 `mysql` 客户端时脚本会跳过建库与迁移，并打印需要手工执行的步骤。
+- `.env` 与 `.env.local` 均已被 `.gitignore` 忽略；脚本生成前会备份同名旧文件，不影响已有手工配置。
+
 ## 环境要求
 
 | 软件 | 版本 |
