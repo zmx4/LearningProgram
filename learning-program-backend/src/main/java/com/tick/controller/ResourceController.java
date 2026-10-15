@@ -4,6 +4,7 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.service.LearningResourceService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -43,7 +44,7 @@ public class ResourceController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable Integer id) {
+    public ResponseEntity<Resource> download(@PathVariable Integer id, HttpServletRequest request) {
         LearningResource resource = resourceService.getResource(id);
         if (resource == null || (!Boolean.TRUE.equals(resource.getVisible()) && !isAdmin())) {
             return notFound("资源不存在");
@@ -53,6 +54,8 @@ public class ResourceController {
             return notFound("资源文件已丢失，请联系管理员");
         }
         try {
+            // 落一条访问流水，供小组任务中 resource 类型任务项判定完成情况
+            resourceService.recordAccess((Integer) request.getAttribute("id"), id);
             ContentDisposition disposition = ContentDisposition.attachment()
                     .filename(resource.getFileName(), StandardCharsets.UTF_8).build();
             return ResponseEntity.ok()

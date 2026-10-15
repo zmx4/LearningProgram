@@ -3,9 +3,11 @@ package com.tick.service.impl;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
 import com.tick.entity.dto.LearningResource;
+import com.tick.entity.dto.ResourceAccessLog;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.mapper.LearningResourceMapper;
+import com.tick.mapper.ResourceAccessLogMapper;
 import com.tick.service.LearningResourceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,11 +36,14 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     private static final Pattern SAFE_EXTENSION = Pattern.compile("^[a-zA-Z0-9]{1,10}$");
 
     private final AccountMapper accountMapper;
+    private final ResourceAccessLogMapper accessLogMapper;
     private final Path storageDir;
 
     public LearningResourceServiceImpl(AccountMapper accountMapper,
+                                       ResourceAccessLogMapper accessLogMapper,
                                        @Value("${learning.resources.upload-dir:./uploads/resources}") String uploadDir) {
         this.accountMapper = accountMapper;
+        this.accessLogMapper = accessLogMapper;
         this.storageDir = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
@@ -122,6 +127,18 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     @Override
     public LearningResource getResource(Integer id) {
         return id == null ? null : getById(id);
+    }
+
+    @Override
+    public void recordAccess(Integer accountId, Integer resourceId) {
+        if (accountId == null || resourceId == null) {
+            return;
+        }
+        ResourceAccessLog log = new ResourceAccessLog();
+        log.setAccountId(accountId);
+        log.setResourceId(resourceId);
+        log.setAccessedAt(LocalDateTime.now());
+        accessLogMapper.insert(log);
     }
 
     /**

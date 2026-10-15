@@ -5,7 +5,10 @@ import com.tick.entity.vo.request.GroupMessageCreateVO;
 import com.tick.entity.vo.request.GroupTaskCreateVO;
 import com.tick.entity.vo.request.StudyGroupCreateVO;
 import com.tick.entity.vo.request.StudyGroupJoinVO;
+import com.tick.entity.vo.response.GroupMemberDetailVO;
 import com.tick.entity.vo.response.GroupMessageVO;
+import com.tick.entity.vo.response.GroupTaskProgressVO;
+import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
 import com.tick.service.StudyGroupService;
@@ -128,6 +131,69 @@ public class StudyGroupController {
         } catch (IllegalArgumentException exception) {
             return RestBean.failure(400, exception.getMessage());
         }
+    }
+
+    @GetMapping("/{id}/tasks")
+    public RestBean<List<GroupTaskVO>> tasks(@PathVariable Integer id, HttpServletRequest request) {
+        Integer accountId = accountId(request);
+        if (accountId == null) {
+            return RestBean.unauthorized("登录状态无效");
+        }
+        List<GroupTaskVO> tasks = studyGroupService.listTasks(accountId, id);
+        return tasks == null
+                ? RestBean.failure(404, "小组不存在或你不是小组成员")
+                : RestBean.success(tasks);
+    }
+
+    @GetMapping("/{id}/tasks/{taskId}/progress")
+    public RestBean<GroupTaskProgressVO> taskProgress(@PathVariable Integer id,
+                                                      @PathVariable Integer taskId,
+                                                      HttpServletRequest request) {
+        Integer accountId = accountId(request);
+        if (accountId == null) {
+            return RestBean.unauthorized("登录状态无效");
+        }
+        try {
+            GroupTaskProgressVO progress = studyGroupService.taskProgress(accountId, id, taskId);
+            return progress == null
+                    ? RestBean.failure(404, "任务不存在或你不是小组成员")
+                    : RestBean.success(progress);
+        } catch (SecurityException exception) {
+            return RestBean.forbidden(exception.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/tasks/{taskId}/items/{itemId}/complete")
+    public RestBean<GroupTaskVO> completeTaskItem(@PathVariable Integer id,
+                                                  @PathVariable Integer taskId,
+                                                  @PathVariable Integer itemId,
+                                                  HttpServletRequest request) {
+        Integer accountId = accountId(request);
+        if (accountId == null) {
+            return RestBean.unauthorized("登录状态无效");
+        }
+        try {
+            GroupTaskVO task = studyGroupService.completeTaskItem(accountId, id, taskId, itemId);
+            return task == null
+                    ? RestBean.failure(404, "任务项不存在或你不是小组成员")
+                    : RestBean.success(task);
+        } catch (IllegalArgumentException exception) {
+            return RestBean.failure(400, exception.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/members/{memberId}")
+    public RestBean<GroupMemberDetailVO> memberDetail(@PathVariable Integer id,
+                                                      @PathVariable Integer memberId,
+                                                      HttpServletRequest request) {
+        Integer accountId = accountId(request);
+        if (accountId == null) {
+            return RestBean.unauthorized("登录状态无效");
+        }
+        GroupMemberDetailVO detail = studyGroupService.memberDetail(accountId, id, memberId);
+        return detail == null
+                ? RestBean.failure(404, "成员不存在或你不是小组成员")
+                : RestBean.success(detail);
     }
 
     @PostMapping("/{id}/leave")

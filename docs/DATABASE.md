@@ -32,9 +32,13 @@
 | 学习小组 | `db_study_group` | 学习小组本身（名称、组长、邀请码） |
 | 学习小组 | `db_study_group_member` | 小组成员，一个人可加入多个小组 |
 | 学习小组 | `db_study_group_message` | 小组消息，含组长发布的学习任务 |
+| 学习小组 | `db_group_task_item` | 学习任务绑定项（课程/资源/组员访问/纯文本） |
+| 学习小组 | `db_group_task_progress` | 纯文本任务项的手动完成记录 |
+| 学习小组 | `db_group_member_visit` | 成员最近访问小组的时间（member_visit 判定依据） |
 | 词典与资源 | `db_dictionary` | 英文词典（word ↔ translation） |
 | 词典与资源 | `db_cet4` / `db_cet6` | CET4 / CET6 词表 |
 | 词典与资源 | `db_learning_resource` | 学习资源文件元信息 |
+| 词典与资源 | `db_resource_access_log` | 资源下载访问流水（resource 任务项判定依据） |
 
 ## 实体关系
 
@@ -61,6 +65,9 @@ erDiagram
 
     db_study_group ||--o{ db_study_group_member : "成员（含组长）"
     db_study_group ||--o{ db_study_group_message : "消息与任务"
+    db_study_group ||--o{ db_group_member_visit : "访问记录"
+    db_study_group_message ||--o{ db_group_task_item : "任务绑定项"
+    db_group_task_item ||--o{ db_group_task_progress : "手动完成记录"
 ```
 
 级联删除链：删除 `db_course` 会级联删除其章节、题集关联和奖励记录；章节删除会级联删除对应的学习进度与流水；删除 `db_account` 会级联删除通知、签到、积分总账和测试记录。例外：`db_learning_resource.account_id` 是不带外键的软引用，删除账号后资源的“上传者”显示为空。
@@ -310,6 +317,55 @@ erDiagram
 
 聊天区按 `(group_id, id)` 倒序取最近 200 条再正序展示；删除小组会级联删除消息。
 
+### db_group_task_item 小组任务绑定项
+
+学习任务（`type = task` 的消息）可绑定若干任务项，用于追踪组员完成情况。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| group_id | INT | NOT NULL | 冗余小组 id，索引 `(group_id)` |
+| message_id | INT | NOT NULL, FK → db_study_group_message(id) ON DELETE CASCADE | 任务消息 id，索引 `(message_id)` |
+| item_type | VARCHAR(20) | NOT NULL | `course` / `resource` / `member_visit` / `text` |
+| ref_id | INT | NULL | item_type 为 course / resource 时的课程或资源 id，软引用不带外键 |
+| title | VARCHAR(200) | NOT NULL | course/resource 自动取关联实体标题，其余为自定义说明 |
+| sort_order | INT | NOT NULL DEFAULT 0 | 展示顺序 |
+
+完成判定：course 看 `db_course_progress` 是否覆盖课程全部章节；resource 看任务发布后是否有
+`db_resource_access_log` 访问流水；member_visit 看任务发布后 `db_group_member_visit.last_visit_at`；
+以上三类查询时实时计算，text 由组员手动标记并写入 `db_group_task_progress`。
+
+### db_group_task_progress 任务项完成记录
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| item_id | INT | NOT NULL, FK → db_group_task_item(id) ON DELETE CASCADE | |
+| account_id | INT | NOT NULL | 软引用 db_account，不带外键 |
+| completed_at | DATETIME | NOT NULL | |
+
+`(item_id, account_id)` 唯一，仅存 text 类型任务项的手动标记。
+
+### db_resource_access_log 资源访问流水
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| account_id | INT | NOT NULL | 软引用 db_account，不带外键，索引 `(account_id, resource_id)` |
+| resource_id | INT | NOT NULL | 软引用 db_learning_resource，不带外键，索引 `(resource_id)` |
+| accessed_at | DATETIME | NOT NULL | 每次成功下载写一条 |
+
+### db_group_member_visit 小组访问记录
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| group_id | INT | NOT NULL, FK → db_study_group(id) ON DELETE CASCADE | |
+| account_id | INT | NOT NULL | 软引用 db_account，不带外键 |
+| last_visit_at | DATETIME | NOT NULL | 最近一次访问小组详情页的时间，每次访问刷新 |
+
+`(group_id, account_id)` 唯一，供 member_visit 任务项判定"任务发布后组员已访问小组"。
+
 ## 迁移脚本
 
 `learning-program-backend/src/main/resources/db/migration/` 中的脚本按序号递增，未启用 Flyway，需手工执行：
@@ -326,5 +382,6 @@ erDiagram
 | V14 | 课程奖励积分：`db_course.reward_points` 列 + `db_course_reward` 表 |
 | V15 | 测试成绩合表：`db_test_record` 统一存储单词/知识测试成绩（迁入两旧表数据后删除旧表） |
 | V16 | 学习小组：`db_study_group`、`db_study_group_member`、`db_study_group_message` |
+| V17 | 小组任务绑定与进度：`db_group_task_item`、`db_group_task_progress`、`db_resource_access_log`、`db_group_member_visit` |
 
 V1–V6（账号、通知、签到、积分、词典等基础表）未纳入仓库，其结构见本文档各表定义与 [INSTALLATION.md](./INSTALLATION.md) 的建表语句；新建环境时可以按“表清单”一节逐表创建，已有环境升级时执行缺失的迁移脚本即可。

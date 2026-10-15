@@ -690,6 +690,7 @@ Authorization: ******
 ```
 
 以 `attachment` 方式返回文件本体，文件名取自上传时的原始文件名。资源不存在、不可见或磁盘文件丢失返回 `404`。
+每次成功下载会写入一条 `db_resource_access_log` 访问流水，用于小组任务中 resource 类型任务项的完成判定。
 
 ### 资源管理（管理员）
 
@@ -953,10 +954,153 @@ POST /api/groups/{id}/tasks
 Authorization: Bearer <token>
 Content-Type: application/json
 
-{ "title": "本周背完 List 1-3", "content": "周五前打卡" }
+{
+  "title": "本周背完 List 1-3",
+  "content": "周五前打卡",
+  "items": [
+    { "type": "course", "refId": 2 },
+    { "type": "resource", "refId": 5 },
+    { "type": "member_visit", "title": "访问小组页面" },
+    { "type": "text", "title": "在群里打卡汇报" }
+  ]
+}
 ```
 
 仅组长可发布，非组长返回 `403`；标题为空或超过 100 字、内容为空或超过 2000 字返回 `400`。
+`items` 为可选的任务绑定项（最多 20 个），类型与完成判定：
+
+| `type` | 含义 | 完成判定 |
+| --- | --- | --- |
+| `course` | 绑定课程（`refId` 为课程 id，标题自动取课程名） | 学完该课程全部章节，系统自动判定 |
+| `resource` | 绑定资源（`refId` 为资源 id，标题自动取资源名） | 任务发布后访问（下载）过该资源，系统自动判定 |
+| `member_visit` | 组员必须访问小组（`title` 必填说明） | 任务发布后访问过小组详情页，系统自动判定 |
+| `text` | 纯文本事项（`title` 必填说明） | 组员手动标记完成 |
+
+课程/资源 id 不存在返回 `400`；member_visit/text 缺少说明文字返回 `400`。
+
+### 查询小组任务列表（含完成进度）
+
+```http
+GET /api/groups/{id}/tasks
+Authorization: Bearer <token>
+```
+
+返回小组全部学习任务（按发布时间正序），每项任务含绑定项、当前用户完成状态与全组总进度：
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 12,
+      "title": "本周背完 List 1-3",
+      "content": "周五前打卡",
+      "accountId": 1,
+      "username": "tick",
+      "createdAt": "2026-10-14T20:10:00",
+      "items": [
+        { "id": 31, "type": "course", "refId": 2, "title": "四级核心词汇", "myCompleted": false, "myCompletedAt": null, "completedCount": 1 },
+        { "id": 32, "type": "text", "refId": null, "title": "在群里打卡汇报", "myCompleted": true, "myCompletedAt": "2026-10-15T09:20:00", "completedCount": 2 }
+      ],
+      "memberCount": 3,
+      "myCompleted": 1,
+      "totalItems": 2,
+      "totalCompletions": 3,
+      "progressPercent": 50
+    }
+  ],
+  "message": "success"
+}
+```
+
+`progressPercent` = 全部成员完成项次合计 /（任务项数 × 成员数），无绑定项时为 `null`。
+`myCompleted` / `myCompletedAt` 为当前用户的完成状态，`completedCount` 为全组已完成该项的人数。
+非成员返回 `404`。
+
+### 标记任务项完成（纯文本）
+
+```http
+POST /api/groups/{id}/tasks/{taskId}/items/{itemId}/complete
+Authorization: Bearer <token>
+```
+
+组员手动标记 `text` 类型任务项完成，幂等；成功后返回该任务的最新进度（结构同上）。
+对 course / resource / member_visit 类型调用返回 `400`「该任务项由系统自动判定完成，无需手动标记」。
+
+### 查询任务完成矩阵（组长）
+
+```http
+GET /api/groups/{id}/tasks/{taskId}/progress
+Authorization: Bearer <token>
+```
+
+仅组长可调用，非组长返回 `403`。返回任务项 × 成员的完成矩阵：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "taskId": 12,
+    "title": "本周背完 List 1-3",
+    "items": [
+      { "id": 31, "type": "course", "refId": 2, "title": "四级核心词汇", "completedCount": 1 }
+    ],
+    "members": [
+      {
+        "accountId": 5,
+        "username": "alice",
+        "role": "member",
+        "completedItems": 1,
+        "totalItems": 1,
+        "percent": 100,
+        "itemStatuses": [
+          { "itemId": 31, "completed": true, "completedAt": "2026-10-15T08:00:00" }
+        ]
+      }
+    ]
+  },
+  "message": "success"
+}
+```
+
+### 查询小组成员详情
+
+```http
+GET /api/groups/{id}/members/{memberId}
+Authorization: Bearer <token>
+```
+
+返回成员基本信息与其在各学习任务上的完成进度（`tasks` 中 `items` 的 `myCompleted` 表示该成员是否完成该项）。
+仅小组成员可见，非成员或目标不在小组中返回 `404`：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "accountId": 5,
+    "username": "alice",
+    "email": "alice@example.com",
+    "bio": "",
+    "role": "member",
+    "joinedAt": "2026-10-14T20:05:00",
+    "tasks": [
+      {
+        "taskId": 12,
+        "title": "本周背完 List 1-3",
+        "createdAt": "2026-10-14T20:10:00",
+        "completedItems": 1,
+        "totalItems": 2,
+        "percent": 50,
+        "items": [
+          { "id": 31, "type": "course", "refId": 2, "title": "四级核心词汇", "myCompleted": false, "myCompletedAt": null },
+          { "id": 32, "type": "text", "refId": null, "title": "在群里打卡汇报", "myCompleted": true, "myCompletedAt": "2026-10-15T09:20:00" }
+        ]
+      }
+    ]
+  },
+  "message": "success"
+}
+```
 
 ### 退出 / 解散小组
 

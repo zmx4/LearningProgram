@@ -45,4 +45,9 @@ public interface LearningResourceService {
      * 托管文件在磁盘上的路径。stored_name 由服务端生成（UUID + 校验过的扩展名），不含路径成分。
      */
     Path resolveStoredPath(String storedName);
+
+    /**
+     * 记录一次资源访问（下载），供小组任务中 resource 类型任务项判定完成情况。
+     */
+    void recordAccess(Integer accountId, Integer resourceId);
 }

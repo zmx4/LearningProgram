@@ -107,6 +107,11 @@ const routes: RouteRecordRaw[] = [
             name: 'group-detail',
             component: () => import('@/views/page/GroupDetailPage.vue'),
             meta: { title: '小组聊天' }
+        },{
+            path: ':id/members/:memberId',
+            name: 'group-member-detail',
+            component: () => import('@/views/page/GroupMemberDetailPage.vue'),
+            meta: { title: '成员详情' }
         }]
     },{
         path: '/leaderboard',

@@ -13,6 +13,7 @@ dist
 dist-ssr
 coverage
 *.local
+.workbuddy
 
 # Editor directories and files
 .vscode/*
@@ -42,3 +43,5 @@ __screenshots__/
 .env
 .env.*
 !.env.example
+
+
