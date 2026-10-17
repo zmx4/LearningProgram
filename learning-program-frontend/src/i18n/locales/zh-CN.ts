@@ -162,6 +162,12 @@ export default {
     completeRegistration: '请完整填写注册表单内容！',
     codeSent: '验证码已发送到邮箱: {email}，请注意查收',
     resetSuccess: '密码重置成功，请重新登录',
+    agreementPrefix: '我已阅读并同意',
+    agreementName: '《用户协议》',
+    agreementTitle: '用户协议',
+    agreementRequired: '请先阅读并勾选同意用户协议',
+    agreementConfirm: '我知道了',
+    agreementContent: '欢迎使用本学习平台。\n\n本协议内容目前为占位符，正式条款将在后续补充完善。请在使用平台服务前仔细阅读以下示例条款：\n\n一、服务内容\n平台为用户提供在线学习、课程管理、小组协作及讨论交流等功能。\n\n二、账号注册\n用户需使用真实、准确的信息注册账号，并妥善保管账号及密码。\n\n三、用户行为规范\n用户不得利用平台发布违法违规内容，不得干扰平台正常运行。\n\n四、隐私保护\n平台重视用户隐私，相关信息收集与使用规则详见隐私政策（占位符）。\n\n五、免责声明\n因不可抗力或非平台原因导致的服务中断，平台不承担相应责任。\n\n六、协议变更\n平台有权根据业务需要调整本协议内容，变更后将继续在平台内公布。',
   },
   validation: {
     requiredUsername: '请输入用户名',

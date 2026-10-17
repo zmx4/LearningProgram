@@ -45,6 +45,9 @@
     <div>
       <el-button style="width: 270px" @click="router.push('/register')" type="warning" plain>{{ $t('welcome.register') }}</el-button>
     </div>
+    <div style="margin-top: 30px;text-align: center">
+      <UserAgreementCheckbox v-model="form.agree" style="display: inline-block"/>
+    </div>
   </div>
 </template>
 
@@ -53,14 +56,17 @@ import {User, Lock} from '@element-plus/icons-vue'
 import router from "@/router";
 import {reactive, ref} from "vue";
 import {useI18n} from 'vue-i18n'
+import {ElMessage} from "element-plus";
 import {login} from '@/net'
+import UserAgreementCheckbox from "@/components/UserAgreementCheckbox.vue";
 
 const { t } = useI18n()
 const formRef = ref()
 const form = reactive({
   username: '',
   password: '',
-  remember: false
+  remember: false,
+  agree: false
 })
 
 const rules = {
@@ -73,6 +79,10 @@ const rules = {
 }
 
 function userLogin() {
+  if(!form.agree) {
+    ElMessage.warning(t('welcome.agreementRequired'))
+    return
+  }
   formRef.value.validate((isValid) => {
     if(isValid) {
       login(form.username, form.password, form.remember, () => router.push("/index"))

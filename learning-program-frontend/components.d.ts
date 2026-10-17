@@ -41,6 +41,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TestStatistics: typeof import('./src/components/TestStatistics.vue')['default']
+    UserAgreementCheckbox: typeof import('./src/components/UserAgreementCheckbox.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

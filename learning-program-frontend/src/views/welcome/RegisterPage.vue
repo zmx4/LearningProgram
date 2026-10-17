@@ -61,6 +61,9 @@
       <span style="font-size: 14px;line-height: 15px;color: grey">{{ $t('welcome.haveAccount') }} </span>
       <el-link type="primary" style="translate: 0 -2px" @click="router.push('/')">{{ $t('welcome.loginNow') }}</el-link>
     </div>
+    <div style="margin-top: 30px;text-align: center">
+      <UserAgreementCheckbox v-model="form.agree" style="display: inline-block"/>
+    </div>
   </div>
 </template>
 
@@ -72,6 +75,7 @@ import {useI18n} from 'vue-i18n'
 import {ElMessage} from "element-plus";
 import {publicGet, publicPost} from "@/net";
 import PasswordPolicyHint from "@/components/PasswordPolicyHint.vue";
+import UserAgreementCheckbox from "@/components/UserAgreementCheckbox.vue";
 import {fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy} from "@/utils/passwordPolicy";
 
 const { t } = useI18n()
@@ -86,7 +90,8 @@ const form = reactive({
   password: '',
   password_repeat: '',
   email: '',
-  code: ''
+  code: '',
+  agree: false
 })
 
 const validateUsername = (rule, value, callback) => {
@@ -152,6 +157,10 @@ const onValidate = (prop, isValid) => {
 }
 
 const register = () => {
+  if(!form.agree) {
+    ElMessage.warning(t('welcome.agreementRequired'))
+    return
+  }
   formRef.value.validate((isValid) => {
     if(isValid) {
       publicPost('/api/auth/register', {
