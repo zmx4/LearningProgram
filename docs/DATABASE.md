@@ -8,7 +8,7 @@
 - 所有表使用 InnoDB 引擎、`db_` 前缀命名，主键为 `AUTO_INCREMENT` 的 `id`。
 - MyBatis-Plus 按驼峰 ↔ 下划线自动映射（如 `register_time` ↔ `registerTime`），个别字段用 `@TableField` 显式指定。
 - 用户密码保存 BCrypt 密文，字段长度 `VARCHAR(255)`。
-- 迁移脚本位于 `learning-program-backend/src/main/resources/db/migration/`，项目未启用 Flyway 自动执行，升级已有数据库时需按序号手工执行。
+- 表结构的唯一来源是仓库根目录 `scripts/learning.sql`（整库 DDL，28 张表，含索引与外键）。项目未启用 Flyway，也没有增量迁移脚本，结构变更直接维护该文件。
 
 ## 表清单
 
@@ -241,7 +241,7 @@ erDiagram
 
 ### db_test_record 测试成绩
 
-单词测试与知识测试成绩统一存储在一张表中，`category` 区分测试大类（V15 起，取代原 `db_word_test_record` 与 `db_knowledge_test_record`）。
+单词测试与知识测试成绩统一存储在一张表中，`category` 区分测试大类（取代原 `db_word_test_record` 与 `db_knowledge_test_record`）。
 
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
@@ -255,7 +255,7 @@ erDiagram
 | total_count / correct_count / wrong_count | INT | NOT NULL | 答题统计 |
 | score | INT | NOT NULL | 得分（按正确率计算） |
 | duration_seconds | INT | NOT NULL DEFAULT 0 | 用时 |
-| detail | LONGTEXT | NULL, CHECK json_valid | 知识测试的答题明细 JSON，结构见迁移脚本 V8 注释 |
+| detail | LONGTEXT | NULL, CHECK json_valid | 知识测试的答题明细 JSON（结构由后端写入，约束见 `scripts/learning.sql` 的 `chk_test_record_detail`） |
 | created_at | DATETIME | NOT NULL | |
 
 ## 词典与资源
@@ -366,22 +366,18 @@ erDiagram
 
 `(group_id, account_id)` 唯一，供 member_visit 任务项判定"任务发布后组员已访问小组"。
 
-## 迁移脚本
+## 建表脚本
 
-`learning-program-backend/src/main/resources/db/migration/` 中的脚本按序号递增，未启用 Flyway，需手工执行：
+表结构的唯一来源是 `scripts/learning.sql`（整库 DDL，28 张表）。安装脚本检测到库为空时会自动导入它；也可以手工执行：
 
-| 脚本 | 内容 |
-| --- | --- |
-| V7 | 题库表：`db_test_type`、`db_test_question` |
-| V8 | 知识测试记录 `db_knowledge_test_record`（含 `detail` JSON 结构说明） |
-| V9 | 题集表：`db_question_set`、`db_question_set_item` |
-| V10 | 学习进度 `db_course_progress`、学习流水 `db_course_study_log` |
-| V11 | 课程表：`db_course`、`db_course_chapter`、`db_course_question_set` |
-| V12 | 知识测试支持课程题集模式（`type_id` 允许 NULL 并移除其外键） |
-| V13 | 学习资源 `db_learning_resource` |
-| V14 | 课程奖励积分：`db_course.reward_points` 列 + `db_course_reward` 表 |
-| V15 | 测试成绩合表：`db_test_record` 统一存储单词/知识测试成绩（迁入两旧表数据后删除旧表） |
-| V16 | 学习小组：`db_study_group`、`db_study_group_member`、`db_study_group_message` |
-| V17 | 小组任务绑定与进度：`db_group_task_item`、`db_group_task_progress`、`db_resource_access_log`、`db_group_member_visit` |
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root -p learning < scripts/learning.sql
+```
 
-V1–V6（账号、通知、签到、积分、词典等基础表）未纳入仓库，其结构见本文档各表定义与 [INSTALLATION.md](./INSTALLATION.md) 的建表语句；新建环境时可以按“表清单”一节逐表创建，已有环境升级时执行缺失的迁移脚本即可。
+需要了解的几点：
+
+- 建表语句不带 `IF NOT EXISTS`，**只能导入空库**；库里已有表时会因同名表报错。已有库要按最新结构重建，用安装脚本的 `--reset-db` / `-ResetDb`（先整库删除再导入）。
+- 文件开头 `SET FOREIGN_KEY_CHECKS = 0`、结尾恢复为 `1`，因此建表顺序不影响外键依赖（例如 `db_course_question_set` 出现在 `db_question_set` 之前）。
+- 表结构变更时直接修改 `scripts/learning.sql`，不再新增 `V*__*.sql` 增量脚本。
+
+历史沿革：早期按序号维护的增量迁移脚本（V7–V17，位于 `learning-program-backend/src/main/resources/db/migration/`）已删除，其内容全部并入 `scripts/learning.sql`；V1–V6 时期的基础表同样包含在该文件中。

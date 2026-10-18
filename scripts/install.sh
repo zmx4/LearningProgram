@@ -7,18 +7,18 @@
 #   2. 收集 MySQL / Redis 连接信息：环境变量里已有的直接沿用，
 #      没指定的（含仍是 .env.example 占位符的）会逐个提示手动输入
 #   3. 生成 learning-program-backend/.env 与 learning-program-frontend/.env.local（原文件先备份）
-#   4. 建库 learning 并按序号执行 db/migration 下的迁移脚本（依赖脚本顺序，自动重试一轮）
+#   4. 建库 learning 并导入 scripts/learning.sql（整库 DDL）
 #   5. 打包后端（mvnw package）、安装依赖并构建前端（pnpm/npm）
 #
 # 用法：
 #   bash scripts/install.sh                 # 交互式安装
 #   bash scripts/install.sh -y              # 非交互：缺少必填环境变量时直接报错退出
 #   bash scripts/install.sh -i              # 强制交互（即使 stdin 不是终端）
-#   bash scripts/install.sh --no-db         # 跳过建库与迁移
+#   bash scripts/install.sh --no-db         # 跳过建库与建表
 #   bash scripts/install.sh --no-build      # 只做配置与数据库，不编译打包
 #   bash scripts/install.sh --no-frontend   # 跳过前端依赖安装与构建
 #   bash scripts/install.sh --force-env     # 覆盖已有 .env / .env.local（默认也会备份后覆盖）
-#   bash scripts/install.sh --force-migrate # 基础表不存在时仍强制执行迁移
+#   bash scripts/install.sh --reset-db      # 删库重建后重新导入（会丢数据，需确认）
 #   bash scripts/install.sh --no-write-env  # 不写文件，只把 export 语句打印出来
 #   bash scripts/install.sh --start         # 安装完成后前台启动后端
 #
@@ -37,7 +37,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${INSTALL_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 BACKEND_DIR="$PROJECT_ROOT/learning-program-backend"
 FRONTEND_DIR="$PROJECT_ROOT/learning-program-frontend"
-MIGRATION_DIR="$BACKEND_DIR/src/main/resources/db/migration"
+SCHEMA_FILE="$SCRIPT_DIR/learning.sql"
 BACKEND_ENV="$BACKEND_DIR/.env"
 FRONTEND_ENV="$FRONTEND_DIR/.env.local"
 
@@ -58,7 +58,7 @@ DO_DB=1
 DO_BUILD=1
 DO_FRONTEND=1
 FORCE_ENV=0
-FORCE_MIGRATE=0
+RESET_DB=0
 WRITE_ENV=1
 START_AFTER_INSTALL=0
 
@@ -76,7 +76,10 @@ while [ $# -gt 0 ]; do
     --no-build) DO_BUILD=0 ;;
     --no-frontend) DO_FRONTEND=0 ;;
     --force-env) FORCE_ENV=1 ;;
-    --force-migrate) FORCE_MIGRATE=1 ;;
+    --reset-db) RESET_DB=1 ;;
+    --force-migrate)
+      printf '  ! --force-migrate 已废弃：迁移脚本已移除，建表统一由 scripts/learning.sql 完成，本次忽略该参数\n' >&2
+      ;;
     --no-write-env) WRITE_ENV=0 ;;
     --start) START_AFTER_INSTALL=1 ;;
     *) echo "未知参数：$1（用 --help 查看用法）" >&2; exit 2 ;;
@@ -220,7 +223,7 @@ check_toolchain() {
     ok "mysql 客户端：$MYSQL_CLIENT"
   else
     MYSQL_CLIENT=""
-    warn "未找到 mysql 客户端，将跳过建库与迁移，稍后按提示手工执行 SQL"
+    warn "未找到 mysql 客户端，将跳过建库与建表，稍后按提示手工执行 SQL"
   fi
 
   # redis 只做提示，密码用不上 redis-cli
@@ -482,21 +485,79 @@ mysql_exec() { # mysql_exec <sql>
     --default-character-set=utf8mb4 --connect-timeout=8 -N -B -e "$1"
 }
 
-mysql_exec_file() { # mysql_exec_file <file>
+mysql_exec_file() { # mysql_exec_file <file> [db]
+  local db="${2:-$DEFAULT_DB_NAME}"
   MYSQL_PWD="${MYSQL_PASSWORD:-}" "$MYSQL_CLIENT" \
     -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USERNAME" \
-    --default-character-set=utf8mb4 --connect-timeout=8 "$DEFAULT_DB_NAME" < "$1"
+    --default-character-set=utf8mb4 --connect-timeout=8 "$db" < "$1"
+}
+
+# scripts/learning.sql 里 CREATE TABLE 的条数，用于导入后核对
+expected_table_count() {
+  [ -f "$SCHEMA_FILE" ] || { printf '0'; return 0; }
+  local n
+  n="$(grep -c '^CREATE TABLE' "$SCHEMA_FILE" 2>/dev/null || true)"
+  printf '%s' "${n:-0}"
+}
+
+table_count() { # 当前库里已有多少张表
+  mysql_exec "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DEFAULT_DB_NAME';" 2>/dev/null | tr -d '[:space:]'
+}
+
+create_database() {
+  mysql_exec "CREATE DATABASE IF NOT EXISTS $DEFAULT_DB_NAME DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1
+}
+
+confirm_reset() {
+  local expected
+  expected="$(expected_table_count)"
+  warn "即将删除数据库 $DEFAULT_DB_NAME（其中数据全部丢失），再按 $(basename "$SCHEMA_FILE") 重建 $expected 张表"
+  if [ "$NON_INTERACTIVE" = "1" ]; then
+    warn "非交互模式：已通过 --reset-db 显式指定，直接执行"
+    return 0
+  fi
+  printf '  %s确认请输入 yes（其他任意输入取消）: %s' "$C_BOLD" "$C_RESET" >&2
+  local answer=''
+  read -r answer || true
+  [ "$answer" = "yes" ]
+}
+
+import_schema() {
+  local expected actual
+  expected="$(expected_table_count)"
+  info "导入 scripts/$(basename "$SCHEMA_FILE")（$expected 张表）"
+
+  if ! mysql_exec_file "$SCHEMA_FILE" >/dev/null 2>&1; then
+    err "导入 $(basename "$SCHEMA_FILE") 失败"
+    info "可手工执行：mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USERNAME -p $DEFAULT_DB_NAME < scripts/learning.sql"
+    return 1
+  fi
+
+  actual="$(table_count 2>/dev/null || true)"
+  if [ "${actual:-0}" = "$expected" ]; then
+    ok "建表完成：$actual 张表"
+    return 0
+  fi
+
+  warn "建表结果与预期不一致：预期 $expected 张，实际 ${actual:-未知} 张"
+  info "请检查 $SCHEMA_FILE 是否完整，或删除数据库后重新执行 bash scripts/install.sh --reset-db --no-build"
+  return 1
 }
 
 init_database() {
   step "初始化数据库"
 
+  if [ ! -f "$SCHEMA_FILE" ]; then
+    err "未找到建表脚本：$SCHEMA_FILE"
+    info "该文件是表结构的唯一来源，请确认 scripts/learning.sql 存在"
+    return 1
+  fi
+
   if [ -z "$MYSQL_CLIENT" ]; then
-    warn "跳过建库与迁移：本机没有 mysql 客户端"
+    warn "跳过建库与建表：本机没有 mysql 客户端"
     info "请手工执行："
     info "  1) CREATE DATABASE IF NOT EXISTS $DEFAULT_DB_NAME DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    info "  2) 按 docs/DATABASE.md 建基础表（V1–V6 未纳入仓库）"
-    info "  3) 按序号执行 learning-program-backend/src/main/resources/db/migration/*.sql"
+    info "  2) mysql -u $MYSQL_USERNAME -p $DEFAULT_DB_NAME < scripts/learning.sql"
     return 0
   fi
 
@@ -507,87 +568,46 @@ init_database() {
   fi
   ok "MySQL 连接成功（$MYSQL_HOST:$MYSQL_PORT）"
 
-  if mysql_exec "CREATE DATABASE IF NOT EXISTS $DEFAULT_DB_NAME DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; then
+  if create_database; then
     ok "数据库 $DEFAULT_DB_NAME 已就绪"
   else
     err "创建数据库 $DEFAULT_DB_NAME 失败：请确认账号 $MYSQL_USERNAME 具备建库权限"
     return 1
   fi
 
-  local base_count
-  if ! base_count="$(mysql_exec "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DEFAULT_DB_NAME' AND table_name='db_account';" 2>/dev/null | tr -d '[:space:]')"; then
-    warn "无法读取表清单（权限不足或库不存在），跳过迁移"
-    info "请按 docs/DATABASE.md 手工建表，再执行 bash scripts/install.sh --no-build"
+  local existing
+  if ! existing="$(table_count)"; then
+    warn "无法读取表清单（权限不足或库不存在），跳过建表"
+    info "请手工导入：mysql -u $MYSQL_USERNAME -p $DEFAULT_DB_NAME < scripts/learning.sql"
     return 0
   fi
+  existing="${existing:-0}"
 
-  if [ "$base_count" != "0" ]; then
-    info "检测到基础表，开始按序号执行迁移脚本"
-  else
-    warn "未检测到基础表 db_account：这是全新数据库"
-    warn "仓库未包含 V1–V6 基础表脚本，请先按 docs/DATABASE.md「表清单」创建基础表"
-    if [ "$FORCE_MIGRATE" = "1" ]; then
-      warn "已指定 --force-migrate，仍继续执行迁移（依赖基础表的脚本会失败并记录）"
-    else
-      info "本次跳过迁移；建好基础表后重新执行：bash scripts/install.sh --no-build"
+  if [ "$existing" != "0" ]; then
+    info "数据库 $DEFAULT_DB_NAME 已有 $existing 张表（$(basename "$SCHEMA_FILE") 定义 $(expected_table_count) 张）"
+    if [ "$RESET_DB" != "1" ]; then
+      info "为避免覆盖现有数据，跳过建表"
+      info "需要按 scripts/learning.sql 重建时加 --reset-db（会清空全部数据）"
       return 0
     fi
-  fi
-
-  run_migrations
-}
-
-run_migrations() {
-  local -a scripts=()
-  while IFS= read -r file; do
-    scripts+=("$file")
-  done < <(ls "$MIGRATION_DIR"/*.sql 2>/dev/null | sort -V)
-
-  if [ "${#scripts[@]}" -eq 0 ]; then
-    warn "未找到任何迁移脚本：$MIGRATION_DIR"
-    return 0
-  fi
-
-  local applied=0
-  local -a failed=()
-
-  for file in "${scripts[@]}"; do
-    local name
-    name="$(basename "$file")"
-    if mysql_exec_file "$file" >/dev/null 2>&1; then
-      ok "迁移 $name"
-      applied=$((applied + 1))
-    else
-      warn "迁移 $name 失败"
-      failed+=("$file")
+    if ! confirm_reset; then
+      info "已取消，数据库保持原样"
+      return 0
     fi
-  done
-
-  # 第二遍：处理脚本之间的依赖顺序（例如 V10 依赖 V11 建出的表）
-  if [ "${#failed[@]}" -gt 0 ]; then
-    info "对失败的脚本重试一轮（解决脚本间先后依赖）"
-    local -a still_failed=()
-    for file in "${failed[@]}"; do
-      local name
-      name="$(basename "$file")"
-      if mysql_exec_file "$file" >/dev/null 2>&1; then
-        ok "迁移 $name（重试成功）"
-        applied=$((applied + 1))
-      else
-        still_failed+=("$file")
-      fi
-    done
-    failed=("${still_failed[@]-}")
+    if ! mysql_exec "DROP DATABASE IF EXISTS $DEFAULT_DB_NAME;" >/dev/null 2>&1; then
+      err "删除数据库 $DEFAULT_DB_NAME 失败：请确认账号 $MYSQL_USERNAME 具备删库权限"
+      return 1
+    fi
+    ok "已删除数据库 $DEFAULT_DB_NAME"
+    if ! create_database; then
+      err "重建数据库 $DEFAULT_DB_NAME 失败"
+      return 1
+    fi
+  else
+    info "检测到空数据库，开始建表"
   fi
 
-  info "迁移完成：成功 $applied 个"
-  if [ "${#failed[@]}" -gt 0 ] && [ -n "${failed[0]:-}" ]; then
-    warn "以下脚本仍未成功，通常是缺少依赖表或已存在同名对象："
-    for file in "${failed[@]}"; do
-      [ -n "$file" ] && warn "  - $(basename "$file")"
-    done
-    warn "请对照 docs/DATABASE.md 检查后手工执行这些脚本"
-  fi
+  import_schema
 }
 
 # ---------------------------------------------------------------- 构建

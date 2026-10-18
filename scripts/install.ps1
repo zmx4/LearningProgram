@@ -8,14 +8,14 @@
       2. 收集 MySQL / Redis 连接信息：环境变量里已有的直接沿用，
          没指定的（含仍是 .env.example 占位符的）会逐个提示手动输入
       3. 生成 learning-program-backend\.env 与 learning-program-frontend\.env.local（原文件先备份）
-      4. 建库 learning 并按序号执行 db\migration 下的迁移脚本（依赖脚本顺序，自动重试一轮）
+      4. 建库 learning 并导入 scripts\learning.sql（整库 DDL）
       5. 打包后端（mvnw.cmd package）、安装依赖并构建前端（pnpm/npm）
 
 .PARAMETER Yes
     非交互：缺少必填环境变量时直接报错退出。
 
 .PARAMETER NoDb
-    跳过建库与迁移。
+    跳过建库与建表。
 
 .PARAMETER NoBuild
     只做配置与数据库，不编译打包。
@@ -26,8 +26,11 @@
 .PARAMETER ForceEnv
     覆盖已有 .env / .env.local（默认也会先备份再覆盖）。
 
+.PARAMETER ResetDb
+    删除并重建 learning 库后重新导入 scripts\learning.sql（会丢失全部数据，交互模式需输入 yes 确认）。
+
 .PARAMETER ForceMigrate
-    基础表不存在时仍强制执行迁移。
+    已废弃：迁移脚本已移除，建表统一由 scripts\learning.sql 完成，传入后被忽略。
 
 .PARAMETER NoWriteEnv
     不写文件，只把 export 语句打印出来。
@@ -52,6 +55,7 @@ param(
     [switch]$NoBuild,
     [switch]$NoFrontend,
     [switch]$ForceEnv,
+    [switch]$ResetDb,
     [switch]$ForceMigrate,
     [switch]$NoWriteEnv,
     [switch]$Start
@@ -65,7 +69,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 if ($env:INSTALL_PROJECT_ROOT) { $ProjectRoot = $env:INSTALL_PROJECT_ROOT }
 $BackendDir   = Join-Path $ProjectRoot 'learning-program-backend'
 $FrontendDir  = Join-Path $ProjectRoot 'learning-program-frontend'
-$MigrationDir = Join-Path $BackendDir 'src\main\resources\db\migration'
+$SchemaFile   = Join-Path $PSScriptRoot 'learning.sql'
 $BackendEnv   = Join-Path $BackendDir '.env'
 $FrontendEnv  = Join-Path $FrontendDir '.env.local'
 
@@ -241,7 +245,7 @@ function Test-Toolchain {
         $script:MysqlClient = $mysql.Source
         Write-Ok "mysql 客户端：$($mysql.Source)"
     } else {
-        Write-Warn2 '未找到 mysql 客户端，将跳过建库与迁移，稍后按提示手工执行 SQL'
+        Write-Warn2 '未找到 mysql 客户端，将跳过建库与建表，稍后按提示手工执行 SQL'
     }
 
     if (-not (Get-Command redis-cli -ErrorAction SilentlyContinue)) {
@@ -521,59 +525,74 @@ function Invoke-MysqlFile {
     }
 }
 
-function Invoke-Migrations {
-    $scripts = Get-ChildItem -LiteralPath $MigrationDir -Filter '*.sql' -ErrorAction SilentlyContinue |
-        Sort-Object -Property @{ Expression = { if ($_.Name -match '^V(\d+)__') { [int]$Matches[1] } else { 0 } } }, 'Name'
+function Get-ExpectedTableCount {
+    if (-not (Test-Path -LiteralPath $SchemaFile)) { return 0 }
+    $lines = [System.IO.File]::ReadAllLines($SchemaFile, [System.Text.Encoding]::UTF8)
+    return @($lines | Where-Object { $_ -match '^CREATE TABLE' }).Count
+}
 
-    if (-not $scripts -or $scripts.Count -eq 0) {
-        Write-Warn2 "未找到任何迁移脚本：$MigrationDir"
-        return
+function Get-TableCount {
+    $value = Invoke-MysqlScalar -Sql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DbName';"
+    if ($null -eq $value) { return $null }
+    return $value.Trim()
+}
+
+function New-Database {
+    return ($null -ne (Invoke-MysqlScalar -Sql "CREATE DATABASE IF NOT EXISTS $DbName DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
+}
+
+function Confirm-Reset {
+    $expected = Get-ExpectedTableCount
+    Write-Warn2 "即将删除数据库 $DbName（其中数据全部丢失），再按 learning.sql 重建 $expected 张表"
+    if ($Yes) {
+        Write-Warn2 '非交互模式：已通过 -ResetDb 显式指定，直接执行'
+        return $true
+    }
+    $answer = Read-Host -Prompt '  确认请输入 yes（其他任意输入取消）'
+    return ($answer -eq 'yes')
+}
+
+function Import-Schema {
+    $expected = Get-ExpectedTableCount
+    Write-Info "导入 scripts\learning.sql（$expected 张表）"
+
+    if (-not (Invoke-MysqlFile -Path $SchemaFile)) {
+        Write-Err2 '导入 learning.sql 失败'
+        Write-Info "可手工执行：mysql -h $(Get-EnvValue 'MYSQL_HOST') -P $(Get-EnvValue 'MYSQL_PORT') -u $(Get-EnvValue 'MYSQL_USERNAME') -p $DbName < scripts\learning.sql"
+        return $false
     }
 
-    $applied = 0
-    $failed = New-Object System.Collections.Generic.List[object]
-
-    foreach ($script in $scripts) {
-        if (Invoke-MysqlFile -Path $script.FullName) {
-            Write-Ok "迁移 $($script.Name)"
-            $applied++
-        } else {
-            Write-Warn2 "迁移 $($script.Name) 失败"
-            $failed.Add($script)
-        }
+    $actual = Get-TableCount
+    if ("$actual" -eq "$expected") {
+        Write-Ok "建表完成：$actual 张表"
+        return $true
     }
 
-    if ($failed.Count -gt 0) {
-        Write-Info '对失败的脚本重试一轮（解决脚本间先后依赖）'
-        $stillFailed = New-Object System.Collections.Generic.List[object]
-        foreach ($script in $failed) {
-            if (Invoke-MysqlFile -Path $script.FullName) {
-                Write-Ok "迁移 $($script.Name)（重试成功）"
-                $applied++
-            } else {
-                $stillFailed.Add($script)
-            }
-        }
-        $failed = $stillFailed
-    }
-
-    Write-Info "迁移完成：成功 $applied 个"
-    if ($failed.Count -gt 0) {
-        Write-Warn2 '以下脚本仍未成功，通常是缺少依赖表或已存在同名对象：'
-        foreach ($script in $failed) { Write-Warn2 "  - $($script.Name)" }
-        Write-Warn2 '请对照 docs/DATABASE.md 检查后手工执行这些脚本'
-    }
+    $actualText = '未知'
+    if ($null -ne $actual) { $actualText = $actual }
+    Write-Warn2 "建表结果与预期不一致：预期 $expected 张，实际 $actualText 张"
+    Write-Info '请检查 scripts\learning.sql 是否完整，或加 -ResetDb 重新建库'
+    return $false
 }
 
 function Initialize-Database {
     Write-Step '初始化数据库'
 
+    if ($ForceMigrate) {
+        Write-Warn2 '-ForceMigrate 已废弃：迁移脚本已移除，建表统一由 scripts\learning.sql 完成，本次忽略该参数'
+    }
+
+    if (-not (Test-Path -LiteralPath $SchemaFile)) {
+        Write-Err2 "未找到建表脚本：$SchemaFile"
+        Write-Info '该文件是表结构的唯一来源，请确认 scripts\learning.sql 存在'
+        return
+    }
+
     if (-not $script:MysqlClient) {
-        Write-Warn2 '跳过建库与迁移：本机没有 mysql 客户端'
+        Write-Warn2 '跳过建库与建表：本机没有 mysql 客户端'
         Write-Info '请手工执行：'
         Write-Info "  1) CREATE DATABASE IF NOT EXISTS $DbName DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-        Write-Info '  2) 按 docs/DATABASE.md 建基础表（V1–V6 未纳入仓库）'
-        Write-Info '  3) 按序号执行 learning-program-backend\src\main\resources\db\migration\*.sql'
+        Write-Info "  2) mysql -u <用户名> -p $DbName < scripts\learning.sql"
         return
     }
 
@@ -584,34 +603,45 @@ function Initialize-Database {
     }
     Write-Ok "MySQL 连接成功（$(Get-EnvValue 'MYSQL_HOST'):$(Get-EnvValue 'MYSQL_PORT')）"
 
-    $createSql = "CREATE DATABASE IF NOT EXISTS $DbName DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    if ($null -eq (Invoke-MysqlScalar -Sql $createSql)) {
+    if (New-Database) {
+        Write-Ok "数据库 $DbName 已就绪"
+    } else {
         Write-Err2 "创建数据库 $DbName 失败：请确认账号具备建库权限"
         return
     }
-    Write-Ok "数据库 $DbName 已就绪"
 
-    $baseCount = Invoke-MysqlScalar -Sql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DbName' AND table_name='db_account';"
-    if ($null -eq $baseCount) {
-        Write-Warn2 '无法读取表清单（权限不足或库不存在），跳过迁移'
-        Write-Info '请按 docs/DATABASE.md 手工建表，再执行 .\scripts\install.ps1 -NoBuild'
+    $existing = Get-TableCount
+    if ($null -eq $existing) {
+        Write-Warn2 '无法读取表清单（权限不足或库不存在），跳过建表'
+        Write-Info "请手工导入：mysql -u <用户名> -p $DbName < scripts\learning.sql"
         return
     }
 
-    if ($baseCount -ne '0') {
-        Write-Info '检测到基础表，开始按序号执行迁移脚本'
-    } else {
-        Write-Warn2 '未检测到基础表 db_account：这是全新数据库'
-        Write-Warn2 '仓库未包含 V1–V6 基础表脚本，请先按 docs/DATABASE.md「表清单」创建基础表'
-        if ($ForceMigrate) {
-            Write-Warn2 '已指定 -ForceMigrate，仍继续执行迁移（依赖基础表的脚本会失败并记录）'
-        } else {
-            Write-Info '本次跳过迁移；建好基础表后重新执行：.\scripts\install.ps1 -NoBuild'
+    if ($existing -ne '0') {
+        Write-Info "数据库 $DbName 已有 $existing 张表（learning.sql 定义 $(Get-ExpectedTableCount) 张）"
+        if (-not $ResetDb) {
+            Write-Info '为避免覆盖现有数据，跳过建表'
+            Write-Info '需要按 scripts\learning.sql 重建时加 -ResetDb（会清空全部数据）'
             return
         }
+        if (-not (Confirm-Reset)) {
+            Write-Info '已取消，数据库保持原样'
+            return
+        }
+        if ($null -eq (Invoke-MysqlScalar -Sql "DROP DATABASE IF EXISTS $DbName;")) {
+            Write-Err2 "删除数据库 $DbName 失败：请确认账号具备删库权限"
+            return
+        }
+        Write-Ok "已删除数据库 $DbName"
+        if (-not (New-Database)) {
+            Write-Err2 "重建数据库 $DbName 失败"
+            return
+        }
+    } else {
+        Write-Info '检测到空数据库，开始建表'
     }
 
-    Invoke-Migrations
+    $null = Import-Schema
 }
 
 # ---------------------------------------------------------------- 构建

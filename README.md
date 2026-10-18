@@ -87,16 +87,17 @@ LearningProgram/
 │   ├── src/router/              # 前端路由和路由守卫
 │   ├── src/utils/               # 前端工具函数
 │   └── src/views/               # 页面组件（welcome / page / admin）
-├── scripts/                     # 一键安装脚本
+├── scripts/                     # 一键安装脚本与建表脚本
 │   ├── install.sh               # bash 版（Git Bash / WSL / Linux / macOS）
-│   └── install.ps1              # PowerShell 版（Windows 原生）
+│   ├── install.ps1              # PowerShell 版（Windows 原生）
+│   └── learning.sql             # 整库 DDL（28 张表），安装脚本自动导入
 └── README.md
 ```
 
 ## 快速开始
 
 一键安装脚本会检查环境、收集数据库连接信息（未通过环境变量指定时会逐个提示手动输入）、
-生成 `.env` 配置、建库并执行迁移脚本，最后打包后端与构建前端：
+生成 `.env` 配置、建库并导入 `scripts/learning.sql`（整库 DDL，28 张表），最后打包后端与构建前端：
 
 ```bash
 # Git Bash / WSL / Linux / macOS
@@ -119,7 +120,7 @@ MYSQL_USERNAME=root MYSQL_PASSWORD=secret bash scripts/install.sh -y
 ## 文档
 
 - [安装与运行](./docs/INSTALLATION.md)：一键安装脚本、环境要求、数据库、配置、启动和构建命令。
-- [数据库说明](./docs/DATABASE.md)：表结构、表间关系、积分与级联删除约定和迁移脚本。
+- [数据库说明](./docs/DATABASE.md)：表结构、表间关系、积分与级联删除约定和建表脚本。
 - [接口文档](./docs/API.md)：认证、个人资料、课程、测试、讨论、排行榜、通知、资源和管理员接口。
 - [部署文档](./docs/DEPLOYMENT.md)：前端构建产物托管与 Nginx 反向代理配置。
 - [后端类图](./docs/CLASS_DIAGRAM.puml)：controller / service / mapper / entity 分层与领域实体关系（[渲染 PNG](./docs/CLASS_DIAGRAM.png)）。

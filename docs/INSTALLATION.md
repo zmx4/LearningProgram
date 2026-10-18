@@ -16,7 +16,7 @@
 1. 检查 JDK 21+、Maven（优先用 `mvnw`）、Node 22.18+、包管理器（有 `pnpm-lock.yaml` 时优先 pnpm）、`mysql` 客户端；
 2. 收集 MySQL / Redis 连接信息：**环境变量里已有的直接沿用，没有指定的会逐个提示手动输入**；
 3. 生成 `learning-program-backend/.env` 与 `learning-program-frontend/.env.local`（已存在的文件先备份为 `*.bak.时间戳`）；
-4. 创建数据库 `learning` 并按序号执行 `db/migration/*.sql`（脚本之间有依赖时自动重试一轮，并列出仍失败的脚本）；
+4. 创建数据库 `learning` 并导入 `scripts/learning.sql`（整库 DDL，28 张表；库里已有表时跳过，避免覆盖数据）；
 5. 打包后端（`mvnw -DskipTests package`）与构建前端（`pnpm/npm run build`）。
 
 ### 环境变量的指定规则
@@ -39,21 +39,21 @@ bash 版（`--help` 查看全部）：
 bash scripts/install.sh                 # 交互式安装
 bash scripts/install.sh -y              # 非交互：缺少必填环境变量时直接报错
 bash scripts/install.sh -i              # 强制交互（即使 stdin 不是终端）
-bash scripts/install.sh --no-db         # 跳过建库与迁移
+bash scripts/install.sh --no-db         # 跳过建库与建表
 bash scripts/install.sh --no-build      # 只做配置与数据库
 bash scripts/install.sh --no-frontend   # 跳过前端依赖安装与构建
 bash scripts/install.sh --no-write-env  # 不写文件，只打印 export 语句
-bash scripts/install.sh --force-migrate # 基础表不存在时仍强制执行迁移
+bash scripts/install.sh --reset-db      # 删库重建后重新导入 learning.sql（会丢数据，需确认）
 bash scripts/install.sh --start         # 安装完成后前台启动后端
 ```
 
-PowerShell 版参数名一致，用开关形式：`-Yes`、`-NoDb`、`-NoBuild`、`-NoFrontend`、`-NoWriteEnv`、`-ForceMigrate`、`-Start`、`-ForceEnv`。
+PowerShell 版参数名一致，用开关形式：`-Yes`、`-NoDb`、`-NoBuild`、`-NoFrontend`、`-NoWriteEnv`、`-ResetDb`、`-Start`、`-ForceEnv`。
 
 ### 注意事项
 
-- **仓库不包含 V1–V6 基础表脚本**。若数据库中没有 `db_account` 等基础表，脚本会提示先按
-  [DATABASE.md](./DATABASE.md) 建基础表，并跳过迁移（也可用 `--force-migrate` / `-ForceMigrate` 强制执行并查看失败清单）。
-- 未安装 `mysql` 客户端时脚本会跳过建库与迁移，并打印需要手工执行的步骤。
+- **表结构的唯一来源是 `scripts/learning.sql`**（整库 DDL，28 张表）。库中没有表时脚本会自动导入；已有表时跳过并提示，不会覆盖现有数据。
+- 需要按 `learning.sql` 重建库时用 `--reset-db` / `-ResetDb`：脚本会先 `DROP DATABASE learning` 再重新导入，**库中数据会全部丢失**（交互模式需输入 `yes` 确认，非交互模式视为显式同意）。
+- 未安装 `mysql` 客户端时脚本会跳过建库与建表，并打印需要手工执行的步骤。
 - `.env` 与 `.env.local` 均已被 `.gitignore` 忽略；脚本生成前会备份同名旧文件，不影响已有手工配置。
 
 ## 环境要求
@@ -77,16 +77,22 @@ CREATE DATABASE IF NOT EXISTS learning
   COLLATE utf8mb4_unicode_ci;
 ```
 
-完整的表结构、表间关系和字段说明见 [数据库说明](./DATABASE.md)。初始化表结构有两种方式：
+完整的表结构、表间关系和字段说明见 [数据库说明](./DATABASE.md)。表结构的唯一来源是仓库 `scripts/learning.sql`（整库 DDL，28 张表，含索引、外键与 JSON 约束），初始化有两种方式：
 
-1. **按文档建表**：在空库中执行 [DATABASE.md](./DATABASE.md) 各表定义对应的建表语句（推荐，一次性完成全部 20 张表）。
-2. **按迁移脚本升级**：`learning-program-backend/src/main/resources/db/migration/` 中的 V7–V14 脚本覆盖题库、课程、学习进度、资源和积分奖励等表；账号、通知、签到等基础表（V1–V6）未纳入仓库，同样以 [DATABASE.md](./DATABASE.md) 为准手工创建。已有数据库升级时，按序号执行缺失的脚本即可。
+1. **安装脚本自动导入（推荐）**：库里没有任何表时，`scripts/install.sh` / `scripts/install.ps1` 会自动导入 `scripts/learning.sql`。
+2. **手工导入**：
+
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root -p learning < scripts/learning.sql
+```
+
+`learning.sql` 中的建表语句不带 `IF NOT EXISTS`，因此**只能导入到空库**。已有库需要按最新结构重建时，用脚本的 `--reset-db` / `-ResetDb`（先整库删除再导入），或手工 `DROP DATABASE learning` 后重新导入。
 
 注意事项：
 
 - `password` 字段保存 BCrypt 密文，需使用 `VARCHAR(255)`。
-- 迁移脚本未启用 Flyway 自动执行，需要手工按序号运行。
-- 如果数据库中已存在同名表，请先对照 [DATABASE.md](./DATABASE.md) 确认字段与后端实体一致，避免启动后出现字段映射错误。
+- 导入后脚本会核对表数量（预期 28 张），不一致会给出警告，便于发现导入中断。
+- 如果数据库中已存在同名表，导入会直接报错；请先确认是否需要 `--reset-db`，避免误删数据。
 
 ## 后端配置
 
