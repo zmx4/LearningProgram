@@ -7,7 +7,8 @@ package com.tick.mail;
 public enum MailType {
 
     REGISTER("register", "注册验证码"),
-    RESET("reset", "重置密码验证码");
+    RESET("reset", "重置密码验证码"),
+    TWO_FACTOR("2fa", "两步验证验证码");
 
     private final String code;
     private final String label;

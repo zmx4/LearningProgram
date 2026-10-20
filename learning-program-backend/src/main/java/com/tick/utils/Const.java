@@ -17,5 +17,6 @@ public class Const {
     public static final String EMAIL_CODE = "email::code:";
     /** 同一邮箱的发送频控：email::code::interval:<type>:<email> */
     public static final String EMAIL_CODE_INTERVAL = "email::code::interval:";
+    public static final String TOTP_LOGIN_CHALLENGE = "totp::login:";
 
 }

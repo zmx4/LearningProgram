@@ -24,16 +24,26 @@ public class Account {
     String bio;
     String role;
     Integer points;
+    @TableField("totp_secret")
+    String totpSecret;
+    @TableField("totp_enabled")
+    Boolean totpEnabled;
     @TableField("register_time")
     Date registerDate;
 
     public Account(Integer id, String username, String password, String email,
                    String phone, String bio, String role, Date registerDate) {
-        this(id, username, password, email, phone, bio, role, 0, registerDate);
+        this(id, username, password, email, phone, bio, role, 0, null, false, registerDate);
     }
 
     public Account(Integer id, String username, String password, String email,
                    String phone, String bio, String role, Integer points, Date registerDate) {
+        this(id, username, password, email, phone, bio, role, points, null, false, registerDate);
+    }
+
+    public Account(Integer id, String username, String password, String email,
+                   String phone, String bio, String role, Integer points, String totpSecret,
+                   Boolean totpEnabled, Date registerDate) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -42,6 +52,8 @@ public class Account {
         this.bio = bio;
         this.role = role;
         this.points = points;
+        this.totpSecret = totpSecret;
+        this.totpEnabled = totpEnabled;
         this.registerDate = registerDate;
     }
 

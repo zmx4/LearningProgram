@@ -3,8 +3,10 @@ package com.tick.config;
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.response.AuthorizeVO;
+import com.tick.entity.vo.response.LoginChallengeVO;
 import com.tick.filter.JwtAuthorizeFilter;
 import com.tick.service.AccountService;
+import com.tick.service.TwoFactorService;
 import com.tick.utils.JwtUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.ServletException;
@@ -44,6 +46,8 @@ public class SecurityConfiguration {
 
     @Resource
     AccountService accountService;
+    @Resource
+    TwoFactorService twoFactorService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -52,6 +56,7 @@ public class SecurityConfiguration {
                         conf
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/2fa/**").permitAll()
                                 // 未处理的错误会被转发到 /error。这里若要求认证，任何错误最终都会
                                 // 变成 401「Full authentication is required to access this resource」，
                                 // 前端会误判成登录过期并清除登录态，真正的错误信息也丢失了。
@@ -99,7 +104,24 @@ public class SecurityConfiguration {
         User user = (User)authentication.getPrincipal();
         assert user != null;
         Account account = accountService.findAccountByUsernameOrEmail(user.getUsername());
-        String token = jwtUtils.createJwt(user,account.getId(),account.getUsername());
+        if (twoFactorService.isEnabled(account)) {
+            response.setStatus(428);
+            response.setContentType("application/json;charset=utf-8");
+            String challenge = twoFactorService.createLoginChallenge(account.getId());
+            response.getWriter().write(RestBean.failure(428, new LoginChallengeVO(challenge),
+                    "请输入两步验证码").asJsonString());
+            return;
+        }
+        writeAuthorization(response, account);
+    }
+
+    public void writeAuthorization(HttpServletResponse response, Account account) throws IOException {
+        response.setContentType("application/json;charset=utf-8");
+        User details = (User) User.withUsername(account.getUsername())
+                .password(account.getPassword())
+                .roles(account.getRole())
+                .build();
+        String token = jwtUtils.createJwt(details,account.getId(),account.getUsername());
         AuthorizeVO authorizeVO = new AuthorizeVO();
 //        authorizeVO.setRole(account.getRole());
 //        authorizeVO.setUsername(account.getUsername());

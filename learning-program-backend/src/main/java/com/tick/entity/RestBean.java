@@ -26,6 +26,10 @@ public record RestBean<T>(int code, T data, String message) implements Serializa
         return new RestBean<T>(code, null, message);
     }
 
+    public static <T>RestBean<T> failure(int code, T data, String message) {
+        return new RestBean<T>(code, data, message);
+    }
+
     public String asJsonString() {
         return JSONObject.toJSONString(this, JSONWriter.Feature.WriteNulls);
     }

@@ -39,6 +39,14 @@
     <div style="margin-top: 40px">
       <el-button @click="userLogin()" style="width: 270px" type="success" plain>{{ $t('welcome.loginNow') }}</el-button>
     </div>
+    <el-dialog v-model="totpVisible" title="两步验证" width="360px" :close-on-click-modal="false">
+      <p>请输入验证器应用中的6位验证码。</p>
+      <el-input v-model="totpCode" maxlength="6" inputmode="numeric" />
+      <template #footer>
+        <el-button @click="totpVisible = false">取消</el-button>
+        <el-button type="primary" :loading="totpLoading" @click="submitTotp">验证并登录</el-button>
+      </template>
+    </el-dialog>
     <el-divider>
       <span style="color: grey;font-size: 13px">{{ $t('welcome.noAccount') }}</span>
     </el-divider>
@@ -57,7 +65,7 @@ import router from "@/router";
 import {reactive, ref} from "vue";
 import {useI18n} from 'vue-i18n'
 import {ElMessage} from "element-plus";
-import {login} from '@/net'
+import {login, verifyTotpLogin} from '@/net'
 import UserAgreementCheckbox from "@/components/UserAgreementCheckbox.vue";
 
 const { t } = useI18n()
@@ -68,6 +76,10 @@ const form = reactive({
   remember: false,
   agree: false
 })
+const totpVisible = ref(false)
+const totpLoading = ref(false)
+const totpCode = ref('')
+const totpChallenge = ref('')
 
 const rules = {
   username: [
@@ -85,7 +97,31 @@ function userLogin() {
   }
   formRef.value.validate((isValid) => {
     if(isValid) {
-      login(form.username, form.password, form.remember, () => router.push("/index"))
+      login(form.username, form.password, form.remember, () => router.push("/index"), (message, status, _url, data) => {
+        if (status === 428 && data && typeof data === 'object' && 'challenge' in data) {
+          totpChallenge.value = String(data.challenge)
+          totpCode.value = ''
+          totpVisible.value = true
+          return
+        }
+        ElMessage.warning(message)
+      })
+    }
+
+    function submitTotp() {
+      if (!/^\d{6}$/.test(totpCode.value)) {
+        ElMessage.warning('请输入6位数字验证码')
+        return
+      }
+      totpLoading.value = true
+      verifyTotpLogin(totpChallenge.value, totpCode.value, form.remember, () => {
+        totpLoading.value = false
+        totpVisible.value = false
+        void router.push('/index')
+      }, (message) => {
+        totpLoading.value = false
+        ElMessage.warning(message)
+      })
     }
   });
 }

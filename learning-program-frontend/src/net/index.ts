@@ -39,7 +39,7 @@ interface LoginResponse {
 }
 
 type SuccessCallback<T> = (data: T) => void
-type FailureCallback = (message: string, status?: number, url?: string) => void
+type FailureCallback = (message: string, status?: number, url?: string, data?: unknown) => void
 type ErrorCallback = (error: unknown) => void
 type Headers = AxiosRequestConfig['headers']
 
@@ -138,7 +138,7 @@ function handleResponse<T>(
         failure('登录状态已过期，请重新登录！')
         deleteAccessToken(true)
     } else {
-        failure(response.message, response.code, url)
+        failure(response.message, response.code, url, response.data)
     }
 }
 
@@ -153,7 +153,13 @@ function internalPost<T>(
     void axios
         .post<ApiResponse<T>>(url, data, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
-        .catch(error)
+        .catch((requestError) => {
+            if (isAxiosError(requestError) && requestError.response?.data?.code) {
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+            } else {
+                error(requestError)
+            }
+        })
 }
 
 function internalGet<T>(
@@ -166,7 +172,13 @@ function internalGet<T>(
     void axios
         .get<ApiResponse<T>>(url, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
-        .catch(error)
+        .catch((requestError) => {
+            if (isAxiosError(requestError) && requestError.response?.data?.code) {
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+            } else {
+                error(requestError)
+            }
+        })
 }
 
 function internalPut<T>(
@@ -180,7 +192,13 @@ function internalPut<T>(
     void axios
         .put<ApiResponse<T>>(url, data, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
-        .catch(error)
+        .catch((requestError) => {
+            if (isAxiosError(requestError) && requestError.response?.data?.code) {
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+            } else {
+                error(requestError)
+            }
+        })
 }
 
 function internalDelete<T>(
@@ -194,7 +212,13 @@ function internalDelete<T>(
     void axios
         .delete<ApiResponse<T>>(url, { data, headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
-        .catch(error)
+        .catch((requestError) => {
+            if (isAxiosError(requestError) && requestError.response?.data?.code) {
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+            } else {
+                error(requestError)
+            }
+        })
 }
 
 // 登录：表单编码提交给 Spring Security 的 /api/auth/login，成功后保存登录态
@@ -216,6 +240,19 @@ function login(
         },
         failure,
     )
+}
+
+function verifyTotpLogin(
+    challenge: string,
+    code: string,
+    remember: boolean,
+    success: SuccessCallback<LoginResponse>,
+    failure: FailureCallback = defaultFailure,
+): void {
+    publicPost<LoginResponse>('/api/2fa/login', { challenge, code }, (data) => {
+        storeAccessToken(remember, data.token, data.expireTime, data.username, data.role, data.id)
+        success(data)
+    }, failure)
 }
 
 function post<T>(
@@ -335,6 +372,7 @@ export {
     del,
     publicGet,
     login,
+    verifyTotpLogin,
     logout,
     unauthorized,
     currentUsername,

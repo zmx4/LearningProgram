@@ -15,6 +15,8 @@ CREATE TABLE `db_account` (
   `phone` varchar(30) DEFAULT NULL,
   `bio` varchar(120) DEFAULT NULL,
   `points` int(11) NOT NULL DEFAULT 0,
+  `totp_secret` varchar(64) DEFAULT NULL,
+  `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)

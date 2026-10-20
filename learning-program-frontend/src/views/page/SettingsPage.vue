@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import type { ThemeMode } from '@/App.vue'
 import { useI18n } from 'vue-i18n'
 import i18n, { LANGUAGE_OPTIONS, setLocale, type SupportedLocale } from '@/i18n'
-import { currentUsername, put } from '@/net'
+import { currentUsername, del, get, post, publicGet, put } from '@/net'
 import PasswordPolicyHint from '@/components/PasswordPolicyHint.vue'
 import { fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy } from '@/utils/passwordPolicy'
 import {
@@ -23,12 +23,52 @@ const themeMode = ref<ThemeMode>(
     : 'system',
 )
 const dailyWordSettings = ref(readDailyWordSettings())
+const twoFactor = ref({ enabled: false, emailVerificationRequired: false, email: '' })
+const twoFactorSetup = ref<{ secret: string; qrCodeUrl: string } | null>(null)
+const emailCode = ref('')
+const totpCode = ref('')
+const loadingTwoFactor = ref(false)
 
 // 密码规则来自后端策略，前端只负责即时提示
 const policy = ref(fallbackPasswordPolicy)
 onMounted(async () => {
   policy.value = await loadPasswordPolicy()
+  get<{ enabled: boolean; emailVerificationRequired: boolean; email: string }>('/api/profile/2fa', (data) => { twoFactor.value = data })
 })
+
+function requestTwoFactorCode() {
+  publicGet(`/api/auth/ask-code?email=${encodeURIComponent(twoFactor.value.email)}&type=2fa`, () => {
+    ElMessage.success('验证码已发送，请查收邮箱')
+  })
+}
+
+function setupTwoFactor() {
+  loadingTwoFactor.value = true
+  post<{ secret: string; qrCodeUrl: string }>('/api/profile/2fa/setup', { emailCode: emailCode.value }, (data) => {
+    twoFactorSetup.value = data
+    loadingTwoFactor.value = false
+  }, () => { loadingTwoFactor.value = false })
+}
+
+function enableTwoFactor() {
+  loadingTwoFactor.value = true
+  post('/api/profile/2fa/enable', { code: Number(totpCode.value) }, () => {
+    twoFactor.value.enabled = true
+    twoFactorSetup.value = null
+    emailCode.value = ''
+    totpCode.value = ''
+    loadingTwoFactor.value = false
+    ElMessage.success('两步验证已启用')
+  }, () => { loadingTwoFactor.value = false })
+}
+
+function updateTwoFactor(enabled: boolean) {
+  if (enabled) return
+  del('/api/profile/2fa', null, () => {
+    twoFactor.value.enabled = false
+    ElMessage.success('两步验证已关闭')
+  })
+}
 
 const themeOptions = [
   { value: 'light' as const, label: 'settings.light', description: 'settings.lightDescription', icon: Sunny },
@@ -102,6 +142,30 @@ function submitChangePassword() {
       <p class="eyebrow">{{ t('settings.eyebrow') }}</p>
       <h2>{{ t('settings.title') }}</h2>
       <p>{{ t('settings.description') }}</p>
+    </section>
+
+    <section class="settings-card">
+      <div class="setting-title">
+        <div>
+          <h3>两步验证（2FA）</h3>
+          <p>登录时除密码外，还需要验证器应用生成的动态验证码。</p>
+        </div>
+        <el-switch :model-value="twoFactor.enabled" @update:model-value="updateTwoFactor" />
+      </div>
+      <div v-if="!twoFactor.enabled" class="two-factor-setup">
+        <p v-if="twoFactor.emailVerificationRequired">启用前需要验证邮箱：{{ twoFactor.email }}</p>
+        <el-input v-if="twoFactor.emailVerificationRequired" v-model="emailCode" maxlength="6" placeholder="邮箱验证码">
+          <template #append><el-button @click="requestTwoFactorCode">发送验证码</el-button></template>
+        </el-input>
+        <el-button type="primary" :loading="loadingTwoFactor" @click="setupTwoFactor">生成验证器密钥</el-button>
+        <div v-if="twoFactorSetup" class="totp-secret">
+          <p>请在验证器应用中添加 LearningProgram，并输入密钥：</p>
+          <code>{{ twoFactorSetup.secret }}</code>
+          <el-input :model-value="twoFactorSetup.qrCodeUrl" readonly />
+          <el-input v-model="totpCode" maxlength="6" placeholder="输入验证器中的6位验证码" />
+          <el-button type="success" :loading="loadingTwoFactor" @click="enableTwoFactor">确认启用</el-button>
+        </div>
+      </div>
     </section>
 
     <section class="settings-card">

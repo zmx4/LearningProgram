@@ -23,7 +23,7 @@ public interface AccountService extends IService<Account> , UserDetailsService {
     /**
      * 发送邮箱验证码。
      *
-     * @param type 用途，取值为 {@code register} 或 {@code reset}
+     * @param type 用途，取值为 {@code register}、{@code reset} 或 {@code 2fa}
      * @return 成功返回 null，失败返回用户可读的原因
      */
     String sendEmailCode(String email, String type);

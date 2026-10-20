@@ -39,6 +39,7 @@
 | `403` | 没有访问权限 |
 | `404` | 资源不存在 |
 | `409` | 数据冲突 |
+| `428` | 需要完成两步验证 |
 | `500` | 服务端内部错误 |
 
 所有接口 —— 包括框架抛出的参数校验失败、请求体格式错误、路径不存在等 —— 都返回上述统一结构，
@@ -64,6 +65,25 @@ Authorization: Bearer YOUR_JWT_VALUE
 ```
 
 前端会将登录信息保存到浏览器的 `authorize` 存储项中，并自动为请求添加认证头。
+
+启用 2FA 的账号在密码正确后会收到 `428` 和短期 `challenge`，随后将验证器应用生成的 6 位验证码提交到
+`POST /api/2fa/login`，成功后返回与普通登录相同的 JWT。
+
+## 两步验证
+
+- `GET /api/profile/2fa`：查询当前账号是否启用 2FA，以及后端是否要求邮箱验证。
+- `POST /api/profile/2fa/setup`：生成一次性 TOTP 密钥。`spring.security.email.enable=true` 时，
+  请求体中的 `emailCode` 必须是通过 `/api/auth/ask-code?type=2fa` 获取的邮箱验证码。
+- `POST /api/profile/2fa/enable`：请求体为 `{"code":123456}`，使用验证器应用验证码确认启用。
+- `DELETE /api/profile/2fa`：关闭 2FA 并清除密钥。
+
+现有数据库执行：
+
+```sql
+ALTER TABLE db_account
+  ADD COLUMN totp_secret varchar(64) DEFAULT NULL,
+  ADD COLUMN totp_enabled tinyint(1) NOT NULL DEFAULT 0;
+```
 
 ## 认证接口
 
