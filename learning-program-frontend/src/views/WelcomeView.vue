@@ -4,12 +4,14 @@
 <template>
   <div class="welcome-shell">
     <div class="welcome-hero">
-      <el-image style="width: 100%;height: 100%" fit="cover"
-                src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/>
+      <!-- <el-image style="width: 100%;height: 100%" fit="cover"
+                src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/> -->
+                <el-image style="width: 100%;height: 100%" fit="cover"
+                src="../../public/background.png"/>
     </div>
     <div class="welcome-title">
       <div style="font-size: 30px; font-weight: bold">{{ $t('welcome.title') }}</div>
-      <div style="margin-top: 10px">.....</div>
+      <div style="margin-top: 10px">一个很有意思的学习平台</div>
     </div>
     <div class="right-card">
       <router-view v-slot="{ Component }">
