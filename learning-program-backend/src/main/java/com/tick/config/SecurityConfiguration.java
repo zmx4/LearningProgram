@@ -116,7 +116,6 @@ public class SecurityConfiguration {
     }
 
     public void writeAuthorization(HttpServletResponse response, Account account) throws IOException {
-        response.setContentType("application/json;charset=utf-8");
         User details = (User) User.withUsername(account.getUsername())
                 .password(account.getPassword())
                 .roles(account.getRole())

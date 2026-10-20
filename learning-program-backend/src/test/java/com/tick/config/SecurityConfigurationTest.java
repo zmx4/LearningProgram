@@ -3,6 +3,7 @@ package com.tick.config;
 import com.alibaba.fastjson2.JSONObject;
 import com.tick.entity.dto.Account;
 import com.tick.service.AccountService;
+import com.tick.service.TwoFactorService;
 import com.tick.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ class SecurityConfigurationTest {
 
     private final JwtUtils jwtUtils = mock(JwtUtils.class);
     private final AccountService accountService = mock(AccountService.class);
+    private final TwoFactorService twoFactorService = mock(TwoFactorService.class);
     private final SecurityConfiguration configuration = createConfiguration();
 
     @Test
@@ -35,6 +37,7 @@ class SecurityConfigurationTest {
 
         when(authentication.getPrincipal()).thenReturn(user);
         when(accountService.findAccountByUsernameOrEmail("tick")).thenReturn(account);
+        when(twoFactorService.isEnabled(account)).thenReturn(false);
         when(jwtUtils.createJwt(user, 1, "tick")).thenReturn("jwt-token");
         when(jwtUtils.expireTime()).thenReturn(expireTime);
 
@@ -66,6 +69,7 @@ class SecurityConfigurationTest {
         SecurityConfiguration configuration = new SecurityConfiguration();
         configuration.jwtUtils = jwtUtils;
         configuration.accountService = accountService;
+        configuration.twoFactorService = twoFactorService;
         return configuration;
     }
 }
