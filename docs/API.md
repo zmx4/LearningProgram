@@ -93,6 +93,38 @@ Content-Type: application/json
 请求体包含用户名、密码、重复密码、邮箱和验证码等注册字段，具体校验以 `EmailRegisterVO` 为准。
 密码强度要求见下方「密码强度策略」，不满足时返回 `400`，`message` 里会列出所有不满足的项。
 
+`spring.security.email.enable` 为 `true` 时会先校验 `code`（且消费掉它），验证码缺失/有误/过期都会返回 `400`；
+为 `false`（默认）时不校验验证码，直接注册。
+
+### 发送邮箱验证码
+
+```http
+GET /api/auth/ask-code?email=user@example.com&type=register
+```
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `email` | 是 | 收件邮箱 |
+| `type` | 是 | `register`（注册）或 `reset`（重置密码），两者的验证码互不通用 |
+
+成功响应：
+
+```json
+{ "code": 200, "data": { "message": "验证码已发送，请查看邮箱" }, "message": "success" }
+```
+
+说明：
+
+- **验证码不会出现在响应里**。开发环境默认 `learning.mail.delivery=log`，验证码会写进服务端日志，
+  格式为 `[mail:log] to=... code=123456`，本地联调直接看日志即可
+- 配置 `delivery=smtp` 与 `spring.mail.*` 后才会真实发信；SMTP 未配置或发送失败会自动降级为写日志，接口不会报错
+- 同一邮箱有发送间隔限制（默认 60 秒），期间重复请求返回 `400`
+  `验证码发送过于频繁，请 60 秒后再试`
+- 前置校验：`type=register` 时邮箱已注册返回 `此email已被其他用户注册.`；
+  `type=reset` 时邮箱未注册返回 `该邮箱尚未注册`
+- 验证码默认 6 位、有效期 300 秒，存放在 Redis 的 `email::code:<type>:<email>`，
+  可按用途隔离，不会出现「用注册码重置别人密码」
+
 ### 查询密码强度策略
 
 ```http
@@ -176,11 +208,13 @@ Content-Type: application/json
 }
 ```
 
-按邮箱重置密码。`spring.security.email` 开启时会先校验验证码（验证码有误返回对应提示）；
+按邮箱重置密码。`spring.security.email.enable` 为 `true` 时先校验验证码
+（与 `/reset-confirm` 用的是同一个 `reset` 验证码；缺失返回 `请先获取验证码`，不匹配返回 `验证码有误`）；
 新密码需满足「密码强度策略」，不合规返回 `400`；邮箱未注册时返回 `400`（`该邮箱尚未注册`）。
+重置成功后验证码立即失效，同一个码不能重复使用。
 
-> 安全提示：`spring.security.email` 为 `false` 时不会校验验证码，此时本接口等于
-> 「知道邮箱即可改密码」，仅适合本地开发，务必在对外部署前启用邮箱验证码。
+> 安全提示：`spring.security.email.enable` 为 `false`（默认）时不校验验证码，此时本接口等于
+> 「知道邮箱即可改密码」，仅适合本地开发，务必在对外部署前打开该开关并配好 SMTP。
 
 ### 退出登录
 

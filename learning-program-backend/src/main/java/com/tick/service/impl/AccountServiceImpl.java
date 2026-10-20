@@ -7,6 +7,8 @@ import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
+import com.tick.mail.EmailCodeService;
+import com.tick.mail.MailType;
 import com.tick.mapper.AccountMapper;
 import com.tick.security.password.PasswordGenerator;
 import com.tick.security.password.PasswordPolicy;
@@ -14,9 +16,7 @@ import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
 import jakarta.annotation.Resource;
 import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -34,19 +34,50 @@ import java.util.List;
 @Service
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountService {
 
-    @Value("${spring.security.email}")
+    @Value("${spring.security.email.enable}")
     boolean enabledEmailVerification;
 
     @Resource
     PasswordEncoder encoder;
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
     @Resource
     private NotificationService notificationService;
     @Resource
     private PasswordPolicy passwordPolicy;
     @Resource
     private PasswordGenerator passwordGenerator;
+    @Resource
+    private EmailCodeService emailCodeService;
+
+    /**
+     * 发送邮箱验证码。
+     * <p>
+     * 先按用途做一次业务前置校验（注册时邮箱不能已存在、重置时邮箱必须已注册），
+     * 避免把验证码发给注定失败的流程；真正的频控与存储交给 {@link EmailCodeService}。
+     * 注意：这里**不会**把验证码返回给调用方，开发环境请在服务端日志里查看。
+     */
+    @Override
+    public String sendEmailCode(String email, String type) {
+        String target = email == null ? "" : email.trim();
+        if (target.isEmpty()) {
+            return "请填写邮箱";
+        }
+
+        MailType mailType;
+        try {
+            mailType = MailType.fromCode(type);
+        } catch (IllegalArgumentException exception) {
+            return "验证码类型无效，可选值：" + MailType.codes();
+        }
+
+        boolean exists = this.existsAccountByEmail(target);
+        if (mailType == MailType.REGISTER && exists) {
+            return "此email已被其他用户注册.";
+        }
+        if (mailType == MailType.RESET && !exists) {
+            return "该邮箱尚未注册";
+        }
+        return emailCodeService.sendCode(target, mailType);
+    }
 
     /**
      * 统一的密码强度校验：所有写密码的入口都先过这里，规则本身见 PasswordPolicy。
@@ -85,7 +116,10 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String username = vo.getUsername();
         if (this.existsAccountByEmail(email)) return "此email已被其他用户注册.";
         if (enabledEmailVerification) {
-            return null;
+            // 原先这里直接 return null：开启邮箱验证后注册会「假成功」—— 不校验验证码也不落库。
+            // 现在先校验并消费验证码，通过后继续往下正常建号。
+            String verify = emailCodeService.verifyAndConsume(email, MailType.REGISTER, vo.getCode());
+            if (verify != null) return verify;
         }
         String policyMessage = checkPasswordPolicy(vo.getPassword(), username, email);
         if (policyMessage != null) return policyMessage;
@@ -168,14 +202,12 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     @Override
     public String resetConfirm(ConfirmRestVO vo) {
-        String email = vo.getEmail();
-        if (enabledEmailVerification) {
-            String code = stringRedisTemplate.opsForValue().get(email);
-            if (code == null)
-                return "请先获取验证码";
-            if (!code.equals(vo.getCode())) return "验证码有误";
+        if (!enabledEmailVerification) {
+            return null;
         }
-        return null;
+        // 只校验不消费：前端会先调 /reset-confirm 再调 /reset-password，
+        // 真正失效留到密码改成功之后（见 restEmailAccountPassword）。
+        return emailCodeService.verify(vo.getEmail(), MailType.RESET, vo.getCode());
     }
 
     @Override
@@ -197,7 +229,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             return "该邮箱尚未注册";
         }
         if (enabledEmailVerification) {
-            stringRedisTemplate.delete(email);
+            emailCodeService.clear(email, MailType.RESET);
         }
         return null;
     }

@@ -113,6 +113,15 @@ MySQL 与 Redis 的连接信息通过环境变量注入，仓库内的 `applicat
 | `REDIS_HOST` | Redis 地址 | `127.0.0.1` |
 | `REDIS_PORT` | Redis 端口 | `6379` |
 | `REDIS_PASSWORD` | Redis 密码 | 空（视为无密码） |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP 服务器 | 空 / `587`（仅 `delivery=smtp` 时需要） |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP 账号与授权码 | 空 |
+| `MAIL_FROM` | 发件人地址 | `no-reply@learning.local` |
+| `RABBITMQ_HOST` / `RABBITMQ_PORT` | RabbitMQ 地址 | `127.0.0.1` / `5672` |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | RabbitMQ 账号 | `guest` / `guest` |
+
+> 邮件与 RabbitMQ 相关的变量都是**可选**的：默认 `learning.mail.delivery=log`、
+> `learning.mail.queue.enabled=false`，不配任何 SMTP / broker 也能正常启动，
+> 验证码会输出到服务端日志。
 
 bash / zsh 设置示例：
 
@@ -158,7 +167,33 @@ JWT 签名密钥（`spring.security.jwt.key`）和有效期目前仍写在 `appl
 
 请勿把真实密码、JWT 密钥或生产环境地址提交到仓库。
 
-`spring.security.email` 当前设置为 `false` 时，注册流程不会强制校验邮箱验证码。启用邮箱校验前，需要同时配置邮件服务和验证码流程。
+`spring.security.email.enable` 当前设置为 `false`：注册与重置密码**不强制校验**邮箱验证码。
+验证码相关的接口、存储与发信能力都已实现，把开关改成 `true` 即可启用（见下节）。
+
+## 邮箱验证码
+
+`GET /api/auth/ask-code?email=...&type=register|reset` 负责发送验证码，验证码保存在 Redis，
+默认 6 位、有效期 300 秒，同一邮箱 60 秒内只能请求一次。相关配置在 `application.yaml` 的 `learning.mail` 下：
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `delivery` | `log` | `log` 只把验证码写进日志；`smtp` 真实发信 |
+| `from` | `no-reply@learning.local` | 发件人，`smtp` 模式下应改成与账号一致的地址 |
+| `queue.enabled` | `false` | 是否通过 RabbitMQ 异步投递，broker 连不上会自动回退 |
+| `queue.exchange` / `queue.queue-name` / `queue.routing-key` | `learning.mail.*` | 队列拓扑 |
+| `code.length` | `6` | 验证码位数 |
+| `code.ttl-seconds` | `300` | 有效期 |
+| `code.interval-seconds` | `60` | 同一邮箱的发送间隔 |
+
+三种典型组合：
+
+1. **本地开发（默认）**：不配任何东西。验证码打在服务端日志里，形如
+   `[mail:log] to=user@example.com subject=【学习平台】注册验证码 code=123456`
+2. **真实发信**：`delivery: smtp` + 设置 `MAIL_*` 环境变量
+3. **异步发信**：`queue.enabled: true` + 装好 RabbitMQ 并设置 `RABBITMQ_*`。
+   未装 broker 却打开了开关也不会失败 —— 投递异常会打一条 warn 并回退成直接发送
+
+> 注意：真实发信时验证码会出现在邮件正文里，接口响应中**永远不会**返回验证码。
 
 ## 密码强度策略
 

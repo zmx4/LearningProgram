@@ -21,8 +21,16 @@ public interface AccountService extends IService<Account> , UserDetailsService {
     public Account findAccountByUsernameOrEmail(String text);
 
     /**
-     * 注册账号：校验邮箱唯一后加密落库并发送欢迎通知。
-     * 注意：spring.security.email 开启时本方法不落库、直接返回 null，实际注册由验证码流程完成。
+     * 发送邮箱验证码。
+     *
+     * @param type 用途，取值为 {@code register} 或 {@code reset}
+     * @return 成功返回 null，失败返回用户可读的原因
+     */
+    String sendEmailCode(String email, String type);
+
+    /**
+     * 注册账号：校验邮箱唯一、必要时校验验证码，然后加密落库并发送欢迎通知。
+     * spring.security.email.enable 开启时，必须携带 register 类型且未过期的验证码。
      */
     String registerEmailAccount(EmailRegisterVO vo);
 

@@ -3,7 +3,8 @@ spring:
     jwt:
       key: erasfiluhbnselir
       expire: 144
-    email: false
+    email:
+      enable: false
   application:
     name: learning-program-backend
   banner:
@@ -24,10 +25,46 @@ spring:
     multipart:
       max-file-size: 55MB
       max-request-size: 60MB
+  # 发信配置：只有 learning.mail.delivery=smtp 时才会用到，账号密码由环境变量注入
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    # 本地没有 broker 时不要让连接超时拖慢接口：3 秒连不上就走回退
+    connection-timeout: 3s
 learning:
   resources:
     # 学习资源文件的存储目录（相对路径基于后端进程工作目录）
     upload-dir: ./uploads/resources
+  mail:
+    # 验证码投递方式：log=只写日志（开发默认，无需 SMTP）；smtp=真实发信
+    delivery: log
+    # 发件人；delivery=smtp 时应改成与 SMTP 账号一致的地址
+    from: ${MAIL_FROM:no-reply@learning.local}
+    queue:
+      # 是否通过 RabbitMQ 异步投递。开着但 broker 连不上会自动回退为直接发送
+      enabled: false
+      exchange: learning.mail.exchange
+      queue-name: learning.mail.queue
+      routing-key: learning.mail.send
+    code:
+      length: 6
+      # 有效期（秒）
+      ttl-seconds: 300
+      # 同一邮箱两次请求的最小间隔（秒）
+      interval-seconds: 60
   password:
     # 密码强度策略：规则链的启用开关与阈值都在这里，改策略不需要改代码。
     # 完整的规则清单可通过 GET /api/auth/password-policy 查看。

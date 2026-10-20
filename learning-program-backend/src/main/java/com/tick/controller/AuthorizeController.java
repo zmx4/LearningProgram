@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -46,6 +47,23 @@ public class AuthorizeController {
     @PostMapping("/register")
     public RestBean<Void> register(@RequestBody @Valid EmailRegisterVO vo) {
         return this.messageHandle(vo,accountService::registerEmailAccount);
+    }
+
+    /**
+     * 发送邮箱验证码。前端通过 {@code /api/auth/ask-code?email=...&type=register|reset} 调用。
+     * <p>
+     * 验证码只存在服务端与日志里（开发默认 delivery=log），接口本身不返回验证码。
+     * 同一邮箱有发送间隔限制，防止被当成短信轰炸通道。
+     */
+    @GetMapping("/ask-code")
+    public RestBean<Map<String, String>> askCode(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String type) {
+        String message = accountService.sendEmailCode(email, type);
+        if (message != null) {
+            return RestBean.failure(400, message);
+        }
+        return RestBean.success(Map.of("message", "验证码已发送，请查看邮箱"));
     }
 
     @PostMapping("/reset-confirm")
