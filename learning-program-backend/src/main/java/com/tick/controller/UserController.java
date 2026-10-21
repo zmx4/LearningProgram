@@ -2,16 +2,15 @@ package com.tick.controller;
 
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
+import com.tick.entity.vo.response.UserProfileVO;
 import com.tick.service.AccountService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 /**
- * 用户主页接口：按 id 查询用户的公开基本信息（用户名、邮箱、简介）。
+ * 用户主页接口：按 id 查询用户的公开基本信息（用户名、简介）。
  */
 @RestController
 @RequestMapping("/api/user")
@@ -23,17 +22,11 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public RestBean<Map<String, String>> getUser(@PathVariable Integer id) {
+    public RestBean<UserProfileVO> getUser(@PathVariable Integer id) {
         Account account = accountService.getById(id);
         if (account == null) {
             return RestBean.failure(404, "用户不存在");
         }
-
-        return RestBean.success(Map.of(
-                "username", account.getUsername(),
-                "email", account.getEmail() == null ? "" : account.getEmail(),
-                "bio", account.getBio() == null ? "" : account.getBio(),
-                "avatar", "temporary"
-        ));
+        return RestBean.success(UserProfileVO.from(account));
     }
 }

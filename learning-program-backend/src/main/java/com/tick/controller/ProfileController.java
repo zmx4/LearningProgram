@@ -4,6 +4,7 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
+import com.tick.entity.vo.response.ProfileVO;
 import com.tick.service.AccountService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * 个人资料接口：当前登录用户的资料查看与更新、修改密码。
@@ -28,23 +27,23 @@ public class ProfileController {
     }
 
     @GetMapping
-    public RestBean<Map<String, String>> getProfile(@RequestAttribute("id") Integer accountId) {
+    public RestBean<ProfileVO> getProfile(@RequestAttribute("id") Integer accountId) {
         Account account = accountService.getById(accountId);
         if (account == null) {
             return RestBean.unauthorized("登录状态无效");
         }
-        return RestBean.success(profile(account));
+        return RestBean.success(ProfileVO.from(account));
     }
 
     @PutMapping
-    public RestBean<Map<String, String>> updateProfile(
+    public RestBean<ProfileVO> updateProfile(
             @Valid @RequestBody ProfileUpdateVO vo,
             @RequestAttribute("id") Integer accountId
     ) {
         Account account = accountService.updateProfile(accountId, vo);
         return account == null
                 ? RestBean.unauthorized("登录状态无效")
-                : RestBean.success(profile(account));
+                : RestBean.success(ProfileVO.from(account));
     }
 
     @PutMapping("/password")
@@ -54,15 +53,5 @@ public class ProfileController {
     ) {
         String message = accountService.changePassword(accountId, vo);
         return message == null ? RestBean.success() : RestBean.failure(400, message);
-    }
-
-    private Map<String, String> profile(Account account) {
-        return Map.of(
-                "username", account.getUsername(),
-                "email", account.getEmail() == null ? "" : account.getEmail(),
-                "phone", account.getPhone() == null ? "" : account.getPhone(),
-                "bio", account.getBio() == null ? "" : account.getBio(),
-                "role", account.getRole() == null ? "user" : account.getRole()
-        );
     }
 }

@@ -7,9 +7,7 @@ import { useI18n } from 'vue-i18n'
 
 interface UserInfo {
   username: string
-  email: string
   bio: string
-  avatar: string
 }
 
 const route = useRoute()
@@ -47,10 +45,6 @@ watch(() => route.params.id, loadUser)
         <h2>{{ user.username }}</h2>
         <p class="user-label">{{ t('user.learner') }}</p>
         <div class="user-details">
-          <div class="detail-item">
-            <span>{{ t('user.email') }}</span>
-            <strong>{{ user.email || t('user.notProvided') }}</strong>
-          </div>
           <div class="detail-item bio">
             <span>{{ t('user.bio') }}</span>
             <strong>{{ user.bio || t('user.noBio') }}</strong>

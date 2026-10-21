@@ -4,6 +4,7 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.AdminBatchCreateVO;
 import com.tick.entity.vo.request.AdminNotificationVO;
+import com.tick.entity.vo.response.AdminUserVO;
 import com.tick.entity.vo.response.BatchCreateResultVO;
 import com.tick.service.AccountService;
 import com.tick.service.AdminService;
@@ -38,11 +39,8 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public RestBean<List<Map<String, Object>>> users() {
-        List<Map<String, Object>> users = accountService.list().stream()
-                .map(this::userView)
-                .toList();
-        return RestBean.success(users);
+    public RestBean<List<AdminUserVO>> users() {
+        return RestBean.success(accountService.list().stream().map(AdminUserVO::from).toList());
     }
 
     @PutMapping("/users/{id}/role")
@@ -101,16 +99,5 @@ public class AdminController {
     @PostMapping("/notifications")
     public RestBean<Map<String, Integer>> sendNotification(@Valid @RequestBody AdminNotificationVO vo) {
         return RestBean.success(Map.of("sentCount", adminService.sendNotification(vo)));
-    }
-
-    private Map<String, Object> userView(Account account) {
-        return Map.of(
-                "id", account.getId(),
-                "username", account.getUsername(),
-                "email", account.getEmail() == null ? "" : account.getEmail(),
-                "phone", account.getPhone() == null ? "" : account.getPhone(),
-                "role", account.getRole(),
-                "registerDate", account.getRegisterDate()
-        );
     }
 }

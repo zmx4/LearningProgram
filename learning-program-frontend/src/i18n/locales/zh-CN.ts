@@ -210,8 +210,6 @@ export default {
     back: '返回上一页',
     avatar: '临时头像',
     learner: '学习者',
-    email: '邮箱',
-    notProvided: '未填写',
     bio: '个人简介',
     noBio: '这个人还没有填写个人简介',
     unavailable: '用户不存在或无法查看',

@@ -352,7 +352,7 @@ GET /api/user/{id}
 Authorization: Bearer <token>
 ```
 
-返回用户名、邮箱、个人简介和临时头像信息。
+返回用户名与个人简介。
 
 ## 单词接口
 
