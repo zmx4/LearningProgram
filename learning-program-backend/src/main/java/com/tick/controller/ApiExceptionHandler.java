@@ -72,6 +72,20 @@ public class ApiExceptionHandler {
         return RestBean.failure(400, "参数 " + exception.getName() + " 格式不正确");
     }
 
+    /** 服务层统一用 IllegalArgumentException 表达业务校验失败。 */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public RestBean<Void> handleIllegalArgument(IllegalArgumentException exception) {
+        String message = exception.getMessage();
+        return RestBean.failure(400, message == null || message.isBlank() ? "请求参数不合法" : message);
+    }
+
+    /** 服务层表达越权操作的信号。 */
+    @ExceptionHandler(SecurityException.class)
+    public RestBean<Void> handleSecurity(SecurityException exception) {
+        String message = exception.getMessage();
+        return RestBean.forbidden(message == null || message.isBlank() ? "没有操作权限" : message);
+    }
+
     /**
      * 兜底：Spring MVC 的客户端错误异常（找不到接口、方法不支持、媒体类型不支持等）都实现了
      * {@link ErrorResponse}，按它自带的状态码返回；其余才是真正未预期的服务端错误，记日志后统一提示。

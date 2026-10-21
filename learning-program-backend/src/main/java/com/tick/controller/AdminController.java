@@ -5,12 +5,12 @@ import com.tick.entity.dto.Account;
 import com.tick.entity.dto.Notification;
 import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,13 +49,12 @@ public class AdminController {
     @PutMapping("/users/{id}/role")
     public RestBean<Void> updateRole(@PathVariable Integer id,
                                      @RequestBody Map<String, String> body,
-                                     HttpServletRequest request) {
+                                     @RequestAttribute("id") Integer currentId) {
         String role = body.get("role");
         if (!Set.of("user", "admin").contains(role)) {
             return RestBean.failure(400, "角色只能是 user 或 admin");
         }
-        Integer currentId = (Integer) request.getAttribute("id");
-        if (currentId != null && currentId.equals(id) && !"admin".equals(role)) {
+        if (currentId.equals(id) && !"admin".equals(role)) {
             return RestBean.failure(400, "不能移除当前管理员的管理员权限");
         }
         Account account = accountService.getById(id);
@@ -68,9 +67,9 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
-    public RestBean<Void> deleteUser(@PathVariable Integer id, HttpServletRequest request) {
-        Integer currentId = (Integer) request.getAttribute("id");
-        if (currentId != null && currentId.equals(id)) {
+    public RestBean<Void> deleteUser(@PathVariable Integer id,
+                                     @RequestAttribute("id") Integer currentId) {
+        if (currentId.equals(id)) {
             return RestBean.failure(400, "不能删除当前登录账号");
         }
         if (!accountService.removeById(id)) {

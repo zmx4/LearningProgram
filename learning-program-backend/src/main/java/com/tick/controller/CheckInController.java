@@ -3,9 +3,9 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.CheckInRecord;
 import com.tick.service.CheckInService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,9 +28,7 @@ public class CheckInController {
 
     @GetMapping
     public RestBean<Map<String, Object>> status(@RequestParam int year, @RequestParam int month,
-                                                 HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
+                                                 @RequestAttribute("id") Integer accountId) {
         try {
             LocalDate.of(year, month, 1);
             return RestBean.success(checkInService.getStatus(accountId, year, month));
@@ -40,9 +38,7 @@ public class CheckInController {
     }
 
     @PostMapping
-    public RestBean<CheckInRecord> checkIn(HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
+    public RestBean<CheckInRecord> checkIn(@RequestAttribute("id") Integer accountId) {
         return RestBean.success(checkInService.checkIn(accountId));
     }
 }

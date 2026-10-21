@@ -3,8 +3,8 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.entity.vo.response.LeaderboardVO;
 import com.tick.service.LeaderboardService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,15 +38,7 @@ public class LeaderboardController {
     public RestBean<LeaderboardVO> leaderboard(
             @RequestParam(required = false, defaultValue = "points") String metric,
             @RequestParam(required = false) Integer limit,
-            HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
-        try {
-            return RestBean.success(leaderboardService.getLeaderboard(accountId, metric, limit));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+            @RequestAttribute("id") Integer accountId) {
+        return RestBean.success(leaderboardService.getLeaderboard(accountId, metric, limit));
     }
 }

@@ -26,29 +26,17 @@ public class AdminQuestionSetController {
 
     @PostMapping
     public RestBean<QuestionSetVO> createSet(@RequestBody QuestionSetSaveVO vo) {
-        try {
-            return RestBean.success(questionSetService.createSet(vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        return RestBean.success(questionSetService.createSet(vo));
     }
 
     @PutMapping("/{id}")
     public RestBean<QuestionSetVO> updateSet(@PathVariable Integer id, @RequestBody QuestionSetSaveVO vo) {
-        try {
-            return RestBean.success(questionSetService.updateSet(id, vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        return RestBean.success(questionSetService.updateSet(id, vo));
     }
 
     @DeleteMapping("/{id}")
     public RestBean<Void> deleteSet(@PathVariable Integer id) {
-        try {
-            questionSetService.deleteSet(id);
-            return RestBean.success();
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        questionSetService.deleteSet(id);
+        return RestBean.success();
     }
 }

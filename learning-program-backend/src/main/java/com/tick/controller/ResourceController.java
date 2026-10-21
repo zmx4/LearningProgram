@@ -4,7 +4,6 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.service.LearningResourceService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,7 +44,8 @@ public class ResourceController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable Integer id, HttpServletRequest request) {
+    public ResponseEntity<Resource> download(@PathVariable Integer id,
+                                             @RequestAttribute("id") Integer accountId) {
         LearningResource resource = resourceService.getResource(id);
         if (resource == null || (!Boolean.TRUE.equals(resource.getVisible()) && !isAdmin())) {
             return notFound("资源不存在");
@@ -55,7 +56,7 @@ public class ResourceController {
         }
         try {
             // 落一条访问流水，供小组任务中 resource 类型任务项判定完成情况
-            resourceService.recordAccess((Integer) request.getAttribute("id"), id);
+            resourceService.recordAccess(accountId, id);
             ContentDisposition disposition = ContentDisposition.attachment()
                     .filename(resource.getFileName(), StandardCharsets.UTF_8).build();
             return ResponseEntity.ok()

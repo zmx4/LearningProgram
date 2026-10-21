@@ -103,4 +103,28 @@ class ApiExceptionHandlerTest {
 
         assertEquals(400, response.code());
     }
+
+    @Test
+    void illegalArgumentBecomesBadRequestWithItsMessage() {
+        RestBean<Void> response = handler.handleIllegalArgument(new IllegalArgumentException("用户名已存在"));
+
+        assertEquals(400, response.code());
+        assertEquals("用户名已存在", response.message());
+    }
+
+    @Test
+    void illegalArgumentWithoutMessageStillGetsAReadableReason() {
+        RestBean<Void> response = handler.handleIllegalArgument(new IllegalArgumentException());
+
+        assertEquals(400, response.code());
+        assertEquals("请求参数不合法", response.message());
+    }
+
+    @Test
+    void securityExceptionBecomesForbidden() {
+        RestBean<Void> response = handler.handleSecurity(new SecurityException("只有组长可以移除组员"));
+
+        assertEquals(403, response.code());
+        assertEquals("只有组长可以移除组员", response.message());
+    }
 }

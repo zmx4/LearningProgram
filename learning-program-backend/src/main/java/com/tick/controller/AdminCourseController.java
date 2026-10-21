@@ -43,29 +43,17 @@ public class AdminCourseController {
 
     @PostMapping
     public RestBean<AdminCourseVO> createCourse(@RequestBody CourseSaveVO vo) {
-        try {
-            return RestBean.success(courseService.createCourse(vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        return RestBean.success(courseService.createCourse(vo));
     }
 
     @PutMapping("/{id}")
     public RestBean<AdminCourseVO> updateCourse(@PathVariable Integer id, @RequestBody CourseSaveVO vo) {
-        try {
-            return RestBean.success(courseService.updateCourse(id, vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        return RestBean.success(courseService.updateCourse(id, vo));
     }
 
     @DeleteMapping("/{id}")
     public RestBean<Void> deleteCourse(@PathVariable Integer id) {
-        try {
-            courseService.deleteCourse(id);
-            return RestBean.success();
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        courseService.deleteCourse(id);
+        return RestBean.success();
     }
 }

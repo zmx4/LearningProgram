@@ -5,10 +5,10 @@ import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
 import com.tick.service.AccountService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,8 +28,8 @@ public class ProfileController {
     }
 
     @GetMapping
-    public RestBean<Map<String, String>> getProfile(HttpServletRequest request) {
-        Account account = findAccount(request);
+    public RestBean<Map<String, String>> getProfile(@RequestAttribute("id") Integer accountId) {
+        Account account = accountService.getById(accountId);
         if (account == null) {
             return RestBean.unauthorized("登录状态无效");
         }
@@ -39,12 +39,8 @@ public class ProfileController {
     @PutMapping
     public RestBean<Map<String, String>> updateProfile(
             @Valid @RequestBody ProfileUpdateVO vo,
-            HttpServletRequest request
+            @RequestAttribute("id") Integer accountId
     ) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
         try {
             Account account = accountService.updateProfile(accountId, vo);
             return account == null
@@ -58,19 +54,10 @@ public class ProfileController {
     @PutMapping("/password")
     public RestBean<Void> changePassword(
             @Valid @RequestBody ChangePasswordVO vo,
-            HttpServletRequest request
+            @RequestAttribute("id") Integer accountId
     ) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
         String message = accountService.changePassword(accountId, vo);
         return message == null ? RestBean.success() : RestBean.failure(400, message);
-    }
-
-    private Account findAccount(HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        return accountId == null ? null : accountService.getById(accountId);
     }
 
     private Map<String, String> profile(Account account) {

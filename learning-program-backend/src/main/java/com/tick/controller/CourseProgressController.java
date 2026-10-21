@@ -7,10 +7,10 @@ import com.tick.entity.vo.response.CourseProgressOverviewVO;
 import com.tick.entity.vo.response.CourseStudyProgressVO;
 import com.tick.entity.vo.response.CourseStudyResultVO;
 import com.tick.service.CourseProgressService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,9 +28,7 @@ public class CourseProgressController {
     }
 
     @GetMapping("/progress")
-    public RestBean<CourseProgressOverviewVO> overview(HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
+    public RestBean<CourseProgressOverviewVO> overview(@RequestAttribute("id") Integer accountId) {
         return RestBean.success(courseProgressService.getOverview(accountId));
     }
 
@@ -44,9 +42,8 @@ public class CourseProgressController {
     }
 
     @GetMapping("/{courseId}/progress")
-    public RestBean<CourseStudyProgressVO> courseProgress(@PathVariable Integer courseId, HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
+    public RestBean<CourseStudyProgressVO> courseProgress(@PathVariable Integer courseId,
+                                                          @RequestAttribute("id") Integer accountId) {
         CourseStudyProgressVO progress = courseProgressService.getCourseProgress(accountId, courseId);
         if (progress == null) {
             return RestBean.failure(404, "课程不存在");
@@ -57,13 +54,7 @@ public class CourseProgressController {
     @PostMapping("/{courseId}/progress")
     public RestBean<CourseStudyResultVO> record(@PathVariable Integer courseId,
                                                 @RequestBody CourseStudyRecordVO vo,
-                                                HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
-        try {
-            return RestBean.success(courseProgressService.recordStudy(accountId, courseId, vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+                                                @RequestAttribute("id") Integer accountId) {
+        return RestBean.success(courseProgressService.recordStudy(accountId, courseId, vo));
     }
 }

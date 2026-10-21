@@ -2,8 +2,8 @@ package com.tick.controller;
 
 import com.tick.entity.RestBean;
 import com.tick.service.AccountPointsService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,11 +22,7 @@ public class AccountPointsController {
     }
 
     @GetMapping
-    public RestBean<Map<String, Integer>> getTotalPoints(HttpServletRequest request) {
-        Integer accountId = (Integer) request.getAttribute("id");
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
+    public RestBean<Map<String, Integer>> getTotalPoints(@RequestAttribute("id") Integer accountId) {
         return RestBean.success(Map.of("totalPoints", accountPointsService.getTotalPoints(accountId)));
     }
 }

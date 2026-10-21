@@ -4,14 +4,13 @@ import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.KnowledgeTestResultVO;
 import com.tick.entity.vo.response.KnowledgeTestRecordVO;
 import com.tick.service.KnowledgeTestService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,9 +27,7 @@ public class KnowledgeTestController {
     }
 
     @GetMapping("/history")
-    public RestBean<Map<String, Object>> history(HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
+    public RestBean<Map<String, Object>> history(@RequestAttribute("id") Integer accountId) {
         return RestBean.success(Map.of(
                 "summary", knowledgeTestService.getSummary(accountId),
                 "records", knowledgeTestService.getHistory(accountId)
@@ -38,17 +35,8 @@ public class KnowledgeTestController {
     }
 
     @PostMapping("/results")
-    public RestBean<KnowledgeTestRecordVO> save(@RequestBody KnowledgeTestResultVO vo, HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) return RestBean.unauthorized("登录状态无效");
-        try {
-            return RestBean.success(knowledgeTestService.saveResult(accountId, vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
-    }
-
-    private Integer accountId(HttpServletRequest request) {
-        return (Integer) request.getAttribute("id");
+    public RestBean<KnowledgeTestRecordVO> save(@RequestBody KnowledgeTestResultVO vo,
+                                                @RequestAttribute("id") Integer accountId) {
+        return RestBean.success(knowledgeTestService.saveResult(accountId, vo));
     }
 }

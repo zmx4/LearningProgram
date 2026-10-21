@@ -7,11 +7,11 @@ import com.tick.entity.vo.response.DiscussionCommentVO;
 import com.tick.entity.vo.response.DiscussionPostPageVO;
 import com.tick.entity.vo.response.DiscussionPostVO;
 import com.tick.service.DiscussionService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,24 +46,14 @@ public class DiscussionController {
     }
 
     @PostMapping
-    public RestBean<DiscussionPostVO> create(@RequestBody DiscussionPostCreateVO vo, HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
-        try {
-            return RestBean.success(discussionService.createPost(accountId, vo));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+    public RestBean<DiscussionPostVO> create(@RequestBody DiscussionPostCreateVO vo,
+                                             @RequestAttribute("id") Integer accountId) {
+        return RestBean.success(discussionService.createPost(accountId, vo));
     }
 
     @DeleteMapping("/{id}")
-    public RestBean<Void> delete(@PathVariable Integer id, HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
+    public RestBean<Void> delete(@PathVariable Integer id,
+                                 @RequestAttribute("id") Integer accountId) {
         if (discussionService.getPost(id) == null) {
             return RestBean.failure(404, "文章不存在");
         }
@@ -82,27 +72,15 @@ public class DiscussionController {
     @PostMapping("/{id}/comments")
     public RestBean<DiscussionCommentVO> comment(@PathVariable Integer id,
                                                  @RequestBody DiscussionCommentCreateVO vo,
-                                                 HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
-        try {
-            DiscussionCommentVO comment = discussionService.createComment(accountId, id, vo);
-            return comment == null ? RestBean.failure(404, "文章不存在") : RestBean.success(comment);
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+                                                 @RequestAttribute("id") Integer accountId) {
+        DiscussionCommentVO comment = discussionService.createComment(accountId, id, vo);
+        return comment == null ? RestBean.failure(404, "文章不存在") : RestBean.success(comment);
     }
 
     @DeleteMapping("/{postId}/comments/{commentId}")
     public RestBean<Void> deleteComment(@PathVariable Integer postId,
                                         @PathVariable Integer commentId,
-                                        HttpServletRequest request) {
-        Integer accountId = accountId(request);
-        if (accountId == null) {
-            return RestBean.unauthorized("登录状态无效");
-        }
+                                        @RequestAttribute("id") Integer accountId) {
         Boolean deleted = discussionService.deleteComment(accountId, commentId);
         if (deleted == null) {
             return RestBean.failure(404, "评论不存在");
@@ -111,9 +89,5 @@ public class DiscussionController {
             return RestBean.forbidden("只能删除自己发表的评论");
         }
         return RestBean.success();
-    }
-
-    private Integer accountId(HttpServletRequest request) {
-        return (Integer) request.getAttribute("id");
     }
 }

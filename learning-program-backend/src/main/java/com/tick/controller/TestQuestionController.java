@@ -41,10 +41,6 @@ public class TestQuestionController {
         if (testTypeService.getType(typeId) == null) {
             return RestBean.failure(404, "测试类型不存在");
         }
-        try {
-            return RestBean.success(testQuestionService.getQuestions(typeId, kind, count));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(400, exception.getMessage());
-        }
+        return RestBean.success(testQuestionService.getQuestions(typeId, kind, count));
     }
 }
