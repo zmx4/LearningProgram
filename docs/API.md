@@ -885,7 +885,7 @@ DELETE /api/discussions/{postId}/comments/{commentId}
 Authorization: Bearer <token>
 ```
 
-仅评论作者本人或管理员可以删除，否则返回 `403`。
+仅评论作者本人或管理员可以删除，否则返回 `403`；评论不存在返回 `404`。
 
 ## 学习小组接口
 
@@ -1172,7 +1172,7 @@ DELETE /api/groups/{id}/members/{memberId}
 Authorization: Bearer <token>
 ```
 
-仅组长可调用，不能移除自己；不是组长或无该组员返回 `403`。
+小组不存在或当前用户不是成员返回 `404`，非组长返回 `403`，目标不在组内返回 `404`，移除自己返回 `400`。
 
 ## 排行榜接口
 

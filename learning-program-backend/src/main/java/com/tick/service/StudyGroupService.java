@@ -84,7 +84,9 @@ public interface StudyGroupService {
     boolean leaveGroup(Integer accountId, Integer groupId);
 
     /**
-     * 组长移除组员（不能移除自己）。当前用户不是组长返回 false。
+     * 组长移除组员（不能移除自己）。小组不存在或当前用户不是成员时抛
+     * {@link com.tick.exception.NotFoundException}，非组长抛 {@link SecurityException}，
+     * 目标不在组内抛 {@link com.tick.exception.NotFoundException}，移除自己抛 {@link IllegalArgumentException}。
      */
-    boolean removeMember(Integer accountId, Integer groupId, Integer memberAccountId);
+    void removeMember(Integer accountId, Integer groupId, Integer memberAccountId);
 }

@@ -54,12 +54,7 @@ public class DiscussionController {
     @DeleteMapping("/{id}")
     public RestBean<Void> delete(@PathVariable Integer id,
                                  @RequestAttribute("id") Integer accountId) {
-        if (discussionService.getPost(id) == null) {
-            return RestBean.failure(404, "文章不存在");
-        }
-        if (!discussionService.deletePost(accountId, id)) {
-            return RestBean.forbidden("只能删除自己发表的文章");
-        }
+        discussionService.deletePost(accountId, id);
         return RestBean.success();
     }
 
@@ -81,13 +76,7 @@ public class DiscussionController {
     public RestBean<Void> deleteComment(@PathVariable Integer postId,
                                         @PathVariable Integer commentId,
                                         @RequestAttribute("id") Integer accountId) {
-        Boolean deleted = discussionService.deleteComment(accountId, commentId);
-        if (deleted == null) {
-            return RestBean.failure(404, "评论不存在");
-        }
-        if (!deleted) {
-            return RestBean.forbidden("只能删除自己发表的评论");
-        }
+        discussionService.deleteComment(accountId, commentId);
         return RestBean.success();
     }
 }

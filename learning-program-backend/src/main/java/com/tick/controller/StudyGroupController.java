@@ -147,8 +147,7 @@ public class StudyGroupController {
     public RestBean<Void> removeMember(@PathVariable Integer id,
                                        @PathVariable Integer memberId,
                                        @RequestAttribute("id") Integer accountId) {
-        return studyGroupService.removeMember(accountId, id, memberId)
-                ? RestBean.success()
-                : RestBean.forbidden("只有组长可以移除组员");
+        studyGroupService.removeMember(accountId, id, memberId);
+        return RestBean.success();
     }
 }

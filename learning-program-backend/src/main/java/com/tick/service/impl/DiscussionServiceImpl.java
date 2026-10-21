@@ -12,6 +12,7 @@ import com.tick.entity.vo.response.DiscussionCommentVO;
 import com.tick.entity.vo.response.DiscussionPostPageVO;
 import com.tick.entity.vo.response.DiscussionPostSummaryVO;
 import com.tick.entity.vo.response.DiscussionPostVO;
+import com.tick.exception.NotFoundException;
 import com.tick.mapper.DiscussionCommentMapper;
 import com.tick.mapper.DiscussionPostMapper;
 import com.tick.service.AccountService;
@@ -118,13 +119,16 @@ public class DiscussionServiceImpl extends ServiceImpl<DiscussionPostMapper, Dis
 
     @Override
     @Transactional
-    public boolean deletePost(Integer accountId, Integer postId) {
+    public void deletePost(Integer accountId, Integer postId) {
         DiscussionPost post = postId == null ? null : getById(postId);
-        if (post == null || !mayDelete(accountId, post.getAccountId())) {
-            return false;
+        if (post == null) {
+            throw new NotFoundException("文章不存在");
+        }
+        if (!mayDelete(accountId, post.getAccountId())) {
+            throw new SecurityException("只能删除自己发表的文章");
         }
         // 评论由 db_discussion_comment 的外键 ON DELETE CASCADE 一并删除
-        return removeById(post.getId());
+        removeById(post.getId());
     }
 
     @Override
@@ -179,19 +183,18 @@ public class DiscussionServiceImpl extends ServiceImpl<DiscussionPostMapper, Dis
 
     @Override
     @Transactional
-    public Boolean deleteComment(Integer accountId, Integer commentId) {
+    public void deleteComment(Integer accountId, Integer commentId) {
         DiscussionComment comment = commentId == null ? null : discussionCommentMapper.selectById(commentId);
         if (comment == null) {
-            return null;
+            throw new NotFoundException("评论不存在");
         }
         if (!mayDelete(accountId, comment.getAccountId())) {
-            return false;
+            throw new SecurityException("只能删除自己发表的评论");
         }
         discussionCommentMapper.deleteById(comment.getId());
         update().eq("id", comment.getPostId())
                 .setSql("comment_count = GREATEST(comment_count - 1, 0)")
                 .update();
-        return true;
     }
 
     /** 评论者不是作者本人时，给文章作者发一条站内通知。 */

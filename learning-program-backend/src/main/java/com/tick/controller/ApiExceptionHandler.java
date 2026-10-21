@@ -1,6 +1,8 @@
 package com.tick.controller;
 
 import com.tick.entity.RestBean;
+import com.tick.exception.ConflictException;
+import com.tick.exception.NotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -77,6 +79,20 @@ public class ApiExceptionHandler {
     public RestBean<Void> handleIllegalArgument(IllegalArgumentException exception) {
         String message = exception.getMessage();
         return RestBean.failure(400, message == null || message.isBlank() ? "请求参数不合法" : message);
+    }
+
+    /** 目标实体不存在或对当前用户不可见。 */
+    @ExceptionHandler(NotFoundException.class)
+    public RestBean<Void> handleNotFound(NotFoundException exception) {
+        String message = exception.getMessage();
+        return RestBean.failure(404, message == null || message.isBlank() ? "请求的资源不存在" : message);
+    }
+
+    /** 数据状态冲突，例如邮箱已被其他账号占用。 */
+    @ExceptionHandler(ConflictException.class)
+    public RestBean<Void> handleConflict(ConflictException exception) {
+        String message = exception.getMessage();
+        return RestBean.failure(409, message == null || message.isBlank() ? "请求与当前数据状态冲突" : message);
     }
 
     /** 服务层表达越权操作的信号。 */

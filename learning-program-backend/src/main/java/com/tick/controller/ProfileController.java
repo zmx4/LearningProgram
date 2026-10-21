@@ -41,14 +41,10 @@ public class ProfileController {
             @Valid @RequestBody ProfileUpdateVO vo,
             @RequestAttribute("id") Integer accountId
     ) {
-        try {
-            Account account = accountService.updateProfile(accountId, vo);
-            return account == null
-                    ? RestBean.unauthorized("登录状态无效")
-                    : RestBean.success(profile(account));
-        } catch (IllegalArgumentException exception) {
-            return RestBean.failure(409, exception.getMessage());
-        }
+        Account account = accountService.updateProfile(accountId, vo);
+        return account == null
+                ? RestBean.unauthorized("登录状态无效")
+                : RestBean.success(profile(account));
     }
 
     @PutMapping("/password")

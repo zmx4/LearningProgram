@@ -63,8 +63,8 @@ public interface AccountService extends IService<Account> , UserDetailsService {
     String restEmailAccountPassword(EmailRegisterVO vo);
 
     /**
-     * 更新个人资料（昵称、邮箱、手机号、简介），邮箱被其他用户占用时抛 {@link IllegalArgumentException}；
-     * 账号不存在返回 null。
+     * 更新个人资料（昵称、邮箱、手机号、简介），邮箱被其他用户占用时抛
+     * {@link com.tick.exception.ConflictException}；账号不存在返回 null。
      */
     Account updateProfile(Integer accountId, ProfileUpdateVO vo);
 

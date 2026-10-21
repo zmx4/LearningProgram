@@ -7,6 +7,7 @@ import com.tick.entity.vo.request.ChangePasswordVO;
 import com.tick.entity.vo.request.ConfirmRestVO;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.entity.vo.request.ProfileUpdateVO;
+import com.tick.exception.ConflictException;
 import com.tick.mail.EmailCodeService;
 import com.tick.mail.MailType;
 import com.tick.mapper.AccountMapper;
@@ -253,7 +254,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         boolean emailChanged = !emailEquals(email, account.getEmail());
         if (emailChanged && email != null
                 && this.query().eq("email", email).ne("id", accountId).exists()) {
-            throw new IllegalArgumentException("此邮箱已被其他用户使用");
+            throw new ConflictException("此邮箱已被其他用户使用");
         }
         account.setUsername(vo.getUsername().trim());
         account.setEmail(email);

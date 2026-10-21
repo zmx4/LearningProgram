@@ -75,6 +75,7 @@ LearningProgram/
 │       ├── config/              # 安全及 Web 配置
 │       ├── controller/          # REST 接口
 │       ├── entity/              # 实体、DTO、VO 请求和响应对象
+│       ├── exception/           # 业务语义异常（404 / 409）
 │       ├── filter/              # CORS、JWT 等过滤器
 │       ├── mapper/              # MyBatis-Plus Mapper
 │       ├── security/            # 密码策略、密码生成等安全组件

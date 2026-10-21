@@ -28,6 +28,7 @@ import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.MemberTaskProgressVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
+import com.tick.exception.NotFoundException;
 import com.tick.mapper.CourseChapterMapper;
 import com.tick.mapper.CourseMapper;
 import com.tick.mapper.CourseProgressMapper;
@@ -420,18 +421,22 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
     }
 
     @Override
-    public boolean removeMember(Integer accountId, Integer groupId, Integer memberAccountId) {
+    public void removeMember(Integer accountId, Integer groupId, Integer memberAccountId) {
         StudyGroupMember self = membership(groupId, accountId);
-        if (self == null || !StudyGroupMember.ROLE_OWNER.equals(self.getRole())
-                || accountId.equals(memberAccountId)) {
-            return false;
+        if (self == null) {
+            throw new NotFoundException("小组不存在或你不是小组成员");
+        }
+        if (!StudyGroupMember.ROLE_OWNER.equals(self.getRole())) {
+            throw new SecurityException("只有组长可以移除组员");
+        }
+        if (accountId.equals(memberAccountId)) {
+            throw new IllegalArgumentException("不能移除自己");
         }
         StudyGroupMember target = membership(groupId, memberAccountId);
         if (target == null) {
-            return false;
+            throw new NotFoundException("该成员不在小组中");
         }
         memberMapper.deleteById(target.getId());
-        return true;
     }
 
     /**

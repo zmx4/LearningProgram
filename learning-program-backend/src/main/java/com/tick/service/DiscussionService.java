@@ -30,9 +30,10 @@ public interface DiscussionService extends IService<DiscussionPost> {
     DiscussionPostVO createPost(Integer accountId, DiscussionPostCreateVO vo);
 
     /**
-     * 删除文章（连同其评论）。仅作者本人或管理员可以删除，否则返回 false。
+     * 删除文章（连同其评论）。文章不存在抛 {@link com.tick.exception.NotFoundException}，
+     * 非作者本人且非管理员抛 {@link SecurityException}。
      */
-    boolean deletePost(Integer accountId, Integer postId);
+    void deletePost(Integer accountId, Integer postId);
 
     /**
      * 某篇文章的评论，按发表时间正序。文章不存在返回 null。
@@ -45,9 +46,8 @@ public interface DiscussionService extends IService<DiscussionPost> {
     DiscussionCommentVO createComment(Integer accountId, Integer postId, DiscussionCommentCreateVO vo);
 
     /**
-     * 删除评论。
-     *
-     * @return {@code null} 表示评论不存在，{@code false} 表示无权删除，{@code true} 表示删除成功
+     * 删除评论。评论不存在抛 {@link com.tick.exception.NotFoundException}，
+     * 非作者本人且非管理员抛 {@link SecurityException}。
      */
-    Boolean deleteComment(Integer accountId, Integer commentId);
+    void deleteComment(Integer accountId, Integer commentId);
 }

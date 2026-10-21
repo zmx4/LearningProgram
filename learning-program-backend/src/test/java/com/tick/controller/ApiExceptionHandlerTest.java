@@ -2,6 +2,8 @@ package com.tick.controller;
 
 import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.EmailRegisterVO;
+import com.tick.exception.ConflictException;
+import com.tick.exception.NotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -94,6 +96,22 @@ class ApiExceptionHandlerTest {
 
         assertEquals(500, response.code());
         assertEquals("内部错误,请联系管理员", response.message());
+    }
+
+    @Test
+    void notFoundExceptionKeepsItsMessage() {
+        RestBean<Void> response = handler.handleNotFound(new NotFoundException("小组不存在或你不是小组成员"));
+
+        assertEquals(404, response.code());
+        assertEquals("小组不存在或你不是小组成员", response.message());
+    }
+
+    @Test
+    void conflictExceptionBecomesConflict() {
+        RestBean<Void> response = handler.handleConflict(new ConflictException("此邮箱已被其他用户使用"));
+
+        assertEquals(409, response.code());
+        assertEquals("此邮箱已被其他用户使用", response.message());
     }
 
     @Test

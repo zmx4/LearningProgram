@@ -114,7 +114,7 @@ package "service · 业务接口层" #E6F4EA {
     +postMessage(accountId, groupId, vo): GroupMessageVO
     +postTask(accountId, groupId, vo): GroupMessageVO
     +leaveGroup(accountId, groupId): boolean
-    +removeMember(accountId, groupId, memberAccountId): boolean
+    +removeMember(accountId, groupId, memberAccountId): void
   }
   interface LearningResourceService {
     +listVisible(): List
