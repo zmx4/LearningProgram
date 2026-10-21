@@ -1561,12 +1561,3 @@ Authorization: Bearer <admin-token>
 ```
 
 删除题集及其题目关联（不影响题目本身）。题集不存在返回 `400`。
-
-## 测试接口
-
-```http
-GET /api/test/hello
-Authorization: Bearer <token>
-```
-
-用于验证登录态和后端鉴权是否正常。

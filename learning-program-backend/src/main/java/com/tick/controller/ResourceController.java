@@ -4,6 +4,8 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.service.LearningResourceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -32,6 +34,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/resources")
 public class ResourceController {
+    private static final Logger log = LoggerFactory.getLogger(ResourceController.class);
+
     private final LearningResourceService resourceService;
 
     public ResourceController(LearningResourceService resourceService) {
@@ -54,18 +58,18 @@ public class ResourceController {
         if (!Files.exists(path)) {
             return notFound("资源文件已丢失，请联系管理员");
         }
+        // 访问流水只用于小组任务判定，写失败不应阻断下载
         try {
-            // 落一条访问流水，供小组任务中 resource 类型任务项判定完成情况
             resourceService.recordAccess(accountId, id);
-            ContentDisposition disposition = ContentDisposition.attachment()
-                    .filename(resource.getFileName(), StandardCharsets.UTF_8).build();
-            return ResponseEntity.ok()
-                    .contentType(safeMediaType(resource.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                    .body(new FileSystemResource(path));
-        } catch (Exception exception) {
-            return notFound("资源文件读取失败，请联系管理员");
+        } catch (RuntimeException exception) {
+            log.warn("记录资源访问流水失败: resourceId={}, accountId={}", id, accountId, exception);
         }
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(resource.getFileName(), StandardCharsets.UTF_8).build();
+        return ResponseEntity.ok()
+                .contentType(safeMediaType(resource.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(new FileSystemResource(path));
     }
 
     private boolean isAdmin() {

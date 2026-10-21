@@ -24,7 +24,6 @@ package "controller · REST 接口层" #E8F0FE {
   class WordTestController
   class ResourceController
   class StudyGroupController
-  class TestController
 
   package "管理员接口（/api/admin，admin 角色）" #F5F5F5 {
     class AdminController
