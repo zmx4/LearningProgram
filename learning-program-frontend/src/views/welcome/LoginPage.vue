@@ -107,23 +107,23 @@ function userLogin() {
         ElMessage.warning(message)
       })
     }
-
-    function submitTotp() {
-      if (!/^\d{6}$/.test(totpCode.value)) {
-        ElMessage.warning('请输入6位数字验证码')
-        return
-      }
-      totpLoading.value = true
-      verifyTotpLogin(totpChallenge.value, totpCode.value, form.remember, () => {
-        totpLoading.value = false
-        totpVisible.value = false
-        void router.push('/index')
-      }, (message) => {
-        totpLoading.value = false
-        ElMessage.warning(message)
-      })
-    }
   });
+}
+
+function submitTotp() {
+  if (!/^\d{6}$/.test(totpCode.value)) {
+    ElMessage.warning('请输入6位数字验证码')
+    return
+  }
+  totpLoading.value = true
+  verifyTotpLogin(totpChallenge.value, totpCode.value, form.remember, () => {
+    totpLoading.value = false
+    totpVisible.value = false
+    void router.push('/index')
+  }, (message) => {
+    totpLoading.value = false
+    ElMessage.warning(message)
+  })
 }
 </script>
 
