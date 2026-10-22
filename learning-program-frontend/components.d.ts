@@ -36,6 +36,7 @@ declare module 'vue' {
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
+    ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     PasswordPolicyHint: typeof import('./src/components/PasswordPolicyHint.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

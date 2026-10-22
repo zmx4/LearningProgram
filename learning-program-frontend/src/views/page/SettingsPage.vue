@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Monitor, Moon, Sunny } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { CircleCheckFilled, CopyDocument, Lock, Monitor, Moon, Sunny } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import QRCode from 'qrcode'
 import type { ThemeMode } from '@/App.vue'
 import { useI18n } from 'vue-i18n'
 import i18n, { LANGUAGE_OPTIONS, setLocale, type SupportedLocale } from '@/i18n'
@@ -25,6 +26,7 @@ const themeMode = ref<ThemeMode>(
 const dailyWordSettings = ref(readDailyWordSettings())
 const twoFactor = ref({ enabled: false, emailVerificationRequired: false, email: '' })
 const twoFactorSetup = ref<{ secret: string; qrCodeUrl: string } | null>(null)
+const qrCodeImage = ref('')
 const emailCode = ref('')
 const totpCode = ref('')
 const loadingTwoFactor = ref(false)
@@ -43,31 +45,81 @@ function requestTwoFactorCode() {
 }
 
 function setupTwoFactor() {
+  if (twoFactor.value.emailVerificationRequired && !emailCode.value.trim()) {
+    ElMessage.warning('请先填写邮箱验证码')
+    return
+  }
   loadingTwoFactor.value = true
-  post<{ secret: string; qrCodeUrl: string }>('/api/profile/2fa/setup', { emailCode: emailCode.value }, (data) => {
-    twoFactorSetup.value = data
-    loadingTwoFactor.value = false
-  }, () => { loadingTwoFactor.value = false })
+  qrCodeImage.value = ''
+  post<{ secret: string; qrCodeUrl: string }>(
+    '/api/profile/2fa/setup',
+    { emailCode: emailCode.value.trim() },
+    async (data) => {
+      twoFactorSetup.value = data
+      try {
+        qrCodeImage.value = await QRCode.toDataURL(data.qrCodeUrl, {
+          width: 360,
+          margin: 1,
+          color: { dark: '#111827', light: '#ffffff' },
+        })
+      } catch {
+        ElMessage.warning('二维码生成失败，请使用下方密钥手动添加')
+      } finally {
+        loadingTwoFactor.value = false
+      }
+    },
+    () => { loadingTwoFactor.value = false },
+  )
+}
+
+function resetTwoFactorSetup() {
+  twoFactorSetup.value = null
+  qrCodeImage.value = ''
+  emailCode.value = ''
+  totpCode.value = ''
 }
 
 function enableTwoFactor() {
+  const code = totpCode.value.trim()
+  if (!/^\d{6}$/.test(code)) {
+    ElMessage.warning('请输入验证器中的 6 位数字验证码')
+    return
+  }
   loadingTwoFactor.value = true
-  post('/api/profile/2fa/enable', { code: Number(totpCode.value) }, () => {
+  post('/api/profile/2fa/enable', { code: Number(code) }, () => {
     twoFactor.value.enabled = true
-    twoFactorSetup.value = null
-    emailCode.value = ''
-    totpCode.value = ''
+    resetTwoFactorSetup()
     loadingTwoFactor.value = false
     ElMessage.success('两步验证已启用')
   }, () => { loadingTwoFactor.value = false })
 }
 
-function updateTwoFactor(enabled: boolean) {
-  if (enabled) return
+async function disableTwoFactor() {
+  try {
+    await ElMessageBox.confirm(
+      '关闭后，登录时将不再要求输入动态验证码，账号安全性会降低。',
+      '关闭两步验证',
+      { type: 'warning', confirmButtonText: '确认关闭', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
   del('/api/profile/2fa', null, () => {
     twoFactor.value.enabled = false
     ElMessage.success('两步验证已关闭')
   })
+}
+
+function copySecret() {
+  const secret = twoFactorSetup.value?.secret
+  if (!secret) return
+  if (!navigator.clipboard) {
+    ElMessage.info(`密钥：${secret}`)
+    return
+  }
+  void navigator.clipboard.writeText(secret)
+    .then(() => ElMessage.success('密钥已复制'))
+    .catch(() => ElMessage.info(`密钥：${secret}`))
 }
 
 const themeOptions = [
@@ -150,20 +202,90 @@ function submitChangePassword() {
           <h3>两步验证（2FA）</h3>
           <p>登录时除密码外，还需要验证器应用生成的动态验证码。</p>
         </div>
-        <el-switch :model-value="twoFactor.enabled" @update:model-value="updateTwoFactor" />
+        <el-tag class="two-factor-status" :type="twoFactor.enabled ? 'success' : 'info'" effect="light" round>
+          {{ twoFactor.enabled ? '已启用' : '未启用' }}
+        </el-tag>
       </div>
-      <div v-if="!twoFactor.enabled" class="two-factor-setup">
-        <p v-if="twoFactor.emailVerificationRequired">启用前需要验证邮箱：{{ twoFactor.email }}</p>
-        <el-input v-if="twoFactor.emailVerificationRequired" v-model="emailCode" maxlength="6" placeholder="邮箱验证码">
-          <template #append><el-button @click="requestTwoFactorCode">发送验证码</el-button></template>
-        </el-input>
-        <el-button type="primary" :loading="loadingTwoFactor" @click="setupTwoFactor">生成验证器密钥</el-button>
-        <div v-if="twoFactorSetup" class="totp-secret">
-          <p>请在验证器应用中添加 LearningProgram，并输入密钥：</p>
-          <code>{{ twoFactorSetup.secret }}</code>
-          <el-input :model-value="twoFactorSetup.qrCodeUrl" readonly />
-          <el-input v-model="totpCode" maxlength="6" placeholder="输入验证器中的6位验证码" />
-          <el-button type="success" :loading="loadingTwoFactor" @click="enableTwoFactor">确认启用</el-button>
+
+      <div v-if="twoFactor.enabled" class="two-factor-enabled">
+        <el-icon><CircleCheckFilled /></el-icon>
+        <div>
+          <strong>两步验证已启用</strong>
+          <p>每次登录都需要输入验证器中的动态验证码；更换设备前请先关闭，再重新绑定。</p>
+        </div>
+        <el-button type="danger" plain @click="disableTwoFactor">关闭两步验证</el-button>
+      </div>
+
+      <div v-else-if="!twoFactorSetup" class="two-factor-entry">
+        <div class="two-factor-intro">
+          <span class="intro-icon"><el-icon><Lock /></el-icon></span>
+          <div>
+            <strong>为账号增加一道防线</strong>
+            <p>绑定 Google Authenticator、Microsoft Authenticator 等验证器应用，即可开启动态验证码登录。</p>
+          </div>
+        </div>
+        <div v-if="twoFactor.emailVerificationRequired" class="two-factor-email">
+          <p>启用前需要验证邮箱 <strong>{{ twoFactor.email }}</strong>，请填写收到的验证码。</p>
+          <el-input v-model="emailCode" maxlength="6" placeholder="邮箱验证码">
+            <template #append><el-button @click="requestTwoFactorCode">发送验证码</el-button></template>
+          </el-input>
+        </div>
+        <div>
+          <el-button type="primary" :loading="loadingTwoFactor" @click="setupTwoFactor">生成验证器密钥</el-button>
+        </div>
+      </div>
+
+      <div v-else class="totp-setup">
+        <div class="totp-qr">
+          <div class="qr-frame">
+            <img v-if="qrCodeImage" :src="qrCodeImage" alt="两步验证二维码" />
+            <div v-else class="qr-fallback">
+              <el-icon><Lock /></el-icon>
+              <span>二维码生成失败，请使用密钥手动添加</span>
+            </div>
+          </div>
+          <span class="qr-caption">使用验证器应用扫码</span>
+        </div>
+        <div class="totp-panel">
+          <div class="totp-step">
+            <span class="step-index">1</span>
+            <div class="step-body">
+              <strong>扫描二维码</strong>
+              <p>打开验证器应用，扫描左侧二维码添加 LearningProgram。</p>
+              <div class="totp-manual">
+                <span>无法扫码？手动输入密钥</span>
+                <code>{{ twoFactorSetup.secret }}</code>
+                <el-button text type="primary" size="small" @click="copySecret">
+                  <el-icon><CopyDocument /></el-icon>复制
+                </el-button>
+              </div>
+            </div>
+          </div>
+          <div class="totp-step">
+            <span class="step-index">2</span>
+            <div class="step-body">
+              <strong>输入验证码</strong>
+              <p>输入验证器应用当前显示的 6 位验证码，完成绑定。</p>
+              <el-input
+                v-model="totpCode"
+                class="totp-code-input"
+                maxlength="6"
+                inputmode="numeric"
+                placeholder="000000"
+              />
+            </div>
+          </div>
+          <div class="totp-actions">
+            <el-button
+              type="primary"
+              :loading="loadingTwoFactor"
+              :disabled="totpCode.trim().length !== 6"
+              @click="enableTwoFactor"
+            >
+              确认启用
+            </el-button>
+            <el-button text @click="resetTwoFactorSetup">取消</el-button>
+          </div>
         </div>
       </div>
     </section>
@@ -316,6 +438,86 @@ h2 { margin-bottom: 8px; font-size: 26px; }
 .setting-title h3 { margin-bottom: 6px; font-size: 17px; }
 .setting-title p { margin-bottom: 0; color: var(--el-text-color-secondary); font-size: 13px; }
 .current-mode { color: var(--el-color-primary); font-size: 13px; }
+.two-factor-status { flex: none; margin-top: 2px; }
+.two-factor-enabled {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--el-color-success-light-7);
+  border-radius: 12px;
+  background: var(--el-color-success-light-9);
+}
+.two-factor-enabled > .el-icon { flex: none; color: var(--el-color-success); font-size: 26px; }
+.two-factor-enabled strong { font-size: 14px; }
+.two-factor-enabled p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.6; }
+.two-factor-enabled > .el-button { flex: none; margin-left: auto; }
+.two-factor-entry { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+.two-factor-intro { display: flex; gap: 14px; align-self: stretch; padding: 16px 18px; border-radius: 12px; background: var(--el-fill-color-light); }
+.intro-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-8);
+  font-size: 19px;
+}
+.two-factor-intro strong { font-size: 14px; }
+.two-factor-intro p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.6; }
+.two-factor-email { width: 100%; max-width: 420px; }
+.two-factor-email p { margin: 0 0 10px; color: var(--el-text-color-secondary); font-size: 13px; }
+.totp-setup { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 30px; align-items: start; }
+.totp-qr { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.qr-frame {
+  display: grid;
+  width: 200px;
+  height: 200px;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: #fff;
+}
+.qr-frame img { display: block; width: 100%; height: 100%; }
+.qr-fallback { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--el-text-color-placeholder); font-size: 12px; line-height: 1.5; text-align: center; }
+.qr-fallback .el-icon { font-size: 26px; }
+.qr-caption { color: var(--el-text-color-secondary); font-size: 12px; }
+.totp-panel { display: flex; flex-direction: column; gap: 22px; }
+.totp-step { display: flex; gap: 12px; }
+.step-index {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--el-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.step-body { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+.step-body strong { font-size: 14px; }
+.step-body p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.6; }
+.totp-manual { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: var(--el-text-color-secondary); font-size: 12px; }
+.totp-manual code {
+  padding: 4px 10px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  color: var(--el-text-color-primary);
+  background: var(--el-fill-color-light);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: .04em;
+  word-break: break-all;
+}
+.totp-manual .el-button { padding: 0 4px; }
+.totp-code-input { max-width: 220px; }
+.totp-code-input :deep(.el-input__inner) { font-size: 18px; letter-spacing: .35em; text-align: center; }
+.totp-actions { display: flex; align-items: center; gap: 4px; }
 .daily-word-source { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--el-text-color-secondary); font-size: 13px; }
 .language-options { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .language-hint { margin: 0; color: var(--el-text-color-placeholder); font-size: 12px; }
@@ -364,5 +566,9 @@ h2 { margin-bottom: 8px; font-size: 26px; }
 @media (max-width: 680px) {
   .settings-card { padding: 24px 20px; }
   .theme-options { grid-template-columns: 1fr; }
-  .theme-option { min-height: auto; flex-direction: row; align-items: center; }}
+  .theme-option { min-height: auto; flex-direction: row; align-items: center; }
+  .two-factor-enabled { align-items: flex-start; flex-wrap: wrap; }
+  .two-factor-enabled > .el-button { margin-left: 0; }
+  .totp-setup { grid-template-columns: 1fr; gap: 24px; }
+}
 </style>
