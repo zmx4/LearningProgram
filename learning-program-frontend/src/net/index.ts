@@ -4,7 +4,8 @@
  * - 后端统一返回 ApiResponse（code/data/message），本模块负责解析并分发给回调
  * - 登录态（token + 过期时间 + 用户名 + 角色）保存在 localStorage / sessionStorage 的 authorize 项中
  * - 每次请求由 axios 拦截器自动注入 Authorization 头
- * - 401 视为登录过期，清除本地登录态并跳转登录页
+ * - 受保护接口的 401 视为登录过期，清除本地登录态并跳转登录页；
+ *   公开接口（登录、两步验证等）的 401 是认证失败，保留后端提示信息
  *
  * 业务代码使用底部导出的 post / get / put / del（自动带 token）
  * 与 publicPost / publicGet（匿名接口，不带头）。
@@ -125,16 +126,17 @@ function deleteAccessToken(redirect = false): void {
     }
 }
 
-// 解析统一响应体：code 200 分发数据；401 清登录态并跳登录页；其余把后端 message 交给 failure
+// 解析统一响应体：code 200 分发数据；受保护接口的 401 清理登录态并跳登录页；其余把后端 message 交给 failure
 function handleResponse<T>(
     response: ApiResponse<T>,
     url: string,
     success: SuccessCallback<T>,
     failure: FailureCallback,
+    sessionExpiryOn401 = true,
 ): void {
     if (response.code === 200) {
         success(response.data)
-    } else if (response.code === 401) {
+    } else if (response.code === 401 && sessionExpiryOn401) {
         failure('登录状态已过期，请重新登录！')
         deleteAccessToken(true)
     } else {
@@ -148,14 +150,15 @@ function internalPost<T>(
     headers: Headers,
     success: SuccessCallback<T>,
     failure: FailureCallback,
+    sessionExpiryOn401 = true,
     error: ErrorCallback = defaultError,
 ): void {
     void axios
         .post<ApiResponse<T>>(url, data, { headers })
-        .then(({ data: response }) => handleResponse(response, url, success, failure))
+        .then(({ data: response }) => handleResponse(response, url, success, failure, sessionExpiryOn401))
         .catch((requestError) => {
             if (isAxiosError(requestError) && requestError.response?.data?.code) {
-                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure, sessionExpiryOn401)
             } else {
                 error(requestError)
             }
@@ -167,14 +170,15 @@ function internalGet<T>(
     headers: Headers,
     success: SuccessCallback<T>,
     failure: FailureCallback,
+    sessionExpiryOn401 = true,
     error: ErrorCallback = defaultError,
 ): void {
     void axios
         .get<ApiResponse<T>>(url, { headers })
-        .then(({ data: response }) => handleResponse(response, url, success, failure))
+        .then(({ data: response }) => handleResponse(response, url, success, failure, sessionExpiryOn401))
         .catch((requestError) => {
             if (isAxiosError(requestError) && requestError.response?.data?.code) {
-                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure)
+                handleResponse(requestError.response.data as ApiResponse<T>, url, success, failure, sessionExpiryOn401)
             } else {
                 error(requestError)
             }
@@ -239,6 +243,7 @@ function login(
             success(data)
         },
         failure,
+        false,
     )
 }
 
@@ -270,7 +275,7 @@ function publicPost<T>(
     success: SuccessCallback<T>,
     failure: FailureCallback = defaultFailure,
 ): void {
-    internalPost<T>(url, data, {}, success, failure)
+    internalPost<T>(url, data, {}, success, failure, false)
 }
 
 // 登出：请求后端把 token 加入黑名单，同时清除本地登录态
@@ -320,7 +325,7 @@ function publicGet<T>(
     failure: FailureCallback = defaultFailure,
     error: ErrorCallback = defaultError,
 ): void {
-    internalGet<T>(url, {}, success, failure, error)
+    internalGet<T>(url, {}, success, failure, false, error)
 }
 
 // 路由守卫用：本地是否持有有效登录态
