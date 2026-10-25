@@ -19,7 +19,7 @@ import {
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useMediaQuery} from '@vueuse/core'
-import {currentRole, currentUsername, get, logout} from '@/net'
+import {currentRole, currentUsername, logout, publicGet, unauthorized} from '@/net'
 import {useI18n} from 'vue-i18n'
 import {
   dailyWordSettingsChangedEvent,
@@ -42,6 +42,8 @@ const sidebarExpanded = ref(false)
 const mobileNavOpen = ref(false)
 const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
+// 主界面允许游客浏览：未登录时隐藏用户区（铃铛/头像/退出），显示登录入口
+const isLoggedIn = !unauthorized()
 
 // On mobile the sidebar is an off-canvas drawer driven by mobileNavOpen;
 // on desktop it keeps the hover/click-to-expand rail behaviour.
@@ -127,7 +129,7 @@ function loadDailyWord() {
   }
 
   dailyWordLoading.value = true
-  get<DailyWord[]>(
+  publicGet<DailyWord[]>(
       `/api/dictionary/${dailyWordSettings.value.source}?count=1`,
       (words) => {
         dailyWordLoading.value = false
@@ -261,27 +263,31 @@ onUnmounted(() => {
           </button>
           <div>
             <p class="eyebrow">LEARNING SPACE</p>
-            <h1>{{ t('common.welcomeBack') }}</h1>
+            <h1>{{ isLoggedIn ? t('common.welcomeBack') : t('common.welcomeGuest') }}</h1>
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" type="button" :aria-label="t('common.notifications')"
-                  @click="router.push({ name: 'notifications' })">
-            <el-icon>
-              <Bell/>
-            </el-icon>
-            <span class="notification-dot"></span>
-          </button>
-          <button class="profile" type="button" :aria-label="t('common.openProfile')"
-                  @click="router.push({ name: 'profile' })">
-            <div class="avatar" :aria-label="t('common.userAvatar')">
+          <template v-if="isLoggedIn">
+            <button class="icon-button" type="button" :aria-label="t('common.notifications')"
+                    @click="router.push({ name: 'notifications' })">
               <el-icon>
-                <UserFilled/>
+                <Bell/>
               </el-icon>
-            </div>
-            <span class="profile-name">{{ username }}</span>
-          </button>
-          <button class="logout-button" type="button" @click="userLogout">{{ t('common.logout') }}</button>
+              <span class="notification-dot"></span>
+            </button>
+            <button class="profile" type="button" :aria-label="t('common.openProfile')"
+                    @click="router.push({ name: 'profile' })">
+              <div class="avatar" :aria-label="t('common.userAvatar')">
+                <el-icon>
+                  <UserFilled/>
+                </el-icon>
+              </div>
+              <span class="profile-name">{{ username }}</span>
+            </button>
+            <button class="logout-button" type="button" @click="userLogout">{{ t('common.logout') }}</button>
+          </template>
+          <button v-else class="login-button" type="button"
+                  @click="router.push({ name: 'welcome-login' })">{{ t('common.login') }}</button>
         </div>
       </header>
 
@@ -641,6 +647,20 @@ onUnmounted(() => {
   color: var(--el-color-primary);
   border-color: var(--el-color-primary-light-5);
   background: var(--el-color-primary-light-9);
+}
+
+.login-button {
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--el-color-white);
+  background: var(--el-color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.login-button:hover {
+  background: var(--el-color-primary-light-3);
 }
 
 .topbar-title {

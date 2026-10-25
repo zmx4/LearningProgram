@@ -27,8 +27,13 @@ public class CourseProgressController {
         this.courseProgressService = courseProgressService;
     }
 
+    /**
+     * 学习总览。主界面支持游客浏览：未登录时请求上没有 id 属性，accountId 为 null，
+     * 服务层返回全部课程（未开始）与零值统计；已登录用户经 JWT 过滤器注入 id，照常返回个人数据。
+     */
     @GetMapping("/progress")
-    public RestBean<CourseProgressOverviewVO> overview(@RequestAttribute("id") Integer accountId) {
+    public RestBean<CourseProgressOverviewVO> overview(
+            @RequestAttribute(value = "id", required = false) Integer accountId) {
         return RestBean.success(courseProgressService.getOverview(accountId));
     }
 

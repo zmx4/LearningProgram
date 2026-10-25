@@ -57,6 +57,10 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/2fa/**").permitAll()
+                                // 主界面游客模式：未登录也能看课程列表与每日一词（只读），
+                                // 进度上报等写接口仍要求登录
+                                .requestMatchers(HttpMethod.GET, "/api/courses/progress").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/dictionary/**").permitAll()
                                 // 未处理的错误会被转发到 /error。这里若要求认证，任何错误最终都会
                                 // 变成 401「Full authentication is required to access this resource」，
                                 // 前端会误判成登录过期并清除登录态，真正的错误信息也丢失了。

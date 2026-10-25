@@ -3,10 +3,19 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, ArrowRight, Reading } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { get, post } from '@/net'
+import { get, post, publicGet, unauthorized } from '@/net'
 
 const { t } = useI18n()
 const router = useRouter()
+// 主界面允许游客浏览：游客看公开课程列表 + 登录引导，签到等用户功能隐藏
+const isLoggedIn = !unauthorized()
+
+interface GuestCourse {
+  courseId: number
+  title: string
+  description: string | null
+  chapterCount: number
+}
 interface CheckInStatus {
   dates: string[]
   todayChecked: boolean
@@ -30,6 +39,7 @@ const checkInStatus = ref<CheckInStatus>({
   dates: [], todayChecked: false, streak: 0, points: 0, checkInCount: 0, monthPoints: 0, records: [],
 })
 const progressSummary = ref<ProgressSummary | null>(null)
+const guestCourses = ref<GuestCourse[]>([])
 const loading = ref(false)
 const today = now.toISOString().slice(0, 10)
 
@@ -59,9 +69,15 @@ function formatDuration(seconds: number): string {
 }
 
 function loadProgressSummary() {
-  get<{ summary: ProgressSummary }>('/api/courses/progress', data => {
+  const apply = (data: { summary: ProgressSummary; courses?: GuestCourse[] }) => {
     progressSummary.value = data.summary
-  })
+    guestCourses.value = data.courses ?? []
+  }
+  if (isLoggedIn) {
+    get<{ summary: ProgressSummary }>('/api/courses/progress', apply)
+  } else {
+    publicGet<{ summary: ProgressSummary; courses?: GuestCourse[] }>('/api/courses/progress', apply)
+  }
 }
 
 const monthTitle = computed(() => `${selectedYear.value}年${selectedMonth.value}月`)
@@ -104,7 +120,9 @@ function checkIn() {
 }
 
 onMounted(() => {
-  loadCheckInStatus()
+  if (isLoggedIn) {
+    loadCheckInStatus()
+  }
   loadProgressSummary()
 })
 </script>
@@ -143,7 +161,26 @@ onMounted(() => {
           </article>
         </div>
 
-        <section class="check-in-card">
+        <template v-if="!isLoggedIn">
+          <div class="section-heading">
+            <div>
+              <p class="card-label">{{ t('home.explore') }}</p>
+              <h2>{{ t('home.exploreTitle') }}</h2>
+            </div>
+          </div>
+          <div class="guest-course-grid">
+            <article v-for="course in guestCourses" :key="course.courseId" class="guest-course-card">
+              <div class="guest-course-head">
+                <strong>{{ course.title }}</strong>
+                <span class="guest-course-tag">{{ t('courses.notStartedTag') }}</span>
+              </div>
+              <p class="guest-course-desc">{{ course.description || t('courses.noDescription') }}</p>
+              <span class="guest-course-meta">{{ t('courses.chapterCount', { count: course.chapterCount }) }}</span>
+            </article>
+          </div>
+        </template>
+
+        <section v-if="isLoggedIn" class="check-in-card">
           <div class="check-in-header">
             <div>
               <p class="card-label">{{ t('home.checkIn') }}</p>
@@ -198,6 +235,17 @@ onMounted(() => {
             </div>
             <p v-else class="points-empty">{{ t('home.noPointsRecord') }}</p>
           </div>
+        </section>
+
+        <section v-else class="login-guide-card">
+          <div class="login-guide-body">
+            <p class="card-label">{{ t('home.guestLabel') }}</p>
+            <h2>{{ t('home.guestTitle') }}</h2>
+            <p class="login-guide-copy">{{ t('home.guestDescription') }}</p>
+          </div>
+          <button class="check-in-button" type="button" @click="router.push({ name: 'welcome-login' })">
+            {{ t('home.guestLoginButton') }}
+          </button>
         </section>
 
         <div class="empty-panel">
@@ -596,6 +644,84 @@ h1 {
   background: var(--el-bg-color);
 }
 
+.guest-course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.guest-course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+}
+
+.guest-course-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guest-course-head strong {
+  color: var(--el-text-color-primary);
+  font-size: 15px;
+}
+
+.guest-course-tag {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 12px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  font-size: 12px;
+}
+
+.guest-course-desc {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.guest-course-meta {
+  margin-top: auto;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+.login-guide-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 28px 32px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+}
+
+.login-guide-card h2 {
+  margin-bottom: 8px;
+  font-size: 20px;
+}
+
+.login-guide-copy {
+  margin-bottom: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.login-guide-card .check-in-button {
+  flex-shrink: 0;
+}
+
 .stat-card p {
   margin-bottom: 18px;
   color: var(--el-text-color-secondary);
@@ -696,5 +822,14 @@ h1 {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .guest-course-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-guide-card {
+    align-items: flex-start;
+    flex-direction: column;
   }}
 </style>

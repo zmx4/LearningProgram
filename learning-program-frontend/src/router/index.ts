@@ -207,7 +207,8 @@ const router = createRouter({
 router.beforeEach((to) => {
     const isUnauthenticated = unauthorized()
 
-    if ((to.path.startsWith('/index') || to.path.startsWith('/notifications')
+    // /index 主界面允许游客浏览（首页有专门的未登录展示），其余页面仍要求登录
+    if ((to.path.startsWith('/notifications')
         || to.path.startsWith('/courses') || to.path.startsWith('/resources')
         || to.path.startsWith('/progress') || to.path.startsWith('/profile')
         || to.path.startsWith('/settings') || to.path.startsWith('/tests')
