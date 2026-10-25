@@ -5,15 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:ssr": "node server.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "build:ssr": "pnpm run type-check && pnpm run build:ssr:client && pnpm run build:ssr:server",
+    "build:ssr:client": "vite build --outDir dist/ssr/client",
+    "build:ssr:server": "vite build --ssr src/entry-server.ts --outDir dist/ssr/server",
+    "start": "node server.mjs --prod"
   },
   "dependencies": {
     "@vueuse/core": "^15.0.0",
     "axios": "^1.20.0",
     "element-plus": "^2.14.6",
+    "express": "^5.3.0",
     "markdown-it": "^15.0.2",
     "qrcode": "^1.5.4",
     "vue": "^3.5.42",

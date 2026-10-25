@@ -12,10 +12,19 @@
  */
 import axios, { type AxiosRequestConfig, isAxiosError } from 'axios'
 import { ElMessage } from 'element-plus'
-import router from '@/router'
+import type { Router } from 'vue-router'
+import { loadSessionItem, loadStorageItem, removeSessionItem, removeStorageItem, storeSessionItem, storeStorageItem } from '@/utils/storage'
 
 // 登录态在 storage 中的键名，值为序列化后的 AuthStorage
 const authItemName = 'authorize'
+
+// 当前应用挂载的路由实例：SSR 时每个请求各有一份，客户端只有一个。
+// 通过 setNetRouter 注入，避免本模块反向依赖 router 单例（router 守卫要用本模块，会成环）。
+let activeRouter: Router | null = null
+
+function setNetRouter(router: Router): void {
+    activeRouter = router
+}
 
 interface ApiResponse<T> {
     code: number
@@ -78,9 +87,9 @@ const defaultFailure: FailureCallback = (message, status, url) => {
     ElMessage.warning(message)
 }
 
-// 读取本地 token；不存在或已过期时清理本地登录态并提示，返回 null
+// 读取本地 token；不存在或已过期时清理本地登录态并提示，返回 null（SSR 下恒为 null）
 function takeAccessToken(): string | null {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const str = loadStorageItem(authItemName) ?? loadSessionItem(authItemName)
     if (!str) {
         return null
     }
@@ -112,17 +121,20 @@ function storeAccessToken(
     id?: number,
 ): void {
     const authObj: AuthStorage = { token, expire, id, username, role }
-    const storage = remember ? localStorage : sessionStorage
-    storage.setItem(authItemName, JSON.stringify(authObj))
+    if (remember) {
+        storeStorageItem(authItemName, JSON.stringify(authObj))
+    } else {
+        storeSessionItem(authItemName, JSON.stringify(authObj))
+    }
 }
 
-// 清除登录态；redirect 为真时跳转登录页（401 过期场景）
+// 清除登录态；redirect 为真时跳转登录页（401 过期场景，仅客户端需要跳转）
 function deleteAccessToken(redirect = false): void {
-    localStorage.removeItem(authItemName)
-    sessionStorage.removeItem(authItemName)
+    removeStorageItem(authItemName)
+    removeSessionItem(authItemName)
 
-    if (redirect) {
-        void router.push({ name: 'welcome-login' })
+    if (redirect && !import.meta.env.SSR) {
+        void activeRouter?.push({ name: 'welcome-login' })
     }
 }
 
@@ -153,6 +165,9 @@ function internalPost<T>(
     sessionExpiryOn401 = true,
     error: ErrorCallback = defaultError,
 ): void {
+    // SSR 阶段不发请求：登录态只在浏览器侧，且 Node 的 axios 无法解析同源相对路径，
+    // 页面数据统一由客户端水合后再拉取。回调（含 ElMessage 提示）也就不会在服务端触发。
+    if (import.meta.env.SSR) return
     void axios
         .post<ApiResponse<T>>(url, data, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure, sessionExpiryOn401))
@@ -173,6 +188,8 @@ function internalGet<T>(
     sessionExpiryOn401 = true,
     error: ErrorCallback = defaultError,
 ): void {
+    // 同 internalPost：SSR 阶段不发请求
+    if (import.meta.env.SSR) return
     void axios
         .get<ApiResponse<T>>(url, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure, sessionExpiryOn401))
@@ -193,6 +210,8 @@ function internalPut<T>(
     failure: FailureCallback,
     error: ErrorCallback = defaultError,
 ): void {
+    // 同 internalPost：SSR 阶段不发请求
+    if (import.meta.env.SSR) return
     void axios
         .put<ApiResponse<T>>(url, data, { headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
@@ -213,6 +232,8 @@ function internalDelete<T>(
     failure: FailureCallback,
     error: ErrorCallback = defaultError,
 ): void {
+    // 同 internalPost：SSR 阶段不发请求
+    if (import.meta.env.SSR) return
     void axios
         .delete<ApiResponse<T>>(url, { data, headers })
         .then(({ data: response }) => handleResponse(response, url, success, failure))
@@ -328,48 +349,40 @@ function publicGet<T>(
     internalGet<T>(url, {}, success, failure, false, error)
 }
 
-// 路由守卫用：本地是否持有有效登录态
+// 路由守卫用：本地是否持有有效登录态（SSR 下恒为“未登录”视角）
 function unauthorized(): boolean {
     return !takeAccessToken()
 }
 
 // 读取当前登录用户名（登录时缓存），未登录返回空串
 function currentUsername(): string {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
-    if (!str) return ''
-    try {
-        const authObj = JSON.parse(str) as AuthStorage
-        return authObj.username?.trim() ?? ''
-    } catch {
-        return ''
-    }
+    return parseAuthStorage()?.username?.trim() ?? ''
 }
 
 // 读取当前登录角色（user / admin），供路由守卫判断 adminOnly 路由
 function currentRole(): string {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
-    if (!str) return ''
-    try {
-        const authObj = JSON.parse(str) as AuthStorage
-        return authObj.role?.trim() ?? ''
-    } catch {
-        return ''
-    }
+    return parseAuthStorage()?.role?.trim() ?? ''
 }
 
 // 读取当前登录账号 id，未登录或旧登录态（无 id）返回 null
 function currentUserId(): number | null {
-    const str = localStorage.getItem(authItemName) ?? sessionStorage.getItem(authItemName)
+    const id = parseAuthStorage()?.id
+    return typeof id === 'number' ? id : null
+}
+
+// 解析本地登录态；无登录态或内容损坏返回 null（SSR 下恒为 null）
+function parseAuthStorage(): AuthStorage | null {
+    const str = loadStorageItem(authItemName) ?? loadSessionItem(authItemName)
     if (!str) return null
     try {
-        const authObj = JSON.parse(str) as AuthStorage
-        return typeof authObj.id === 'number' ? authObj.id : null
+        return JSON.parse(str) as AuthStorage
     } catch {
         return null
     }
 }
 
 export {
+    setNetRouter,
     post,
     publicPost,
     get,

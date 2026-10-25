@@ -84,11 +84,12 @@ import {useI18n} from 'vue-i18n'
 import {EditPen, Lock, Message} from "@element-plus/icons-vue";
 import {get, post} from "@/net";
 import {ElMessage} from "element-plus";
-import router from "@/router";
 import PasswordPolicyHint from "@/components/PasswordPolicyHint.vue";
 import {fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy} from "@/utils/passwordPolicy";
+import {useRouter} from "vue-router";
 
 const { t } = useI18n()
+const router = useRouter()
 const active = ref(0)
 
 // 密码规则来自后端策略

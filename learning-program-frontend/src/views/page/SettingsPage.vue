@@ -9,6 +9,7 @@ import i18n, { LANGUAGE_OPTIONS, setLocale, type SupportedLocale } from '@/i18n'
 import { currentUsername, del, get, post, publicGet, put } from '@/net'
 import PasswordPolicyHint from '@/components/PasswordPolicyHint.vue'
 import { fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy } from '@/utils/passwordPolicy'
+import { loadStorageItem, storeStorageItem } from '@/utils/storage'
 import {
   readDailyWordSettings,
   saveDailyWordSettings,
@@ -17,7 +18,8 @@ import {
 
 const themeStorageKey = 'learning-theme-mode'
 const { t } = useI18n()
-const storedMode = localStorage.getItem(themeStorageKey)
+// setup 顶层读取，SSR 下需经安全封装（返回 null → 默认 system，水合后由客户端修正）
+const storedMode = loadStorageItem(themeStorageKey)
 const themeMode = ref<ThemeMode>(
   storedMode === 'light' || storedMode === 'dark' || storedMode === 'system'
     ? storedMode
@@ -130,7 +132,7 @@ const themeOptions = [
 
 function updateTheme(mode: ThemeMode) {
   themeMode.value = mode
-  localStorage.setItem(themeStorageKey, mode)
+  storeStorageItem(themeStorageKey, mode)
   const media = window.matchMedia('(prefers-color-scheme: dark)')
   document.documentElement.classList.toggle('dark', mode === 'dark' || (mode === 'system' && media.matches))
   const selectedOption = themeOptions.find((option) => option.value === mode)

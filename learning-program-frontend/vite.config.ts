@@ -33,6 +33,12 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    // SSR（dev:ssr / build:ssr）时 element-plus 必须经 vite 处理：
+    // unplugin 自动注入的组件样式（element-plus/es/components/**/style/css）内部含 .css 导入，
+    // 若按默认外部化交给 Node 直接加载，会因 Node 无法解析 .css 而报错。
+    ssr: {
+      noExternal: ['element-plus'],
+    },
     // host: true 监听 0.0.0.0，允许其他 IP 访问开发服务器
     server: {
       host: true,

@@ -13,6 +13,9 @@
                               └── /api/...    反向代理 ──► Spring Boot (127.0.0.1:1231)
 ```
 
+> 如果需要服务端渲染（首屏直出、更利于 SEO），见[第 6 节的 SSR 模式](#6-可选ssr服务端渲染模式)；
+> 默认的 SPA 静态部署适合绝大多数场景。
+
 ---
 
 ## 1. 构建
@@ -158,6 +161,82 @@ rsync -av --delete dist/ server:/var/www/learning-program/
 ```
 
 因为 `index.html` 不缓存、`assets/` 文件名带 hash，用户下次打开就是新版本，不需要额外清缓存操作。
+
+---
+
+## 6. 可选：SSR（服务端渲染）模式
+
+上面 1–5 节是默认的 **SPA 静态部署**。前端还支持 **SSR 模式**：HTML 由 Node 服务渲染好再返回，
+首屏内容直达（不用等 JS 下载执行），对游客可浏览的公开页面（首页、课程等）也更利于搜索引擎收录。
+
+两种模式二选一即可，**开发与构建命令完全独立、互不影响**：
+
+| | SPA（默认） | SSR |
+| --- | --- | --- |
+| 开发 | `pnpm dev` | `pnpm run dev:ssr` |
+| 构建 | `pnpm run build` → `dist/` | `pnpm run build:ssr` → `dist/ssr/` |
+| 运行 | nginx 托管静态文件 | `pnpm run start`（Node 常驻进程） |
+
+### 构建与启动
+
+```bash
+cd learning-program-frontend
+pnpm install
+pnpm run build:ssr     # 类型检查 + 客户端/服务端双构建，产物在 dist/ssr/
+pnpm run start         # 即 node server.mjs --prod，默认监听 3000，PORT 环境变量可覆盖
+```
+
+服务器上需要常驻运行（示例用 systemd，路径按实际情况调整）：
+
+```ini
+# /etc/systemd/system/learning-frontend-ssr.service
+[Unit]
+Description=Learning Program frontend SSR server
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/learning-program/learning-program-frontend
+ExecStart=/usr/bin/node server.mjs --prod
+Environment=PORT=3000
+Restart=always
+User=www-data
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now learning-frontend-ssr
+```
+
+### nginx 改法
+
+把原来「root 静态目录 + SPA 回退」的 `location /` 换成反代到 Node 服务即可，
+`/api` 与 `/assets` 的配置保持不变（`deploy/nginx.conf` 末尾附有完整注释版）：
+
+```nginx
+# 原来：
+#   root  /var/www/learning-program;
+#   location / { try_files $uri $uri/ /index.html; }
+# 改为：
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+### SSR 模式的已知边界
+
+- **登录态在浏览器 localStorage / sessionStorage 里，服务端读不到**，因此 SSR 恒按「游客视角」渲染；
+  已登录用户打开页面时客户端水合后会自动纠正（侧边栏用户名等个人信息可能有极短暂的一次闪动，属预期）。
+- 数据请求统一在水合后由浏览器发起（服务端渲染的是页面骨架与静态内容），接口仍走同源 `/api`。
+- `server.mjs` 不处理 `/api`（返回 404），**必须由 nginx 之类的前置代理转发到后端**。
+- 渲染异常时生产模式自动降级为 SPA（返回未填充的模板，页面仍可正常使用）。
 
 ---
 

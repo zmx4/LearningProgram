@@ -69,7 +69,6 @@
 
 <script setup>
 import {EditPen, Lock, Message, User} from "@element-plus/icons-vue";
-import router from "@/router";
 import {onMounted, reactive, ref} from "vue";
 import {useI18n} from 'vue-i18n'
 import {ElMessage} from "element-plus";
@@ -77,8 +76,10 @@ import {publicGet, publicPost} from "@/net";
 import PasswordPolicyHint from "@/components/PasswordPolicyHint.vue";
 import UserAgreementCheckbox from "@/components/UserAgreementCheckbox.vue";
 import {fallbackPasswordPolicy, firstUnmetRequirement, loadPasswordPolicy} from "@/utils/passwordPolicy";
+import {useRouter} from "vue-router";
 
 const { t } = useI18n()
+const router = useRouter()
 
 // 密码规则来自后端策略，避免前后端各写一份
 const policy = ref(fallbackPasswordPolicy)

@@ -61,14 +61,15 @@
 
 <script setup>
 import {User, Lock} from '@element-plus/icons-vue'
-import router from "@/router";
 import {reactive, ref} from "vue";
+import {useRouter} from "vue-router";
 import {useI18n} from 'vue-i18n'
 import {ElMessage} from "element-plus";
 import {login, verifyTotpLogin} from '@/net'
 import UserAgreementCheckbox from "@/components/UserAgreementCheckbox.vue";
 
 const { t } = useI18n()
+const router = useRouter()
 const formRef = ref()
 const form = reactive({
   username: '',

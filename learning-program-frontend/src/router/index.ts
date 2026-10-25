@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createMemoryHistory, createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { currentRole, unauthorized } from '@/net'
 
 /** 路由表：welcome 为登录注册壳，MainView 承载登录后页面（含侧边栏），AdminView 承载管理员后台。 */
@@ -198,35 +198,62 @@ const routes: RouteRecordRaw[] = [
     }
 ]
 
-const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
-    routes
-})
+/**
+ * 以工厂方式创建路由实例：SSR 时每个请求都要一份独立路由（history 状态不能跨请求共享），
+ * 客户端则始终只有一个实例。路由表与守卫逻辑对两者完全一致。
+ */
+function createAppRouter() {
+    const router = createRouter({
+        // 服务端没有 window，无法使用基于浏览器 history API 的导航，
+        // 用内存 history 承载本次请求的 URL（客户端水合时仍使用 createWebHistory）
+        history: import.meta.env.SSR ? createMemoryHistory() : createWebHistory(import.meta.env.BASE_URL),
+        routes
+    })
 
-/** 全局路由守卫：受保护路径未登录跳登录页；adminOnly 路由非 admin 拒绝；已登录用户访问 welcome 页跳首页。 */
-router.beforeEach((to) => {
-    const isUnauthenticated = unauthorized()
+    /**
+     * 全局路由守卫：受保护路径未登录跳登录页；adminOnly 路由非 admin 拒绝；已登录用户访问 welcome 页跳首页。
+     * SSR 下登录态只存在于浏览器 storage（服务端读不到），三类依赖登录态的跳转都无法判断，
+     * 统一跳过：服务端按游客视角渲染目标页骨架，水合后客户端守卫会带着真实登录态重新纠正路由。
+     */
+    router.beforeEach((to) => {
+        if (import.meta.env.SSR) {
+            return true
+        }
 
-    // /index 主界面允许游客浏览（首页有专门的未登录展示），其余页面仍要求登录
-    if ((to.path.startsWith('/notifications')
-        || to.path.startsWith('/courses') || to.path.startsWith('/resources')
-        || to.path.startsWith('/progress') || to.path.startsWith('/profile')
-        || to.path.startsWith('/settings') || to.path.startsWith('/tests')
-        || to.path.startsWith('/discussions') || to.path.startsWith('/leaderboard')
-        || to.path.startsWith('/groups')
-        || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
-        return { name: 'welcome-login' }
-    }
+        const isUnauthenticated = unauthorized()
 
-    if (to.meta.adminOnly && currentRole() !== 'admin') {
-        return { name: 'index' }
-    }
+        // /index 主界面允许游客浏览（首页有专门的未登录展示），其余页面仍要求登录
+        if ((to.path.startsWith('/notifications')
+            || to.path.startsWith('/courses') || to.path.startsWith('/resources')
+            || to.path.startsWith('/progress') || to.path.startsWith('/profile')
+            || to.path.startsWith('/settings') || to.path.startsWith('/tests')
+            || to.path.startsWith('/discussions') || to.path.startsWith('/leaderboard')
+            || to.path.startsWith('/groups')
+            || to.path.startsWith('/admin') || to.path.startsWith('/user/')) && isUnauthenticated) {
+            return { name: 'welcome-login' }
+        }
 
-    if (typeof to.name === 'string' && to.name.startsWith('welcome') && !isUnauthenticated) {
-        return { name: 'index' }
-    }
+        if (to.meta.adminOnly && currentRole() !== 'admin') {
+            return { name: 'index' }
+        }
 
-    return true
-})
+        if (typeof to.name === 'string' && to.name.startsWith('welcome') && !isUnauthenticated) {
+            return { name: 'index' }
+        }
 
-export default router
+        return true
+    })
+
+    // SPA 内导航同步页面标题；首次标题由 SSR 按 meta 生成（见 entry-server.ts）
+    router.afterEach((to) => {
+        if (typeof document === 'undefined') return
+        const title = to.meta.title
+        if (typeof title === 'string' && title) {
+            document.title = `${title} - 学习平台`
+        }
+    })
+
+    return router
+}
+
+export { createAppRouter }
