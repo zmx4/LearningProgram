@@ -100,7 +100,8 @@ public class SecurityConfiguration {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         @NonNull HttpServletResponse response,
                                         @NonNull Authentication authentication) throws IOException, ServletException {
-        response.setContentType("application/json");
+        // 不带 charset 时 Servlet 容器按 ISO-8859-1 编码响应体，中文会变成问号
+        response.setContentType("application/json;charset=utf-8");
         User user = (User)authentication.getPrincipal();
         assert user != null;
         Account account = accountService.findAccountByUsernameOrEmail(user.getUsername());
@@ -132,7 +133,7 @@ public class SecurityConfiguration {
     public void onAuthenticationFailure(HttpServletRequest request,
                                         @NonNull HttpServletResponse response,
                                         @NonNull AuthenticationException exception) throws IOException, ServletException {
-        response.setContentType("application/json");
+        response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(RestBean.unauthorized(exception.getMessage()).asJsonString());
     }
     public void onLogoutSuccess(@NonNull HttpServletRequest request,
