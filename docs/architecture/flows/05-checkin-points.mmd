@@ -1,0 +1,40 @@
+%% 05 每日签到与积分
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["登录用户进入首页"])
+  p1["GET /api/check-in?year&month"]
+  p2["查询本月记录与今日记录<br/>计算连续天数 / 总积分"]
+  p3["渲染日历、连续天数、积分流水"]
+  p4["点击「立即签到」"]
+  p5["POST /api/check-in"]
+  d1{"今日已签到？"}
+  e0(["返回已有记录（幂等）"])
+  p6["currentStreak：今天 / 昨天有记录则延续<br/>否则归零，streak + 1"]
+  p7[("points = streak<br/>insert check_in_record(account,date)<br/>唯一键保证一天一条")]
+  d2{"并发唯一键冲突？"}
+  e1(["回查今日记录并返回"])
+  p8["AccountPoints.addPoints"]
+  e2(["返回签到记录<br/>前端重新加载状态"])
+  p9["GET /api/points<br/>读取总积分（只读）"]
+  n_guest[["游客：不显示签到卡片<br/>只浏览公开课程与每日一词"]]
+
+  s0 --> p1
+  p1 --> p2
+  p2 --> p3
+  p3 --> p4
+  p4 --> p5
+  p5 --> d1
+  d1 -->|"是"| e0
+  d1 -->|"否"| p6
+  p6 --> p7
+  p7 --> d2
+  d2 -->|"是"| e1
+  d2 -->|"否"| p8
+  p8 --> e2
+
+  %% 证据：
+  %% - HomePage.vue:97-127（加载签到状态、切换月份、提交签到）
+  %% - CheckInServiceImpl.java:31-62（状态聚合与连续天数）
+  %% - CheckInServiceImpl.java:64-96（幂等签到、积分发放）
+  %% - CheckInController.java:29-45（GET / POST /api/check-in）
+  %% - AccountPointsService.java（积分累计）

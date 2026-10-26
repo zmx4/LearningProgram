@@ -1,0 +1,63 @@
+%% 08 管理后台
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["管理员登录，role = admin"])
+  p1["前端 /admin 路由 adminOnly<br/>后端 /api/admin/** hasRole(admin)"]
+  d0{"权限校验通过？"}
+  x0["403 / 跳回首页"]
+  p2["管理员中心"]
+  p3["用户管理<br/>GET /api/admin/users"]
+  p4["课程管理<br/>/api/admin/courses"]
+  p5["题库管理<br/>/api/admin/test-types|test-questions"]
+  p6["题集管理<br/>/api/admin/question-sets"]
+  p7["资源管理<br/>/api/admin/resources"]
+  p8["通知<br/>POST /api/admin/notifications"]
+  p9["调整角色 PUT /users/{id}/role<br/>不能降级当前管理员"]
+  p10["删除用户 DELETE /users/{id}<br/>不能删除当前账号"]
+  p11["重置密码 PUT /users/{id}/password<br/>随机密码 + 站内通知"]
+  p12["批量创建 POST /users/batch<br/>逐条返回失败原因"]
+  p13["新增 / 编辑 / 删除课程<br/>维护章节与题集关联"]
+  p14["新增 / 编辑 / 删除<br/>测试类型与题目"]
+  p15["新增 / 编辑 / 删除题集<br/>维护题目顺序"]
+  p16["上传(multipart) / 编辑 / 删除<br/>visible 控制可见性"]
+  p17["目标 all / role / users<br/>批量写 notification"]
+  e0(["用户操作完成"])
+  e1(["课程操作完成"])
+  e2(["题库操作完成"])
+  e3(["题集操作完成"])
+  e4(["资源操作完成"])
+  e5(["通知发送完成"])
+
+  s0 --> p1
+  p1 --> d0
+  d0 -->|"否"| x0
+  d0 -->|"是"| p2
+  p2 -->|"用户"| p3
+  p2 --> p4
+  p2 --> p5
+  p2 --> p6
+  p2 --> p7
+  p2 --> p8
+  p3 --> p9
+  p9 --> p10
+  p10 --> p11
+  p11 --> p12
+  p12 --> e0
+  p4 --> p13
+  p5 --> p14
+  p6 --> p15
+  p7 --> p16
+  p8 --> p17
+  p13 --> e1
+  p14 --> e2
+  p15 --> e3
+  p16 --> e4
+  p17 --> e5
+
+  %% 证据：
+  %% - router/index.ts:153-188,236-238（/admin 路由与 adminOnly 守卫）
+  %% - SecurityConfiguration.java:68（/api/admin/** hasRole admin）
+  %% - AdminController.java:41-102（用户、角色、删除、重置密码、批量创建、通知）
+  %% - AdminServiceImpl.java:34-80（批量建号与定向通知）
+  %% - AdminCourseController.java:22-58 / AdminTestBankController.java:22-76（课程与题库）
+  %% - AdminQuestionSetController.java:19-40 / AdminResourceController.java:26-60（题集与资源）

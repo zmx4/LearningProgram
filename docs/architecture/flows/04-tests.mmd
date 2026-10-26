@@ -1,0 +1,54 @@
+%% 04 单词测试与知识测试
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["测试中心"])
+  d0{"选择测试类型"}
+  p1["单词：GET /api/dictionary/{cet4|cet6}?count=10"]
+  p2["过滤无释义单词<br/>生成 4 选 1 选项"]
+  p3["逐题作答，前端本地计分"]
+  p4["POST /api/tests/words/results<br/>{source,total,correct,duration}"]
+  p5["validateCounts<br/>source ∈ cet4 / cet6"]
+  p6[("score = correct*100/total<br/>写 test_record(category=word)")]
+  p7["返回记录，刷新历史与汇总"]
+  p8["知识：普通模式 / 课程题集模式"]
+  d1{"是否带 setId？"}
+  p9["GET /api/question-sets/{id}<br/>读取题集题目"]
+  p10["GET /api/test-types<br/>→ GET /api/test-questions?typeId&count"]
+  p11["题型 single / multiple / blank<br/>前端逐题判分并生成 detail"]
+  p12["POST /api/tests/knowledge/results<br/>{typeId XOR setId,total,correct,detail}"]
+  p13["校验 typeId / setId 二选一<br/>counts ≤ 100，清洗 detail"]
+  p14[("写 test_record(category=knowledge)<br/>typeName 快照")]
+  p15["返回记录，刷新历史与汇总"]
+  p16["GET /api/tests/{words|knowledge}/history<br/>汇总平均分 / 最高分 / 正确率"]
+  e0(["历史与汇总展示"])
+  n1[["注意：正确数由前端计算后提交，<br/>后端只做范围与结构校验"]]
+
+  s0 --> d0
+  d0 -->|"单词测试"| p1
+  d0 -->|"知识测试"| p8
+  p1 --> p2
+  p2 --> p3
+  p3 --> p4
+  p4 --> p5
+  p5 --> p6
+  p6 --> p7
+  p7 --> p16
+  p8 --> d1
+  d1 -->|"是"| p9
+  d1 -->|"否"| p10
+  p9 --> p11
+  p10 --> p11
+  p11 --> p12
+  p12 --> p13
+  p13 --> p14
+  p14 --> p15
+  p15 --> p16
+  p16 --> e0
+
+  %% 证据：
+  %% - WordTestPage.vue:90-122（取词、选项、计分、提交）
+  %% - WordTestController.java:19-37 / WordTestServiceImpl.java:22-33（单词成绩）
+  %% - KnowledgeTestPage.vue:144-288（类型 / 题集、判分、detail、提交）
+  %% - KnowledgeTestServiceImpl.java:44-78（typeId / setId 校验与落库）
+  %% - BaseTestService.java:28-55（计数校验、按正确率计分）
+  %% - TestQuestionController.java:33 / QuestionSetController.java:26-35（取题接口）

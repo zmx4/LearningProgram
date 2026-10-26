@@ -1,0 +1,49 @@
+%% 07 讨论区与通知
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["讨论区列表<br/>GET /api/discussions"])
+  p1["分页查询 + 摘要（≤120 字）<br/>批量换取作者用户名"]
+  d0{"用户操作"}
+  p2["发帖 POST /api/discussions<br/>标题≤150，正文≤5000"]
+  e2(["返回新文章<br/>刷新列表"])
+  p3["查看详情 GET /{id}<br/>评论 GET /{id}/comments"]
+  p4["评论 POST /{id}/comments<br/>内容≤1000"]
+  p5[("insert comment<br/>post.comment_count + 1")]
+  d1{"评论者 = 文章作者？"}
+  p6["写 notification(type=discussion)<br/>link=/discussions/{id}"]
+  p7["不发送通知"]
+  p8["返回评论，刷新列表"]
+  e0(["评论成功"])
+  p9["删除文章 / 评论：作者或 admin<br/>文章删除级联评论；评论删除计数 -1"]
+  e1(["删除成功"])
+  s1(["站内通知"])
+  p11["GET /api/notifications<br/>列表 + 未读数"]
+  p12["POST /{id}/read<br/>POST /read-all"]
+  p13["管理员定向通知（流程 08）<br/>写 notification"]
+
+  s0 --> p1
+  p1 --> d0
+  d0 -->|"发帖"| p2
+  d0 -->|"查看 / 评论"| p3
+  p2 --> e2
+  p3 -->|"评论"| p4
+  p4 --> p5
+  p5 --> d1
+  d1 -->|"否"| p6
+  d1 -->|"是"| p7
+  p6 --> p8
+  p7 --> p8
+  p8 --> e0
+  p3 -->|"作者 / 管理员删除"| p9
+  p9 --> e1
+  p6 -.->|"写入通知"| p13
+  s1 --> p11
+  p11 --> p12
+  p13 --> p11
+
+  %% 证据：
+  %% - DiscussionController.java:27-76（列表、详情、发帖、删除、评论）
+  %% - DiscussionServiceImpl.java:95-132（发帖校验、作者 / 管理员删除）
+  %% - DiscussionServiceImpl.java:156-198（评论、计数、删除评论）
+  %% - DiscussionServiceImpl.java:200-225（评论通知作者）
+  %% - NotificationController.java:28-50（通知列表、单条已读、全部已读）

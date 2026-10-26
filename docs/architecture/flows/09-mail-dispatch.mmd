@@ -1,0 +1,45 @@
+%% 09 邮件验证码异步投递
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["业务触发验证码<br/>注册 / 找回密码 / 2FA"])
+  p1["EmailCodeService.sendCode<br/>Redis 频控 + 生成 6 位码"]
+  p2[("Redis 存 email::code:<type>:<email><br/>TTL 300s")]
+  p3["MailDispatcher.dispatch"]
+  d1{"队列已启用且生产者可用？"}
+  p4["RabbitMailProducer.publish<br/>exchange + routingKey"]
+  d2{"发布成功？"}
+  p5[["RabbitMQ<br/>learning.mail.queue"]]
+  p6["RabbitMailConsumer.onMessage<br/>反序列化 EmailMessage"]
+  p7["MailDelivery.send"]
+  p8["准备投递"]
+  d3{"smtp 模式且发送成功？"}
+  p9[["SMTP 服务器<br/>真实发信"]]
+  p10["降级：写日志 [mail:log]<br/>code=xxxxxx"]
+  e0(["用户获取验证码<br/>（开发环境看日志）"])
+  n0[["投递不会抛异常：<br/>队列不可用 → 直接发送；<br/>SMTP 失败 → 写日志"]]
+
+  s0 --> p1
+  p1 --> p2
+  p2 --> p3
+  p3 --> d1
+  d1 -->|"是"| p4
+  d1 -->|"否"| p8
+  p4 --> d2
+  d2 -->|"是"| p5
+  d2 -->|"否"| p8
+  p5 --> p6
+  p6 --> p7
+  p7 --> p8
+  p8 --> d3
+  d3 -->|"是"| p9
+  d3 -->|"否"| p10
+  p9 --> e0
+  p10 --> e0
+
+  %% 证据：
+  %% - EmailCodeService.java:48-73（频控、生成、存 Redis、投递）
+  %% - MailDispatcher.java:35-47（队列优先与降级）
+  %% - MailDelivery.java:32-66（SMTP / 日志双模式，永不抛异常）
+  %% - MailProperties.java:13-46（delivery、queue、code 配置）
+  %% - RabbitMailProducer.java:30-35 / RabbitMailConsumer.java:23-31（发布与消费）
+  %% - AuthorizeController.java:58-67（ask-code 接口）

@@ -1,0 +1,47 @@
+%% 03 课程学习与积分奖励
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["进入课程列表"])
+  p1["GET /api/courses/progress<br/>游客可读，登录用户读个人进度"]
+  p2["聚合 course + chapter + progress<br/>+ 本周 study_log"]
+  p3["选择课程<br/>GET /api/courses/{id}"]
+  p4["GET /api/courses/{id}/progress<br/>已学章节 / 总章节 / 状态"]
+  p5["打开章节，前端开始计时"]
+  p6["POST /api/courses/{courseId}/progress<br/>{chapterId, durationSeconds}"]
+  p7["校验课程与章节归属<br/>时长截断 0..3600s"]
+  p8[("upsert course_progress<br/>insert course_study_log")]
+  p9["统计已学章节<br/>not_started / in_progress / completed"]
+  d1{"课程已完成？"}
+  e0(["继续学习下一章"])
+  p10["awardCourseRewardOnce<br/>(account_id, course_id) 唯一"]
+  d2{"是否首次完成？"}
+  x1["不重复发放积分"]
+  p11[("写 course_reward<br/>AccountPoints.addPoints")]
+  e1(["返回奖励积分<br/>前端刷新进度"])
+  n_q[["课程关联题集<br/>→ 跳转知识测试（流程 04）"]]
+  n_guest[["游客仅能读课程总览<br/>课程详情 / 进度上报需登录"]]
+
+  s0 --> p1
+  p1 --> p2
+  p2 --> p3
+  p3 --> p4
+  p4 --> p5
+  p5 --> p6
+  p6 --> p7
+  p7 --> p8
+  p8 --> p9
+  p9 --> d1
+  d1 -->|"否"| e0
+  d1 -->|"是"| p10
+  p10 --> d2
+  d2 -->|"否"| x1
+  d2 -->|"是"| p11
+  p11 --> e1
+
+  %% 证据：
+  %% - CourseProgressController.java:30-64（总览 / 详情 / 进度 / 上报）
+  %% - CourseProgressServiceImpl.java:86-117（总览聚合）
+  %% - CourseProgressServiceImpl.java:149-209（章节上报与状态计算）
+  %% - CourseProgressServiceImpl.java:214-233（完成奖励唯一发放）
+  %% - CourseStudyPage.vue:78-130（打开章节与上报时长）
+  %% - SecurityConfiguration.java:60-63（游客可读课程进度）

@@ -1,0 +1,63 @@
+%% 02 登录、两步验证与会话
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["登录页：输入用户名 / 密码 / 记住我"])
+  p1["提交登录表单<br/>POST /api/auth/login (form-urlencoded)"]
+  p2["JwtAuthorizeFilter 先执行<br/>无 Bearer Token → 放行"]
+  p3["Spring Security 认证<br/>loadUserByUsername + BCrypt 校验"]
+  d1{"用户名 / 密码正确？"}
+  x1["401 认证失败<br/>返回统一错误信息"]
+  d2{"账号已启用 TOTP？"}
+  p4["返回 428 + challenge<br/>Redis 保存 5 分钟"]
+  p5["前端弹出两步验证输入框<br/>输入 6 位动态码"]
+  p6["POST /api/2fa/login<br/>校验 challenge + TOTP"]
+  d3{"challenge 与验证码有效？"}
+  x2["401 验证码错误<br/>或挑战已过期"]
+  p7["writeAuthorization：签发 JWT<br/>id / username / authorities / exp"]
+  p8["按「记住我」写入<br/>localStorage / sessionStorage 的 authorize"]
+  p9["跳转 /index<br/>路由守卫校验登录态与 adminOnly 角色"]
+  p10["后续请求：Axios 注入 Bearer Token"]
+  p11["JwtAuthorizeFilter.resolveJwt<br/>验签 + Redis 黑名单 + 过期校验"]
+  d4{"Token 有效？"}
+  x3["受保护接口 401<br/>清登录态 → 登录页"]
+  p12["写入 SecurityContext 与 request.id<br/>Controller 读取当前用户"]
+  e0(["访问业务接口"])
+  p13["登出：POST /api/auth/logout"]
+  p14["invalidateToken<br/>jti 写入 Redis 黑名单至过期"]
+  p15["清除 authorize<br/>跳转登录页"]
+  n_guest[["游客模式<br/>/index、GET /api/courses/progress、<br/>GET /api/dictionary/** 允许匿名只读"]]
+
+  s0 --> p1
+  p1 --> p2
+  p2 --> p3
+  p3 --> d1
+  d1 -->|"否"| x1
+  d1 -->|"是"| d2
+  d2 -->|"是"| p4
+  d4 -->|"否"| x3
+  d2 -->|"否"| p7
+  p4 --> p5
+  p5 --> p6
+  p6 --> d3
+  d3 -->|"否"| x2
+  d3 -->|"是"| p7
+  p7 --> p8
+  p8 --> p9
+  p9 --> p10
+  p10 --> p11
+  p11 --> d4
+  d4 -->|"是"| p12
+  p12 --> e0
+  p9 -->|"登出"| p13
+  p13 --> p14
+  p14 --> p15
+
+  %% 证据：
+  %% - SecurityConfiguration.java:53-85（放行规则 / admin 角色 / 无状态会话）
+  %% - SecurityConfiguration.java:104-155（2FA 428、JWT 签发、登出黑名单）
+  %% - JwtAuthorizeFilter.java:32-49（解析 token 并注入 request.id）
+  %% - JwtUtils.java:43-105（黑名单、验签、过期、签发）
+  %% - TwoFactorServiceImpl.java:78-96 / TwoFactorLoginController.java:25-42（challenge 与 TOTP 校验）
+  %% - net/index.ts:249-315（登录、2FA、登出、401 处理）
+  %% - router/index.ts:218-245（路由守卫与游客模式）
+  %% - LoginPage.vue:94-128（428 弹窗）

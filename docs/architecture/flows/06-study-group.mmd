@@ -1,0 +1,61 @@
+%% 06 学习小组
+%% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
+flowchart TD
+  s0(["学习小组列表<br/>GET /api/groups"])
+  d0{"选择操作"}
+  p1["创建小组<br/>POST /api/groups"]
+  p2["生成 8 位邀请码<br/>insert group + owner membership"]
+  e0(["成为组长"])
+  p3["邀请码加入<br/>POST /api/groups/join"]
+  d1{"邀请码有效且未加入？"}
+  x1["返回邀请码无效 / 已在小组"]
+  p4[("insert member(role=member)")]
+  e1(["进入小组"])
+  p5["GET /api/groups/{id}<br/>成员校验 + 记录本次访问"]
+  p6["聊天：GET / POST /{id}/messages<br/>仅成员可见"]
+  p7["组长发布任务 POST /{id}/tasks<br/>保存 type=task 消息 + 任务项"]
+  p8["任务项类型：course / resource /<br/>member_visit / text"]
+  p9["GET /{id}/tasks<br/>按任务项实时计算完成度"]
+  d2{"任务项类型"}
+  p10["text：组员手动标记<br/>写 group_task_progress"]
+  p11["course：章节覆盖率 100%"]
+  p12["resource：任务发布后的<br/>资源访问流水"]
+  p13["member_visit：任务发布后的<br/>小组访问记录"]
+  p14["组长查看进度<br/>GET /{id}/tasks/{taskId}/progress"]
+  p15["退出 POST /{id}/leave<br/>组长退出=解散；组员退出=移除成员"]
+  p16["组长移除组员<br/>DELETE /{id}/members/{memberId}"]
+
+  s0 --> d0
+  d0 -->|"创建"| p1
+  d0 -->|"邀请码加入"| p3
+  p1 --> p2
+  p2 --> e0
+  p3 --> d1
+  d1 -->|"否"| x1
+  d1 -->|"是"| p4
+  p4 --> e1
+  e0 --> p5
+  e1 --> p5
+  p5 --> p6
+  p6 --> p7
+  p7 --> p8
+  p8 --> p9
+  p9 --> d2
+  d2 -->|"text"| p10
+  d2 -->|"course"| p11
+  d2 -->|"resource"| p12
+  d2 -->|"member_visit"| p13
+  p10 --> p14
+  p11 --> p14
+  p12 --> p14
+  p13 --> p14
+  p14 --> p15
+  p15 --> p16
+
+  %% 证据：
+  %% - StudyGroupController.java:31-153（小组、消息、任务、成员接口）
+  %% - StudyGroupServiceImpl.java:144-195（创建与邀请码加入）
+  %% - StudyGroupServiceImpl.java:197-248（详情访问记录、群聊）
+  %% - StudyGroupServiceImpl.java:250-331（组长发布任务、手动完成）
+  %% - StudyGroupServiceImpl.java:333-440（进度、退出、移除成员）
+  %% - StudyGroupServiceImpl.java:542-569（四类任务项完成判定）

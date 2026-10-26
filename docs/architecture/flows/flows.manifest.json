@@ -1,0 +1,92 @@
+[
+  {
+    "id": "00-legend",
+    "name": "00 图例与阅读说明",
+    "nodes": 12,
+    "edges": 0,
+    "width": 1200,
+    "height": 863,
+    "mermaid": false
+  },
+  {
+    "id": "01-register-reset",
+    "name": "01 注册与找回密码",
+    "nodes": 29,
+    "edges": 28,
+    "width": 1405,
+    "height": 1731,
+    "mermaid": true
+  },
+  {
+    "id": "02-login-session",
+    "name": "02 登录、两步验证与会话",
+    "nodes": 25,
+    "edges": 24,
+    "width": 1200,
+    "height": 1659,
+    "mermaid": true
+  },
+  {
+    "id": "03-course-learning",
+    "name": "03 课程学习与积分奖励",
+    "nodes": 19,
+    "edges": 16,
+    "width": 1200,
+    "height": 1631,
+    "mermaid": true
+  },
+  {
+    "id": "04-tests",
+    "name": "04 单词测试与知识测试",
+    "nodes": 21,
+    "edges": 21,
+    "width": 1435,
+    "height": 1431,
+    "mermaid": true
+  },
+  {
+    "id": "05-checkin-points",
+    "name": "05 每日签到与积分",
+    "nodes": 16,
+    "edges": 13,
+    "width": 1200,
+    "height": 1417,
+    "mermaid": true
+  },
+  {
+    "id": "06-study-group",
+    "name": "06 学习小组",
+    "nodes": 23,
+    "edges": 26,
+    "width": 1200,
+    "height": 1933,
+    "mermaid": true
+  },
+  {
+    "id": "07-discussion-notification",
+    "name": "07 讨论区与通知",
+    "nodes": 19,
+    "edges": 19,
+    "width": 1200,
+    "height": 1217,
+    "mermaid": true
+  },
+  {
+    "id": "08-admin",
+    "name": "08 管理后台",
+    "nodes": 26,
+    "edges": 25,
+    "width": 1945,
+    "height": 1231,
+    "mermaid": true
+  },
+  {
+    "id": "09-mail-dispatch",
+    "name": "09 邮件验证码异步投递",
+    "nodes": 16,
+    "edges": 17,
+    "width": 1435,
+    "height": 1431,
+    "mermaid": true
+  }
+]
