@@ -600,6 +600,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         if (!courseIds.isEmpty()) {
             for (CourseChapter chapter : chapterMapper.selectList(
                     new LambdaQueryWrapper<CourseChapter>()
+                            .select(CourseChapter::getCourseId)
                             .in(CourseChapter::getCourseId, courseIds))) {
                 chapterCounts.merge(chapter.getCourseId(), 1L, Long::sum);
             }

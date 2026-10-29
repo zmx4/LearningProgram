@@ -88,6 +88,12 @@ mysql -h 127.0.0.1 -P 3306 -u root -p learning < scripts/learning.sql
 
 `learning.sql` 中的建表语句不带 `IF NOT EXISTS`，因此**只能导入到空库**。已有库需要按最新结构重建时，用脚本的 `--reset-db` / `-ResetDb`（先整库删除再导入），或手工 `DROP DATABASE learning` 后重新导入。
 
+已有数据的库不要重建，按日期顺序执行 `scripts/migrations/` 下的增量脚本即可，例如：
+
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root -p learning < scripts/migrations/2026-10-29-dictionary-word-index.sql
+```
+
 注意事项：
 
 - `password` 字段保存 BCrypt 密文，需使用 `VARCHAR(255)`。

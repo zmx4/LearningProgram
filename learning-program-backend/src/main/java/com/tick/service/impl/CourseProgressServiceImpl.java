@@ -153,6 +153,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
             return null;
         }
         List<Integer> chapterIds = chapterMapper.selectList(new LambdaQueryWrapper<CourseChapter>()
+                        .select(CourseChapter::getId)
                         .eq(CourseChapter::getCourseId, courseId))
                 .stream().map(CourseChapter::getId).toList();
         List<CourseProgress> rows = lambdaQuery()
@@ -233,8 +234,9 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
     }
 
     private Map<Integer, List<CourseChapter>> chaptersGroupedByCourse() {
+        // 总览只统计章节数量，不读 content（章节正文为 mediumtext，全量读出会放大 IO）
         return chapterMapper.selectList(new LambdaQueryWrapper<CourseChapter>()
-                        .orderByAsc(CourseChapter::getSortOrder).orderByAsc(CourseChapter::getId))
+                        .select(CourseChapter::getId, CourseChapter::getCourseId))
                 .stream().collect(Collectors.groupingBy(CourseChapter::getCourseId));
     }
 

@@ -266,7 +266,7 @@ erDiagram
 
 ### db_dictionary / db_cet4 / db_cet6 词表
 
-三张表结构相同：`id`（PK）、`word` VARCHAR(255) NOT NULL、`translation`（db_dictionary 为 TEXT，其余为 VARCHAR(512)）。`db_dictionary` 供查词使用，`db_cet4` / `db_cet6` 作为每日一词和单词测试的词库来源。
+三张表结构相同：`id`（PK）、`word` VARCHAR(255) NOT NULL、`translation`（db_dictionary 为 TEXT，其余为 VARCHAR(512)）。`db_dictionary` 供查词使用，`db_cet4` / `db_cet6` 作为每日一词和单词测试的词库来源。`db_dictionary` 的 `word` 建有索引 `idx_dictionary_word`，支撑按词精确查询（340 万行，无索引会全表扫描）；已有库执行 `scripts/migrations/2026-10-29-dictionary-word-index.sql` 补齐。
 
 ### db_learning_resource 学习资源
 

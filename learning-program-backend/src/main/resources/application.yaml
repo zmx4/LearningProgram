@@ -14,13 +14,24 @@ spring:
     username: ${MYSQL_USERNAME:}
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    # rewriteBatchedStatements 让 saveBatch 真正合并成多值 INSERT；服务端预编译缓存减少解析开销
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&useServerPrepStmts=true&cachePrepStmts=true
+    # 默认 Hikari 只有 10 个连接，Tomcat 默认 200 线程，慢查询一来线程全在等连接
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+      max-lifetime: 1800000
+      keepalive-time: 60000
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
       # 未设置时视为无密码
       password: ${REDIS_PASSWORD:}
+      # 默认命令超时是 60s，Redis 抖动会把请求线程长时间挂住
+      timeout: 2s
+      connect-timeout: 2s
   servlet:
     multipart:
       max-file-size: 55MB
