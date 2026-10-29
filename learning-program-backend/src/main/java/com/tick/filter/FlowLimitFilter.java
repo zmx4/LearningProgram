@@ -10,19 +10,33 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 /**
  * 基于 Redis 的 IP 限流过滤器：超过阈值后拉黑一段时间并返回 429。
  * OPTIONS 预检不计数也不拦截——被拉黑时预检若返回非 2xx，浏览器只会报 CORS 错误，掩盖限流真实原因。
+ * 计数与拉黑在一个 Lua 脚本里原子完成，每请求只占一次 Redis 往返。
  */
 @Component
 @Order(Const.ORDER_LIMIT)
 public class FlowLimitFilter extends HttpFilter {
+
+    /** 3 秒窗口内允许 50 次；超限后拉黑 30 秒。 */
+    private static final int LIMIT = 50;
+
+    private static final DefaultRedisScript<Long> FLOW_LIMIT_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('EXISTS', KEYS[2]) == 1 then return 0 end "
+                    + "local n = redis.call('INCR', KEYS[1]) "
+                    + "if n == 1 then redis.call('EXPIRE', KEYS[1], 3) end "
+                    + "if n > tonumber(ARGV[1]) then "
+                    + "  redis.call('SET', KEYS[2], '1', 'EX', 30) return 0 "
+                    + "end "
+                    + "return 1",
+            Long.class);
 
     @Resource
     StringRedisTemplate template;
@@ -46,23 +60,9 @@ public class FlowLimitFilter extends HttpFilter {
     }
 
     private boolean tryCount(String ip) {
-        synchronized (ip.intern()){
-            if (Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_BLOCK + ip)))
-                return false;
-            return this.limitPeriodCheck(ip);
-        }
-    }
-
-    private boolean limitPeriodCheck(String ip) {
-        if (template.hasKey(Const.FLOW_LIMIT_COUNTER + ip)) {
-            long increment = Optional.ofNullable(template.opsForValue().increment(Const.FLOW_LIMIT_COUNTER + ip)).orElse(0L);
-            if (increment > 50) {
-                template.opsForValue().set(Const.FLOW_LIMIT_BLOCK + ip, "", 30, TimeUnit.SECONDS);
-                return false;
-            }
-        } else {
-            template.opsForValue().set(Const.FLOW_LIMIT_COUNTER + ip, "1", 3, TimeUnit.SECONDS);
-        }
-        return true;
+        Long allowed = template.execute(FLOW_LIMIT_SCRIPT,
+                List.of(Const.FLOW_LIMIT_COUNTER + ip, Const.FLOW_LIMIT_BLOCK + ip),
+                String.valueOf(LIMIT));
+        return Long.valueOf(1L).equals(allowed);
     }
 }

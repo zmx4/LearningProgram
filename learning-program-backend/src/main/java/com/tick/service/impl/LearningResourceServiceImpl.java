@@ -1,9 +1,9 @@
 package com.tick.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
 import com.tick.entity.dto.LearningResource;
-import com.tick.entity.dto.ResourceAccessLog;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.mapper.LearningResourceMapper;
@@ -20,9 +20,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 学习资源服务实现。
@@ -49,15 +53,14 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
 
     @Override
     public List<ResourceVO> listVisible() {
-        return lambdaQuery().eq(LearningResource::getVisible, true)
+        return toVOList(lambdaQuery().eq(LearningResource::getVisible, true)
                 .orderByDesc(LearningResource::getCreatedAt).orderByDesc(LearningResource::getId)
-                .list().stream().map(this::toVO).toList();
+                .list());
     }
 
     @Override
     public List<ResourceVO> listAll() {
-        return query().orderByDesc("created_at").orderByDesc("id").list().stream()
-                .map(this::toVO).toList();
+        return toVOList(query().orderByDesc("created_at").orderByDesc("id").list());
     }
 
     @Override
@@ -99,7 +102,7 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
                 originalName, storedName, file.getContentType(), file.getSize(), visible, accountId,
                 LocalDateTime.now());
         save(resource);
-        return toVO(resource);
+        return toVO(resource, uploaderNames(List.of(resource)).get(accountId));
     }
 
     @Override
@@ -134,11 +137,7 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
         if (accountId == null || resourceId == null) {
             return;
         }
-        ResourceAccessLog log = new ResourceAccessLog();
-        log.setAccountId(accountId);
-        log.setResourceId(resourceId);
-        log.setAccessedAt(LocalDateTime.now());
-        accessLogMapper.insert(log);
+        accessLogMapper.upsertAccess(accountId, resourceId, LocalDateTime.now());
     }
 
     /**
@@ -186,12 +185,30 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
         return matcher.matches() ? "." + extension.toLowerCase() : "";
     }
 
-    private ResourceVO toVO(LearningResource resource) {
-        String uploaderName = null;
-        if (resource.getAccountId() != null) {
-            Account account = accountMapper.selectById(resource.getAccountId());
-            uploaderName = account == null ? null : account.getUsername();
+    private List<ResourceVO> toVOList(List<LearningResource> resources) {
+        Map<Integer, String> uploaderNames = uploaderNames(resources);
+        return resources.stream()
+                .map(resource -> toVO(resource, uploaderNames.get(resource.getAccountId())))
+                .toList();
+    }
+
+    /**
+     * 一次查出整批上传人，避免按条回查账号。只取 id/username，不带出密码等字段。
+     */
+    private Map<Integer, String> uploaderNames(List<LearningResource> resources) {
+        Set<Integer> accountIds = resources.stream().map(LearningResource::getAccountId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        if (accountIds.isEmpty()) {
+            return Map.of();
         }
+        return accountMapper.selectList(new LambdaQueryWrapper<Account>()
+                        .select(Account::getId, Account::getUsername)
+                        .in(Account::getId, accountIds))
+                .stream()
+                .collect(Collectors.toMap(Account::getId, Account::getUsername));
+    }
+
+    private ResourceVO toVO(LearningResource resource, String uploaderName) {
         return new ResourceVO(resource.getId(), resource.getTitle(), resource.getDescription(),
                 resource.getFileName(), resource.getFileSize(), resource.getContentType(),
                 resource.getVisible(), uploaderName, resource.getCreatedAt());

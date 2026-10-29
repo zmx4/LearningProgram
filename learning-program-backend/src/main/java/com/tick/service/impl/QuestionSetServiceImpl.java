@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 题集服务实现。
@@ -34,7 +36,14 @@ public class QuestionSetServiceImpl extends ServiceImpl<QuestionSetMapper, Quest
 
     @Override
     public List<QuestionSetVO> listSets() {
-        return query().orderByAsc("id").list().stream().map(this::toVO).toList();
+        List<QuestionSet> sets = query().orderByAsc("id").list();
+        if (sets.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, Integer> counts = itemCounts(sets.stream().map(QuestionSet::getId).toList());
+        return sets.stream()
+                .map(set -> toVO(set, counts.getOrDefault(set.getId(), 0)))
+                .toList();
     }
 
     @Override
@@ -127,11 +136,14 @@ public class QuestionSetServiceImpl extends ServiceImpl<QuestionSetMapper, Quest
         return new Normalized(title, description, questionIds);
     }
 
-    private QuestionSetVO toVO(QuestionSet set) {
-        long count = itemMapper.selectCount(
-                new LambdaQueryWrapper<QuestionSetItem>()
-                        .eq(QuestionSetItem::getSetId, set.getId()));
-        return toVO(set, (int) count);
+    private Map<Integer, Integer> itemCounts(List<Integer> setIds) {
+        // 一次取回所有题的归属关系再在内存分组，替代逐个题集 selectCount
+        return itemMapper.selectList(new LambdaQueryWrapper<QuestionSetItem>()
+                        .select(QuestionSetItem::getSetId)
+                        .in(QuestionSetItem::getSetId, setIds))
+                .stream()
+                .collect(Collectors.groupingBy(QuestionSetItem::getSetId,
+                        Collectors.summingInt(item -> 1)));
     }
 
     private QuestionSetVO toVO(QuestionSet set, int questionCount) {

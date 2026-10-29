@@ -91,6 +91,7 @@ CREATE TABLE `db_course_progress` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_course_progress` (`account_id`,`chapter_id`),
   KEY `idx_course_progress_account` (`account_id`,`updated_at`),
+  KEY `idx_course_progress_course_account` (`course_id`,`account_id`),
   KEY `fk_course_progress_chapter` (`chapter_id`),
   CONSTRAINT `fk_course_progress_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `db_course_chapter` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -255,7 +256,7 @@ CREATE TABLE `db_resource_access_log` (
   `resource_id` int(11) NOT NULL,
   `accessed_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_resource_access_log_account` (`account_id`,`resource_id`),
+  UNIQUE KEY `uk_access_log_account_resource` (`account_id`,`resource_id`),
   KEY `idx_resource_access_log_resource` (`resource_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

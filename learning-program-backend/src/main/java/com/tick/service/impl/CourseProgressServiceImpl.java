@@ -127,22 +127,44 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
                         .orderByAsc(CourseChapter::getSortOrder).orderByAsc(CourseChapter::getId))
                 .stream().map(chapter -> new CourseChapterVO(chapter.getId(), chapter.getTitle(), chapter.getContent()))
                 .toList();
-        List<CourseQuestionSetVO> questionSets = questionSetMapper.selectList(new LambdaQueryWrapper<CourseQuestionSet>()
+        List<CourseQuestionSetVO> questionSets = toQuestionSetVOs(
+                questionSetMapper.selectList(new LambdaQueryWrapper<CourseQuestionSet>()
                         .eq(CourseQuestionSet::getCourseId, courseId)
-                        .orderByAsc(CourseQuestionSet::getSortOrder).orderByAsc(CourseQuestionSet::getId))
-                .stream().map(this::toQuestionSetVO).filter(Objects::nonNull).toList();
+                        .orderByAsc(CourseQuestionSet::getSortOrder).orderByAsc(CourseQuestionSet::getId)));
         return new CourseDetailVO(course.getId(), course.getTitle(), course.getDescription(), course.getIcon(),
                 course.getRewardPoints(), questionSets, chapters);
     }
 
-    private CourseQuestionSetVO toQuestionSetVO(CourseQuestionSet link) {
-        QuestionSet set = link.getSetId() == null ? null : setMapper.selectById(link.getSetId());
+    /**
+     * 课程关联的题集一次批量加载，题目数一次聚合，避免每个题集两次回查。
+     */
+    private List<CourseQuestionSetVO> toQuestionSetVOs(List<CourseQuestionSet> links) {
+        List<Integer> setIds = links.stream().map(CourseQuestionSet::getSetId)
+                .filter(Objects::nonNull).distinct().toList();
+        if (setIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, QuestionSet> sets = setMapper.selectBatchIds(setIds).stream()
+                .collect(Collectors.toMap(QuestionSet::getId, set -> set));
+        Map<Integer, Long> counts = setItemMapper.selectList(new LambdaQueryWrapper<QuestionSetItem>()
+                        .select(QuestionSetItem::getSetId)
+                        .in(QuestionSetItem::getSetId, setIds))
+                .stream()
+                .collect(Collectors.groupingBy(QuestionSetItem::getSetId, Collectors.counting()));
+        return links.stream()
+                .map(link -> toQuestionSetVO(link, sets, counts))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private CourseQuestionSetVO toQuestionSetVO(CourseQuestionSet link, Map<Integer, QuestionSet> sets,
+                                                Map<Integer, Long> counts) {
+        QuestionSet set = sets.get(link.getSetId());
         if (set == null) {
             // 关联表的 set_id 外键保证题集存在，此处兜底跳过脏数据
             return null;
         }
-        long questionCount = setItemMapper.selectCount(new LambdaQueryWrapper<QuestionSetItem>()
-                .eq(QuestionSetItem::getSetId, set.getId()));
+        long questionCount = counts.getOrDefault(set.getId(), 0L);
         return new CourseQuestionSetVO(set.getId(), set.getTitle(), set.getDescription(), (int) questionCount);
     }
 

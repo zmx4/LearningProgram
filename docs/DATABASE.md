@@ -169,7 +169,7 @@ erDiagram
 | --- | --- | --- | --- |
 | id | INT | PK, AUTO_INCREMENT | |
 | account_id | INT | NOT NULL | 与 `chapter_id` 组成唯一键，一章一进度 |
-| course_id | INT | NOT NULL | 冗余存储便于统计 |
+| course_id | INT | NOT NULL | 冗余存储便于统计，索引 `(course_id, account_id)` |
 | chapter_id | INT | NOT NULL, FK → db_course_chapter(id) ON DELETE CASCADE | |
 | duration_seconds | INT | NOT NULL DEFAULT 0 | 该章累计学习时长 |
 | studied_count | INT | NOT NULL DEFAULT 1 | 该章被标记已学的次数 |
@@ -355,9 +355,9 @@ erDiagram
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | id | INT | PK, AUTO_INCREMENT | |
-| account_id | INT | NOT NULL | 软引用 db_account，不带外键，索引 `(account_id, resource_id)` |
+| account_id | INT | NOT NULL | 软引用 db_account，不带外键；与 `resource_id` 组成唯一键 `uk_access_log_account_resource` |
 | resource_id | INT | NOT NULL | 软引用 db_learning_resource，不带外键，索引 `(resource_id)` |
-| accessed_at | DATETIME | NOT NULL | 每次成功下载写一条 |
+| accessed_at | DATETIME | NOT NULL | 最后一次成功下载时间（同一人同一资源只保留一行，重复访问刷新该字段） |
 
 ### db_group_member_visit 小组访问记录
 

@@ -285,7 +285,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         if (tasks.isEmpty()) {
             return List.of();
         }
-        CompletionContext ctx = completionContext(groupId, tasks);
+        CompletionContext ctx = completionContext(groupId, tasks, members);
         Map<Integer, String> names = usernames(tasks.stream().map(StudyGroupMessage::getAccountId).toList());
         return tasks.stream()
                 .map(task -> toTaskVO(task, accountId, members, ctx, names.get(task.getAccountId())))
@@ -324,7 +324,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
             }
         }
         List<StudyGroupMember> members = membersOf(groupId);
-        CompletionContext ctx = completionContext(groupId, List.of(task));
+        CompletionContext ctx = completionContext(groupId, List.of(task), members);
         Account publisher = accountService.getById(task.getAccountId());
         return toTaskVO(task, accountId, members, ctx,
                 publisher == null ? null : publisher.getUsername());
@@ -345,7 +345,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
             return null;
         }
         List<StudyGroupMember> members = membersOf(groupId);
-        CompletionContext ctx = completionContext(groupId, List.of(task));
+        CompletionContext ctx = completionContext(groupId, List.of(task), members);
         List<GroupTaskItem> items = ctx.items(taskId);
 
         List<GroupTaskItemVO> itemVOs = new ArrayList<>();
@@ -377,9 +377,10 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         }
         Account account = accountService.getById(memberAccountId);
         List<StudyGroupMessage> tasks = taskMessages(groupId);
+        List<StudyGroupMember> members = membersOf(groupId);
         CompletionContext ctx = tasks.isEmpty()
                 ? CompletionContext.empty()
-                : completionContext(groupId, tasks);
+                : completionContext(groupId, tasks, members);
         List<GroupMemberDetailVO.TaskStatus> taskStatuses = tasks.stream()
                 .map(task -> {
                     List<GroupTaskItem> items = ctx.items(task.getId());
@@ -570,8 +571,10 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
 
     /**
      * 批量加载一组任务的完成判定上下文，避免按项逐次查库。
+     * 只统计本组成员、且只读取任务发布之后的资源访问流水，避免随流水表增长而全量扫描。
      */
-    private CompletionContext completionContext(Integer groupId, List<StudyGroupMessage> tasks) {
+    private CompletionContext completionContext(Integer groupId, List<StudyGroupMessage> tasks,
+                                                List<StudyGroupMember> members) {
         List<Integer> messageIds = tasks.stream().map(StudyGroupMessage::getId).toList();
         List<GroupTaskItem> items = taskItemMapper.selectList(
                 new LambdaQueryWrapper<GroupTaskItem>()
@@ -591,6 +594,13 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
             }
         }
 
+        List<Integer> memberIds = members.stream().map(StudyGroupMember::getAccountId).toList();
+        LocalDateTime taskWindowStart = tasks.stream()
+                .map(StudyGroupMessage::getCreatedAt)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+
         Set<Integer> courseIds = items.stream()
                 .filter(item -> GroupTaskItem.TYPE_COURSE.equals(item.getItemType()))
                 .map(GroupTaskItem::getRefId).filter(Objects::nonNull)
@@ -604,20 +614,25 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
                             .in(CourseChapter::getCourseId, courseIds))) {
                 chapterCounts.merge(chapter.getCourseId(), 1L, Long::sum);
             }
-            for (CourseProgress row : courseProgressMapper.selectList(
-                    new LambdaQueryWrapper<CourseProgress>()
-                            .in(CourseProgress::getCourseId, courseIds))) {
-                studies.compute(row.getAccountId() + "_" + row.getCourseId(), (key, study) -> {
-                    if (study == null) {
-                        study = new CourseStudy();
-                    }
-                    study.count++;
-                    if (study.lastAt == null || (row.getUpdatedAt() != null
-                            && row.getUpdatedAt().isAfter(study.lastAt))) {
-                        study.lastAt = row.getUpdatedAt();
-                    }
-                    return study;
-                });
+            if (!memberIds.isEmpty()) {
+                for (CourseProgress row : courseProgressMapper.selectList(
+                        new LambdaQueryWrapper<CourseProgress>()
+                                .select(CourseProgress::getAccountId, CourseProgress::getCourseId,
+                                        CourseProgress::getUpdatedAt)
+                                .in(CourseProgress::getCourseId, courseIds)
+                                .in(CourseProgress::getAccountId, memberIds))) {
+                    studies.compute(row.getAccountId() + "_" + row.getCourseId(), (key, study) -> {
+                        if (study == null) {
+                            study = new CourseStudy();
+                        }
+                        study.count++;
+                        if (study.lastAt == null || (row.getUpdatedAt() != null
+                                && row.getUpdatedAt().isAfter(study.lastAt))) {
+                            study.lastAt = row.getUpdatedAt();
+                        }
+                        return study;
+                    });
+                }
             }
         }
 
@@ -626,10 +641,14 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
                 .map(GroupTaskItem::getRefId).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<String, LocalDateTime> accesses = new HashMap<>();
-        if (!resourceIds.isEmpty()) {
+        if (!resourceIds.isEmpty() && !memberIds.isEmpty()) {
             for (ResourceAccessLog log : accessLogMapper.selectList(
                     new LambdaQueryWrapper<ResourceAccessLog>()
-                            .in(ResourceAccessLog::getResourceId, resourceIds))) {
+                            .select(ResourceAccessLog::getAccountId, ResourceAccessLog::getResourceId,
+                                    ResourceAccessLog::getAccessedAt)
+                            .in(ResourceAccessLog::getResourceId, resourceIds)
+                            .in(ResourceAccessLog::getAccountId, memberIds)
+                            .ge(taskWindowStart != null, ResourceAccessLog::getAccessedAt, taskWindowStart))) {
                 accesses.merge(log.getAccountId() + "_" + log.getResourceId(), log.getAccessedAt(),
                         (a, b) -> a.isAfter(b) ? a : b);
             }
