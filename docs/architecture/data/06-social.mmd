@@ -1,0 +1,56 @@
+%% 06 讨论、资源与词典（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_discussion_post {
+    int id PK "int(11) 自增"
+    int account_id FK "int(11) → db_account"
+    varchar title "varchar(150)"
+    text content "text"
+    int comment_count "int(11) 冗余计数，默认 0"
+    datetime created_at "datetime"
+  }
+  db_discussion_comment {
+    int id PK "int(11) 自增"
+    int post_id FK "int(11) → 帖子，级联删除"
+    int account_id FK "int(11) → db_account"
+    varchar content "varchar(1000)"
+    datetime created_at "datetime"
+  }
+  db_learning_resource {
+    int id PK "int(11) 自增"
+    varchar title "varchar(100)"
+    varchar description "varchar(255) 可空"
+    varchar file_name "varchar(255) 原始文件名"
+    varchar stored_name "varchar(100) 磁盘存储名"
+    varchar content_type "varchar(100) 可空"
+    bigint file_size "bigint 默认 0"
+    tinyint visible "tinyint(1) 默认 1"
+    int account_id "int(11) 上传者，软引用，可空"
+    datetime created_at "datetime"
+  }
+  db_resource_access_log {
+    int id PK "int(11) 自增"
+    int account_id "int(11) 软引用 db_account"
+    int resource_id "int(11) 软引用学习资源"
+    datetime accessed_at "datetime"
+  }
+  db_dictionary {
+    int id PK "int(11) 自增"
+    varchar word "varchar(255)"
+    text translation "text 可空"
+  }
+  db_account {
+    int id PK "int(11) 自增"
+  }
+
+  db_account ||--o{ db_discussion_post : "发布帖子 1:0..N"
+  db_account ||--o{ db_discussion_comment : "发表评论 1:0..N"
+  db_discussion_post ||--o{ db_discussion_comment : "帖子评论 1:0..N"
+  db_account ||..o{ db_learning_resource : "上传者（可空） 1:0..N"
+  db_account ||..o{ db_resource_access_log : "软引用 account_id 1:0..N"
+  db_learning_resource ||..o{ db_resource_access_log : "软引用 resource_id 1:0..N"
+
+  %% 证据：
+  %% - scripts/learning.sql:143-167（帖子、评论及 FK）
+  %% - scripts/learning.sql:203-216（资源，上传者 account_id 可空软引用）
+  %% - scripts/learning.sql:251-259（访问流水，无 FK）
+  %% - scripts/learning.sql:136-141（词典独立表）

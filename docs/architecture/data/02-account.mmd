@@ -1,0 +1,47 @@
+%% 02 账号与积分（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_account {
+    int id PK "int(11) 自增"
+    varchar username UK "varchar(32) 唯一"
+    varchar password "varchar(255) BCrypt"
+    varchar email UK "varchar(128) 唯一"
+    varchar role "varchar(32) 默认 user"
+    datetime register_time "datetime 注册时间"
+    varchar phone "varchar(30) 可空"
+    varchar bio "varchar(120) 可空"
+    int points "int(11) 旧字段，默认 0"
+    varchar totp_secret "varchar(64) 可空"
+    tinyint totp_enabled "tinyint(1) 默认 0"
+  }
+  db_account_points {
+    int id PK "int(11) 自增"
+    int account_id FK "int(11) → db_account"
+    int total_points "int(11) 默认 0"
+  }
+  db_check_in {
+    int id PK "int(11) 自增"
+    int account_id FK "int(11) → db_account"
+    date checkin_date UK "date 与账号联合唯一"
+    int points "int(11) 当日积分"
+    int streak "int(11) 连续天数"
+  }
+  db_notification {
+    int id PK "int(11) 自增"
+    int account_id FK "int(11) → db_account，级联删除"
+    varchar title "varchar(128)"
+    varchar content "varchar(1000)"
+    varchar link "varchar(255) 可空"
+    varchar type "varchar(32) 默认 system"
+    tinyint is_read "tinyint(1) 默认 0"
+    datetime created_at "datetime"
+  }
+
+  db_account ||--o| db_account_points : "积分总账 1:0..1"
+  db_account ||--o{ db_check_in : "签到 1:0..N"
+  db_account ||--o{ db_notification : "站内通知 1:0..N"
+
+  %% 证据：
+  %% - scripts/learning.sql:8-32（db_account、db_account_points 及 FK/UNIQUE）
+  %% - scripts/learning.sql:48-57（db_check_in，唯一键 account_id + checkin_date）
+  %% - scripts/learning.sql:218-230（db_notification，FK ON DELETE CASCADE）
+  %% - docs/DATABASE.md:86-112（points 旧字段说明）

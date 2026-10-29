@@ -1,0 +1,82 @@
+%% 04 题库与测试（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_test_type {
+    int id PK "int(11) 自增"
+    varchar code UK "varchar(50) 唯一编码"
+    varchar name "varchar(100)"
+    varchar description "varchar(255) 可空"
+    datetime created_at "datetime"
+  }
+  db_test_question {
+    int id PK "int(11) 自增"
+    int type_id FK "int(11) → db_test_type"
+    varchar kind "varchar(20) single/multiple/blank"
+    longtext content "longtext JSON，json_valid 校验"
+    datetime created_at "datetime"
+  }
+  db_question_set {
+    int id PK "int(11) 自增"
+    varchar title "varchar(100)"
+    varchar description "varchar(255) 可空"
+    datetime created_at "datetime"
+  }
+  db_question_set_item {
+    int id PK "int(11) 自增"
+    int set_id FK "int(11) → 题集，级联删除"
+    int question_id FK "int(11) → db_test_question"
+  }
+  db_course_question_set {
+    int id PK "int(11) 自增"
+    int course_id FK "int(11) → db_course，级联删除"
+    int set_id FK "int(11) → 题集，级联删除"
+    int sort_order "int(11) 默认 0"
+    datetime created_at "datetime"
+  }
+  db_test_record {
+    int id PK "int(11) 自增"
+    int account_id "int(11) 软引用 db_account"
+    varchar category "varchar(20) word/knowledge"
+    varchar source "varchar(10) cet4/cet6，可空"
+    int type_id "int(11) 软引用，可空"
+    int set_id FK "int(11) → 题集，可空"
+    varchar type_name "varchar(100) 类型名快照"
+    int total_count "int(11)"
+    int correct_count "int(11)"
+    int wrong_count "int(11)"
+    int score "int(11)"
+    int duration_seconds "int(11) 默认 0"
+    longtext detail "longtext JSON 明细，可空"
+    datetime created_at "datetime"
+  }
+  db_account {
+    int id PK "int(11) 自增"
+  }
+  db_course {
+    int id PK "int(11) 自增"
+  }
+  db_cet4 {
+    int id PK "int(11) 自增"
+    varchar word "varchar(255)"
+    varchar translation "varchar(512) 可空"
+  }
+  db_cet6 {
+    int id PK "int(11) 自增"
+    varchar word "varchar(255)"
+    varchar translation "varchar(512) 可空"
+  }
+
+  db_test_type ||--o{ db_test_question : "题目类型 1:0..N"
+  db_question_set ||--o{ db_question_set_item : "包含题目 1:0..N"
+  db_test_question ||--o{ db_question_set_item : "被题集收录 1:0..N"
+  db_course ||--o{ db_course_question_set : "关联题集 1:0..N"
+  db_question_set ||--o{ db_course_question_set : "被课程关联 1:0..N"
+  db_question_set ||--o{ db_test_record : "题集模式成绩 1:0..N"
+  db_account ||..o{ db_test_record : "软引用 account_id 1:0..N"
+  db_test_type ||..o| db_test_record : "软引用 type_id（可空） 1:0..1"
+
+  %% 证据：
+  %% - scripts/learning.sql:296-305（题目，FK type_id）
+  %% - scripts/learning.sql:330-338（测试类型）
+  %% - scripts/learning.sql:232-249（题集与题集↔题目连接表）
+  %% - scripts/learning.sql:307-328（成绩表：仅 set_id 有 FK，account_id / type_id 无 FK）
+  %% - scripts/learning.sql:34-46（db_cet4 / db_cet6 独立词库）

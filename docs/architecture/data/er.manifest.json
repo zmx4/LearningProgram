@@ -1,0 +1,65 @@
+[
+  {
+    "id": "00-legend",
+    "name": "00 图例与阅读说明",
+    "tables": 2,
+    "relations": 4,
+    "width": 1200,
+    "height": 1258,
+    "mermaid": false
+  },
+  {
+    "id": "01-overview",
+    "name": "01 实体总览",
+    "tables": 0,
+    "relations": 21,
+    "width": 1800,
+    "height": 1162,
+    "mermaid": true
+  },
+  {
+    "id": "02-account",
+    "name": "02 账号与积分",
+    "tables": 4,
+    "relations": 3,
+    "width": 1220,
+    "height": 842,
+    "mermaid": true
+  },
+  {
+    "id": "03-course",
+    "name": "03 课程学习",
+    "tables": 7,
+    "relations": 11,
+    "width": 1580,
+    "height": 934,
+    "mermaid": true
+  },
+  {
+    "id": "04-test",
+    "name": "04 题库与测试",
+    "tables": 9,
+    "relations": 8,
+    "width": 1560,
+    "height": 1030,
+    "mermaid": true
+  },
+  {
+    "id": "05-group",
+    "name": "05 学习小组",
+    "tables": 7,
+    "relations": 13,
+    "width": 1580,
+    "height": 886,
+    "mermaid": true
+  },
+  {
+    "id": "06-social",
+    "name": "06 讨论、资源与词典",
+    "tables": 6,
+    "relations": 6,
+    "width": 1580,
+    "height": 886,
+    "mermaid": true
+  }
+]

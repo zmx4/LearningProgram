@@ -1,0 +1,75 @@
+%% 05 学习小组（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_study_group {
+    int id PK "int(11) 自增"
+    varchar name "varchar(50)"
+    int owner_id "int(11) 软引用 db_account"
+    varchar invite_code UK "varchar(8) 唯一邀请码"
+    datetime created_at "datetime"
+  }
+  db_study_group_member {
+    int id PK "int(11) 自增"
+    int group_id FK "int(11) → 小组，级联删除"
+    int account_id "int(11) 软引用，联合唯一"
+    varchar role "varchar(10) owner/member"
+    datetime joined_at "datetime"
+  }
+  db_study_group_message {
+    int id PK "int(11) 自增"
+    int group_id FK "int(11) → 小组，级联删除"
+    int account_id "int(11) 软引用（发送者）"
+    varchar type "varchar(10) text/task"
+    varchar title "varchar(100) 可空"
+    varchar content "varchar(2000)"
+    datetime created_at "datetime"
+  }
+  db_group_member_visit {
+    int id PK "int(11) 自增"
+    int group_id FK "int(11) → 小组，联合唯一"
+    int account_id "int(11) 软引用，联合唯一"
+    datetime last_visit_at "datetime"
+  }
+  db_group_task_item {
+    int id PK "int(11) 自增"
+    int group_id "int(11) 冗余列，无 FK"
+    int message_id FK "int(11) → 群消息，级联删除"
+    varchar item_type "varchar(20) course/resource/…"
+    int ref_id "int(11) 多态引用，可空"
+    varchar title "varchar(200)"
+    int sort_order "int(11) 默认 0"
+  }
+  db_group_task_progress {
+    int id PK "int(11) 自增"
+    int item_id FK "int(11) → 任务项，联合唯一"
+    int account_id "int(11) 软引用，联合唯一"
+    datetime completed_at "datetime"
+  }
+  db_account {
+    int id PK "int(11) 自增"
+  }
+  db_course {
+    int id PK "int(11) 自增"
+  }
+  db_learning_resource {
+    int id PK "int(11) 自增"
+  }
+
+  db_study_group ||--o{ db_study_group_member : "小组成员 1:0..N"
+  db_study_group ||--o{ db_study_group_message : "群消息 1:0..N"
+  db_study_group ||--o{ db_group_member_visit : "成员访问 1:0..N"
+  db_study_group_message ||--o{ db_group_task_item : "任务项 1:0..N"
+  db_group_task_item ||--o{ db_group_task_progress : "任务完成 1:0..N"
+  db_account ||..o{ db_study_group : "软引用 owner_id 1:0..N"
+  db_account ||..o{ db_study_group_member : "软引用 account_id 1:0..N"
+  db_account ||..o{ db_study_group_message : "软引用发送者 1:0..N"
+  db_account ||..o{ db_group_member_visit : "软引用 account_id 1:0..N"
+  db_account ||..o{ db_group_task_progress : "软引用 account_id 1:0..N"
+  db_study_group ||..o{ db_group_task_item : "冗余 group_id 1:0..N"
+  db_group_task_item ||..o{ db_course : "ref_id → 课程 1:0..N"
+  db_group_task_item ||..o{ db_learning_resource : "ref_id → 资源 1:0..N"
+
+  %% 证据：
+  %% - scripts/learning.sql:261-294（小组、成员连接表、群消息）
+  %% - scripts/learning.sql:169-201（访问记录、任务项、任务完成）
+  %% - scripts/learning.sql:179-191（ref_id 多态引用，无 FK）
+  %% - docs/DATABASE.md:290-367（账号侧软引用说明）

@@ -1,0 +1,75 @@
+%% 03 课程学习（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_course {
+    int id PK "int(11) 自增"
+    varchar title "varchar(100)"
+    varchar description "varchar(500) 可空"
+    varchar icon "varchar(16) 可空"
+    int sort_order "int(11) 默认 0"
+    datetime created_at "datetime"
+    int reward_points "int(11) 默认 0"
+  }
+  db_course_chapter {
+    int id PK "int(11) 自增"
+    int course_id FK "int(11) → db_course，级联删除"
+    varchar title "varchar(150)"
+    mediumtext content "mediumtext 可空"
+    int sort_order "int(11) 默认 0"
+    datetime created_at "datetime"
+  }
+  db_course_progress {
+    int id PK "int(11) 自增"
+    int account_id "int(11) 软引用 db_account"
+    int course_id "int(11) 冗余列，无 FK"
+    int chapter_id FK "int(11) → 章节，级联删除"
+    int duration_seconds "int(11) 默认 0"
+    int studied_count "int(11) 默认 1"
+    datetime created_at "datetime"
+    datetime updated_at "datetime"
+  }
+  db_course_study_log {
+    int id PK "int(11) 自增"
+    int account_id "int(11) 软引用 db_account"
+    int course_id "int(11) 冗余列，无 FK"
+    int chapter_id FK "int(11) → 章节，级联删除"
+    int duration_seconds "int(11)"
+    datetime created_at "datetime"
+  }
+  db_course_reward {
+    int id PK "int(11) 自增"
+    int account_id "int(11) 软引用，联合唯一"
+    int course_id FK "int(11) → db_course，级联删除"
+    int points "int(11) 发放积分"
+    datetime created_at "datetime"
+  }
+  db_account {
+    int id PK "int(11) 自增"
+  }
+  db_course_question_set {
+    int id PK "int(11) 自增"
+    int course_id FK "int(11) → db_course，级联删除"
+    int set_id FK "int(11) → 题集，级联删除"
+    int sort_order "int(11) 默认 0"
+    datetime created_at "datetime"
+  }
+  db_question_set {
+    int id PK "int(11) 自增"
+  }
+
+  db_course ||--o{ db_course_chapter : "包含章节 1:0..N"
+  db_course_chapter ||--o{ db_course_progress : "章节进度 1:0..N"
+  db_course_chapter ||--o{ db_course_study_log : "学习流水 1:0..N"
+  db_course ||--o{ db_course_reward : "课程奖励 1:0..N"
+  db_course ||--o{ db_course_question_set : "关联题集 1:0..N"
+  db_question_set ||--o{ db_course_question_set : "被课程关联 1:0..N"
+  db_account ||..o{ db_course_progress : "软引用 account_id 1:0..N"
+  db_account ||..o{ db_course_study_log : "软引用 account_id 1:0..N"
+  db_account ||..o{ db_course_reward : "软引用 account_id 1:0..N"
+  db_course ||..o{ db_course_progress : "冗余 course_id 1:0..N"
+  db_course ||..o{ db_course_study_log : "冗余 course_id 1:0..N"
+
+  %% 证据：
+  %% - scripts/learning.sql:59-96（课程、章节、进度及级联删除）
+  %% - scripts/learning.sql:98-121（课程↔题集连接表、课程奖励）
+  %% - scripts/learning.sql:123-134（学习流水，仅 chapter_id 有 FK）
+  %% - scripts/learning.sql:84-85,125-126（account_id / course_id 无 FK）

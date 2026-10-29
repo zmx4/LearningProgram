@@ -70,6 +70,10 @@ erDiagram
     db_group_task_item ||--o{ db_group_task_progress : "手动完成记录"
 ```
 
+> 完整字段级 E-R 图（含软引用、冗余列与多态引用的可视化标注）见
+> [architecture/data/README.md](architecture/data/README.md)，
+> 可编辑文件为 `architecture/data/learning-program-er.drawio`。
+
 级联删除链：删除 `db_course` 会级联删除其章节、题集关联和奖励记录；章节删除会级联删除对应的学习进度与流水；删除 `db_account` 会级联删除通知、签到、积分总账和测试记录。例外：`db_learning_resource.account_id` 是不带外键的软引用，删除账号后资源的“上传者”显示为空。
 
 ## 账号与积分

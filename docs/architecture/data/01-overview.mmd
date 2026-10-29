@@ -1,0 +1,113 @@
+%% 01 实体总览（由 scripts/generate-er-diagram.mjs 生成，修改请改脚本）
+erDiagram
+  db_account {
+    int id PK "int(11) 自增"
+  }
+  db_account_points {
+    int id PK "int(11) 自增"
+  }
+  db_check_in {
+    int id PK "int(11) 自增"
+  }
+  db_notification {
+    int id PK "int(11) 自增"
+  }
+  db_course {
+    int id PK "int(11) 自增"
+  }
+  db_course_chapter {
+    int id PK "int(11) 自增"
+  }
+  db_course_progress {
+    int id PK "int(11) 自增"
+  }
+  db_course_study_log {
+    int id PK "int(11) 自增"
+  }
+  db_course_reward {
+    int id PK "int(11) 自增"
+  }
+  db_test_type {
+    int id PK "int(11) 自增"
+  }
+  db_test_question {
+    int id PK "int(11) 自增"
+  }
+  db_question_set {
+    int id PK "int(11) 自增"
+  }
+  db_test_record {
+    int id PK "int(11) 自增"
+  }
+  db_question_set_item {
+    int id PK "int(11) 自增"
+  }
+  db_course_question_set {
+    int id PK "int(11) 自增"
+  }
+  db_study_group {
+    int id PK "int(11) 自增"
+  }
+  db_study_group_member {
+    int id PK "int(11) 自增"
+  }
+  db_study_group_message {
+    int id PK "int(11) 自增"
+  }
+  db_group_member_visit {
+    int id PK "int(11) 自增"
+  }
+  db_group_task_item {
+    int id PK "int(11) 自增"
+  }
+  db_group_task_progress {
+    int id PK "int(11) 自增"
+  }
+  db_discussion_post {
+    int id PK "int(11) 自增"
+  }
+  db_discussion_comment {
+    int id PK "int(11) 自增"
+  }
+  db_learning_resource {
+    int id PK "int(11) 自增"
+  }
+  db_resource_access_log {
+    int id PK "int(11) 自增"
+  }
+  db_dictionary {
+    int id PK "int(11) 自增"
+  }
+  db_cet4 {
+    int id PK "int(11) 自增"
+  }
+  db_cet6 {
+    int id PK "int(11) 自增"
+  }
+
+  db_account ||--o| db_account_points : "积分总账 1:0..1"
+  db_account ||--o{ db_check_in : "签到 1:0..N"
+  db_account ||--o{ db_notification : "站内通知 1:0..N"
+  db_account ||--o{ db_discussion_post : "发布帖子 1:0..N"
+  db_account ||--o{ db_discussion_comment : "发表评论 1:0..N"
+  db_discussion_post ||--o{ db_discussion_comment : "帖子评论 1:0..N"
+  db_course ||--o{ db_course_chapter : "包含章节 1:0..N"
+  db_course_chapter ||--o{ db_course_progress : "章节进度 1:0..N"
+  db_course_chapter ||--o{ db_course_study_log : "学习流水 1:0..N"
+  db_course ||--o{ db_course_question_set : "关联题集 1:0..N"
+  db_question_set ||--o{ db_course_question_set : "被课程关联 1:0..N"
+  db_course ||--o{ db_course_reward : "课程奖励 1:0..N"
+  db_test_type ||--o{ db_test_question : "题目类型 1:0..N"
+  db_question_set ||--o{ db_question_set_item : "包含题目 1:0..N"
+  db_test_question ||--o{ db_question_set_item : "被题集收录 1:0..N"
+  db_question_set ||--o{ db_test_record : "题集模式成绩 1:0..N"
+  db_study_group ||--o{ db_study_group_member : "小组成员 1:0..N"
+  db_study_group ||--o{ db_study_group_message : "群消息 1:0..N"
+  db_study_group ||--o{ db_group_member_visit : "成员访问 1:0..N"
+  db_study_group_message ||--o{ db_group_task_item : "任务项 1:0..N"
+  db_group_task_item ||--o{ db_group_task_progress : "任务完成 1:0..N"
+
+  %% 证据：
+  %% - scripts/learning.sql:8-338（28 张表 DDL）
+  %% - 21 条 CONSTRAINT ... FOREIGN KEY 子句；连接表：db_course_question_set、db_question_set_item、db_study_group_member
+  %% - 软引用、冗余列、多态引用在 02 - 06 分域页用虚线标注
