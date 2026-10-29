@@ -43,7 +43,7 @@ class SecurityConfigurationTest {
 
         configuration.onAuthenticationSuccess(request, response, authentication);
 
-        assertEquals("application/json", response.getContentType());
+        assertEquals("application/json;charset=utf-8", response.getContentType());
         JSONObject result = JSONObject.parseObject(response.getContentAsString());
         assertEquals(200, result.getIntValue("code"));
         assertEquals("success", result.getString("message"));
@@ -61,7 +61,7 @@ class SecurityConfigurationTest {
 
         configuration.onAuthenticationFailure(request, response, new BadCredentialsException("用户名或密码错误"));
 
-        assertEquals("application/json", response.getContentType());
+        assertEquals("application/json;charset=utf-8", response.getContentType());
         assertEquals("{\"code\":401,\"data\":null,\"message\":\"用户名或密码错误\"}", response.getContentAsString());
     }
 
