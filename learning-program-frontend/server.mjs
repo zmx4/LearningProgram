@@ -36,7 +36,8 @@ const httpServer = createHttpServer(app)
 let vite = null
 let template = ''            // 页面模板：dev 为源 index.html（经 vite 注入），prod 为构建产物
 let render = null            // SSR 渲染函数（src/entry-server.ts 导出）
-let extraCssLinks = ''       // 生产态补充的 <link>：入口模板之外按需加载的路由分包样式
+let cssManifest = null       // 生产态产物清单（.vite/manifest.json），用于按路由收集样式
+let fallbackCssLinks = ''    // 清单缺失时的兜底：注入全部路由样式
 
 // 进程级兜底：个别组件库代码在服务端触发未捕获的 Promise 拒绝（如访问 document），
 // 默认行为是整个进程退出，这里改为记录日志并由请求级 try/catch 兜住页面渲染。
@@ -63,13 +64,21 @@ if (!isProduction) {
 } else {
   template = readFileSync(resolve(distClient, 'index.html'), 'utf-8')
 
-  // 构建产物 index.html 只带入口 chunk 的样式；SSR 直出深层路由时，
-  // 该路由的样式在懒加载 chunk 里，首屏补齐所有样式链接，避免水合前闪无样式。
-  const assetsDir = resolve(distClient, 'assets')
-  extraCssLinks = readdirSync(assetsDir)
-    .filter((file) => file.endsWith('.css') && !template.includes(file))
-    .map((file) => `<link rel="stylesheet" href="/assets/${file}">`)
-    .join('')
+  // 构建产物 index.html 只带入入口 chunk 的样式；SSR 直出深层路由时，
+  // 该路由的样式在懒加载 chunk 里。这里读产物清单，按本次渲染实际用到的组件
+  // 收集 CSS（见 cssLinksForModules），避免把全部路由的样式都塞进首屏 HTML。
+  const manifestPath = resolve(distClient, '.vite/manifest.json')
+  if (existsSync(manifestPath)) {
+    cssManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+  } else {
+    // 兼容没有产物清单的旧构建：退回注入全部路由样式（首屏会多下载，但不会无样式）
+    console.warn('未找到 dist/ssr/client/.vite/manifest.json，退回注入全部路由 CSS')
+    const assetsDir = resolve(distClient, 'assets')
+    fallbackCssLinks = readdirSync(assetsDir)
+      .filter((file) => file.endsWith('.css') && !template.includes(file))
+      .map((file) => `<link rel="stylesheet" href="/assets/${file}">`)
+      .join('')
+  }
 
   ;({ render } = await import(distServerEntry))
 }
@@ -78,6 +87,34 @@ if (!isProduction) {
 if (isProduction) {
   app.use('/assets', express.static(resolve(distClient, 'assets'), { maxAge: '1y', immutable: true }))
   app.use(express.static(distClient, { index: false }))
+}
+
+/**
+ * 按本次 SSR 渲染登记的组件模块收集样式链接。
+ * 清单里一个模块只记录自身 chunk 的 CSS，共享的组件库样式挂在它静态依赖的 chunk 上，
+ * 因此要顺着 imports 递归；入口模板里已有的样式直接跳过，避免重复加载。
+ */
+function cssLinksForModules(modules) {
+  if (!cssManifest) return fallbackCssLinks
+
+  const visited = new Set()
+  const cssFiles = new Set()
+  const walk = (key) => {
+    if (!key || visited.has(key)) return
+    visited.add(key)
+    const entry = cssManifest[key]
+    if (!entry) return
+    for (const file of entry.css ?? []) cssFiles.add(file)
+    for (const dep of entry.imports ?? []) walk(dep)
+  }
+  for (const moduleId of modules) walk(moduleId)
+
+  let links = ''
+  for (const file of cssFiles) {
+    const href = `/${file}`
+    if (!template.includes(href)) links += `<link rel="stylesheet" href="${href}">`
+  }
+  return links
 }
 
 app.use(async (req, res, next) => {
@@ -101,15 +138,17 @@ app.use(async (req, res, next) => {
       ;({ render: renderPage } = await vite.ssrLoadModule('/src/entry-server.ts'))
     }
 
-    const { html: appHtml, title } = await renderPage(req.originalUrl)
+    const { html: appHtml, title, modules } = await renderPage(req.originalUrl)
 
     // 用函数形式替换，避免渲染内容里的 $& / $' 等被当作 replace 的特殊模式
     html = html.replace('<div id="app"></div>', () => `<div id="app">${appHtml}</div>`)
     if (title) {
       html = html.replace('<title>学习平台</title>', () => `<title>${title} - 学习平台</title>`)
     }
-    if (extraCssLinks) {
-      html = html.replace('</head>', () => `${extraCssLinks}</head>`)
+    // 开发态样式由 vite 内联注入，不需要额外 <link>
+    const cssLinks = isProduction ? cssLinksForModules(modules ?? []) : ''
+    if (cssLinks) {
+      html = html.replace('</head>', () => `${cssLinks}</head>`)
     }
 
     res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(html)

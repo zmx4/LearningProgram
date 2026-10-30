@@ -8,7 +8,7 @@
 import { renderToString } from 'vue/server-renderer'
 import { createAppInstance } from './create-app'
 
-export async function render(url: string): Promise<{ html: string, title: string | null }> {
+export async function render(url: string): Promise<{ html: string, title: string | null, modules: string[] }> {
     const { app, router } = createAppInstance()
 
     await router.push(url)
@@ -22,6 +22,9 @@ export async function render(url: string): Promise<{ html: string, title: string
         }
     }
 
-    const html = await renderToString(app)
-    return { html, title }
+    // SFC 编译产物会把自身模块登记到 SSR context.modules，
+    // server.mjs 用这份清单 + 构建产物 manifest.json 找出本次渲染真正用到的路由样式。
+    const context: { modules?: Set<string> } = {}
+    const html = await renderToString(app, context)
+    return { html, title, modules: [...(context.modules ?? [])] }
 }

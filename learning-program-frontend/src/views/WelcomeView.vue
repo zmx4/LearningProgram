@@ -4,10 +4,16 @@
 <template>
   <div class="welcome-shell">
     <div class="welcome-hero">
-      <!-- <el-image style="width: 100%;height: 100%" fit="cover"
-                src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/> -->
-                <el-image style="width: 100%;height: 100%" fit="cover"
-                src="../../public/background.png"/>
+      <!-- 首屏 LCP 图片：原生 img + fetchpriority，WebP 版约 43KB，比原来 160KB 的 PNG 小一个量级 -->
+      <img
+        class="welcome-hero-image"
+        src="/background.webp"
+        alt=""
+        width="799"
+        height="533"
+        fetchpriority="high"
+        decoding="async"
+      />
     </div>
     <div class="welcome-title">
       <div style="font-size: 30px; font-weight: bold">{{ $t('welcome.title') }}</div>
@@ -34,6 +40,13 @@
 .welcome-hero {
   flex: 1;
   background: aqua;
+}
+
+.welcome-hero-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .right-card {

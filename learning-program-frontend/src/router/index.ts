@@ -16,6 +16,10 @@ const routes: RouteRecordRaw[] = [
                 path: 'register',
                 name: 'welcome-register',
                 component: () => import('@/views/welcome/RegisterPage.vue')
+            },{
+                path: 'forget',
+                name: 'welcome-forget',
+                component: () => import('@/views/welcome/ForgetPage.vue')
             }
         ]
     },{

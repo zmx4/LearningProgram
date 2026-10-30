@@ -147,9 +147,22 @@ function loadTasks() {
 
 function loadMessages(scrollToBottom = false) {
   get<GroupMessage[]>(`/api/groups/${groupId}/messages`, data => {
-    const lastId = messages.value[messages.value.length - 1]?.id
-    messages.value = data
+    const previous = messages.value
+    const lastId = previous[previous.length - 1]?.id
     const newLastId = data[data.length - 1]?.id
+    // 轮询通常只是追加新消息：保留旧数组、只拼接新增部分，
+    // 避免整体替换导致消息列表（含任务卡片）全量重渲染。
+    // 前缀对不上（消息被清理、重新进入页面）时退回整体替换。
+    const isAppend = previous.length > 0
+      && data.length >= previous.length
+      && data[previous.length - 1]?.id === lastId
+    if (isAppend) {
+      if (data.length > previous.length) {
+        messages.value = [...previous, ...data.slice(previous.length)]
+      }
+    } else {
+      messages.value = data
+    }
     if (scrollToBottom || (lastId !== undefined && newLastId !== lastId)) {
       void nextTick(() => scrollMessagesToBottom())
     }
@@ -161,6 +174,12 @@ function loadMessages(scrollToBottom = false) {
 function scrollMessagesToBottom() {
   const el = messageListEl.value
   if (el) el.scrollTop = el.scrollHeight
+}
+
+function onVisibilityChange() {
+  if (document.hidden) return
+  loadMessages()
+  loadTasks()
 }
 
 function sendMessage() {
@@ -365,14 +384,18 @@ onMounted(() => {
   loadDetail()
   loadMessages(true)
   loadTasks()
+  // 页面切到后台时跳过轮询，回到前台立即补一次，避免看不见的标签页持续拉取和重渲染
   pollTimer = setInterval(() => {
+    if (document.hidden) return
     loadMessages()
     loadTasks()
   }, 10000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 

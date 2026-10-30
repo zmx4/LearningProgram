@@ -6,337 +6,337 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE `db_account` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(32) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `email` varchar(128) NOT NULL,
-  `role` varchar(32) NOT NULL DEFAULT 'user',
-  `register_time` datetime NOT NULL DEFAULT current_timestamp(),
-  `phone` varchar(30) DEFAULT NULL,
-  `bio` varchar(120) DEFAULT NULL,
-  `points` int(11) NOT NULL DEFAULT 0,
-  `totp_secret` varchar(64) DEFAULT NULL,
-  `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `username` varchar(32) NOT NULL COMMENT '登录名，唯一',
+  `password` varchar(255) NOT NULL COMMENT '密码哈希（BCrypt）',
+  `email` varchar(128) NOT NULL COMMENT '邮箱，唯一，可用于登录',
+  `role` varchar(32) NOT NULL DEFAULT 'user' COMMENT '角色：user / admin',
+  `register_time` datetime NOT NULL DEFAULT current_timestamp() COMMENT '注册时间',
+  `phone` varchar(30) DEFAULT NULL COMMENT '手机号',
+  `bio` varchar(120) DEFAULT NULL COMMENT '个人简介',
+  `points` int(11) NOT NULL DEFAULT 0 COMMENT '遗留积分字段，有效积分见 db_account_points',
+  `totp_secret` varchar(64) DEFAULT NULL COMMENT '两步验证 TOTP 密钥',
+  `totp_enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用两步验证',
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户账号，role 区分 user / admin';
 
 CREATE TABLE `db_account_points` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `total_points` int(11) NOT NULL DEFAULT 0,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID，一人一条',
+  `total_points` int(11) NOT NULL DEFAULT 0 COMMENT '当前积分总额',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_account_points_account` (`account_id`),
   CONSTRAINT `fk_account_points_account` FOREIGN KEY (`account_id`) REFERENCES `db_account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户积分总账，与 db_account 一对一';
 
 CREATE TABLE `db_cet4` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `word` varchar(255) NOT NULL,
-  `translation` varchar(512) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `word` varchar(255) NOT NULL COMMENT '单词',
+  `translation` varchar(512) DEFAULT NULL COMMENT '中文释义',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4544 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4544 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='CET-4 四级词库';
 
 CREATE TABLE `db_cet6` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `word` varchar(255) NOT NULL,
-  `translation` varchar(512) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `word` varchar(255) NOT NULL COMMENT '单词',
+  `translation` varchar(512) DEFAULT NULL COMMENT '中文释义',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3993 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3993 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='CET-6 六级词库';
 
 CREATE TABLE `db_check_in` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `checkin_date` date NOT NULL,
-  `points` int(11) NOT NULL,
-  `streak` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `checkin_date` date NOT NULL COMMENT '签到日期（按天）',
+  `points` int(11) NOT NULL COMMENT '本次签到获得积分',
+  `streak` int(11) NOT NULL COMMENT '连续签到天数',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_check_in_account_date` (`account_id`,`checkin_date`),
   CONSTRAINT `fk_check_in_account` FOREIGN KEY (`account_id`) REFERENCES `db_account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='每日签到记录，每人每天一条';
 
 CREATE TABLE `db_course` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(100) NOT NULL,
-  `description` varchar(500) DEFAULT NULL,
-  `icon` varchar(16) DEFAULT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL,
-  `reward_points` int(11) NOT NULL DEFAULT 0,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `title` varchar(100) NOT NULL COMMENT '课程标题',
+  `description` varchar(500) DEFAULT NULL COMMENT '课程简介',
+  `icon` varchar(16) DEFAULT NULL COMMENT '课程图标（emoji）',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序值，越小越靠前',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
+  `reward_points` int(11) NOT NULL DEFAULT 0 COMMENT '完成课程奖励积分，0 表示不发放',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='课程';
 
 CREATE TABLE `db_course_chapter` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `course_id` int(11) NOT NULL,
-  `title` varchar(150) NOT NULL,
-  `content` mediumtext DEFAULT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `course_id` int(11) NOT NULL COMMENT '所属课程',
+  `title` varchar(150) NOT NULL COMMENT '章节标题',
+  `content` mediumtext DEFAULT NULL COMMENT '章节正文（富文本）',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '章节排序',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_course_chapter_course` (`course_id`,`sort_order`),
   CONSTRAINT `fk_course_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `db_course` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='课程章节，content 为章节正文';
 
 CREATE TABLE `db_course_progress` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `course_id` int(11) NOT NULL,
-  `chapter_id` int(11) NOT NULL,
-  `duration_seconds` int(11) NOT NULL DEFAULT 0,
-  `studied_count` int(11) NOT NULL DEFAULT 1,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `course_id` int(11) NOT NULL COMMENT '所属课程',
+  `chapter_id` int(11) NOT NULL COMMENT '已学章节',
+  `duration_seconds` int(11) NOT NULL DEFAULT 0 COMMENT '累计学习时长（秒）',
+  `studied_count` int(11) NOT NULL DEFAULT 1 COMMENT '上报学习次数',
+  `created_at` datetime NOT NULL COMMENT '首次学习时间',
+  `updated_at` datetime NOT NULL COMMENT '最近学习时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_course_progress` (`account_id`,`chapter_id`),
   KEY `idx_course_progress_account` (`account_id`,`updated_at`),
   KEY `idx_course_progress_course_account` (`course_id`,`account_id`),
   KEY `fk_course_progress_chapter` (`chapter_id`),
   CONSTRAINT `fk_course_progress_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `db_course_chapter` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='账号章节学习进度，按账号 + 章节聚合';
 
 CREATE TABLE `db_course_question_set` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `course_id` int(11) NOT NULL,
-  `set_id` int(11) NOT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `course_id` int(11) NOT NULL COMMENT '课程 ID',
+  `set_id` int(11) NOT NULL COMMENT '题集 ID',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '展示顺序',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_course_question_set` (`course_id`,`set_id`),
   KEY `fk_course_question_set_set` (`set_id`),
   CONSTRAINT `fk_course_question_set_course` FOREIGN KEY (`course_id`) REFERENCES `db_course` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_course_question_set_set` FOREIGN KEY (`set_id`) REFERENCES `db_question_set` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='课程与题集的关联';
 
 CREATE TABLE `db_course_reward` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `course_id` int(11) NOT NULL,
-  `points` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `course_id` int(11) NOT NULL COMMENT '完成课程 ID',
+  `points` int(11) NOT NULL COMMENT '发放积分',
+  `created_at` datetime NOT NULL COMMENT '发放时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_course_reward` (`account_id`,`course_id`),
   KEY `fk_course_reward_course` (`course_id`),
   CONSTRAINT `fk_course_reward_course` FOREIGN KEY (`course_id`) REFERENCES `db_course` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='课程完成积分发放记录，每人每课只发一次';
 
 CREATE TABLE `db_course_study_log` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `course_id` int(11) NOT NULL,
-  `chapter_id` int(11) NOT NULL,
-  `duration_seconds` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `course_id` int(11) NOT NULL COMMENT '课程 ID',
+  `chapter_id` int(11) NOT NULL COMMENT '章节 ID',
+  `duration_seconds` int(11) NOT NULL COMMENT '本次学习时长（秒）',
+  `created_at` datetime NOT NULL COMMENT '上报时间',
   PRIMARY KEY (`id`),
   KEY `idx_course_study_log_account` (`account_id`,`created_at`),
   KEY `fk_course_study_log_chapter` (`chapter_id`),
   CONSTRAINT `fk_course_study_log_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `db_course_chapter` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='章节学习时长流水，用于周学习时长统计';
 
 CREATE TABLE `db_dictionary` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `word` varchar(255) NOT NULL,
-  `translation` text DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `word` varchar(255) NOT NULL COMMENT '单词',
+  `translation` text DEFAULT NULL COMMENT '释义',
   PRIMARY KEY (`id`),
   KEY `idx_dictionary_word` (`word`)
-) ENGINE=InnoDB AUTO_INCREMENT=3402565 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3402565 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='英汉词典词条，查词接口数据源';
 
 CREATE TABLE `db_discussion_comment` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `post_id` int(11) NOT NULL,
-  `account_id` int(11) NOT NULL,
-  `content` varchar(1000) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `post_id` int(11) NOT NULL COMMENT '所属帖子',
+  `account_id` int(11) NOT NULL COMMENT '评论人账号',
+  `content` varchar(1000) NOT NULL COMMENT '评论内容',
+  `created_at` datetime NOT NULL COMMENT '评论时间',
   PRIMARY KEY (`id`),
   KEY `fk_discussion_comment_account` (`account_id`),
   KEY `idx_discussion_comment_post` (`post_id`,`created_at`),
   CONSTRAINT `fk_discussion_comment_account` FOREIGN KEY (`account_id`) REFERENCES `db_account` (`id`),
   CONSTRAINT `fk_discussion_comment_post` FOREIGN KEY (`post_id`) REFERENCES `db_discussion_post` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='讨论区评论';
 
 CREATE TABLE `db_discussion_post` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `title` varchar(150) NOT NULL,
-  `content` text NOT NULL,
-  `comment_count` int(11) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '发帖人账号',
+  `title` varchar(150) NOT NULL COMMENT '帖子标题',
+  `content` text NOT NULL COMMENT '帖子正文',
+  `comment_count` int(11) NOT NULL DEFAULT 0 COMMENT '评论数冗余计数',
+  `created_at` datetime NOT NULL COMMENT '发帖时间',
   PRIMARY KEY (`id`),
   KEY `fk_discussion_post_account` (`account_id`),
   KEY `idx_discussion_post_created` (`created_at`),
   CONSTRAINT `fk_discussion_post_account` FOREIGN KEY (`account_id`) REFERENCES `db_account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='讨论区帖子，comment_count 为冗余评论数';
 
 CREATE TABLE `db_group_member_visit` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `group_id` int(11) NOT NULL,
-  `account_id` int(11) NOT NULL,
-  `last_visit_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` int(11) NOT NULL COMMENT '小组 ID',
+  `account_id` int(11) NOT NULL COMMENT '成员账号',
+  `last_visit_at` datetime NOT NULL COMMENT '最近一次进入小组时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_group_member_visit` (`group_id`,`account_id`),
   CONSTRAINT `fk_group_member_visit_group` FOREIGN KEY (`group_id`) REFERENCES `db_study_group` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组成员最近访问时间，用于任务已读判定';
 
 CREATE TABLE `db_group_task_item` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `group_id` int(11) NOT NULL,
-  `message_id` int(11) NOT NULL,
-  `item_type` varchar(20) NOT NULL,
-  `ref_id` int(11) DEFAULT NULL,
-  `title` varchar(200) NOT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` int(11) NOT NULL COMMENT '小组 ID',
+  `message_id` int(11) NOT NULL COMMENT '所属任务消息',
+  `item_type` varchar(20) NOT NULL COMMENT '任务项类型：course / resource / member_visit / text',
+  `ref_id` int(11) DEFAULT NULL COMMENT '关联对象 ID（课程或资源），text 类型为空',
+  `title` varchar(200) NOT NULL COMMENT '任务项标题',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序值',
   PRIMARY KEY (`id`),
   KEY `idx_group_task_item_message` (`message_id`),
   KEY `idx_group_task_item_group` (`group_id`),
   CONSTRAINT `fk_group_task_item_message` FOREIGN KEY (`message_id`) REFERENCES `db_study_group_message` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组任务项，item_type 区分课程 / 资源 / 成员访问 / 文本';
 
 CREATE TABLE `db_group_task_progress` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `item_id` int(11) NOT NULL,
-  `account_id` int(11) NOT NULL,
-  `completed_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `item_id` int(11) NOT NULL COMMENT '任务项 ID',
+  `account_id` int(11) NOT NULL COMMENT '完成人账号',
+  `completed_at` datetime NOT NULL COMMENT '完成时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_group_task_progress` (`item_id`,`account_id`),
   CONSTRAINT `fk_group_task_progress_item` FOREIGN KEY (`item_id`) REFERENCES `db_group_task_item` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组成员任务项完成记录（手动勾选）';
 
 CREATE TABLE `db_learning_resource` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(100) NOT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `file_name` varchar(255) NOT NULL,
-  `stored_name` varchar(100) NOT NULL,
-  `content_type` varchar(100) DEFAULT NULL,
-  `file_size` bigint(20) NOT NULL DEFAULT 0,
-  `visible` tinyint(1) NOT NULL DEFAULT 1,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `title` varchar(100) NOT NULL COMMENT '资源标题',
+  `description` varchar(255) DEFAULT NULL COMMENT '资源描述',
+  `file_name` varchar(255) NOT NULL COMMENT '原始文件名（展示与下载用）',
+  `stored_name` varchar(100) NOT NULL COMMENT '磁盘存储文件名（UUID + 扩展名）',
+  `content_type` varchar(100) DEFAULT NULL COMMENT '文件 MIME 类型',
+  `file_size` bigint(20) NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+  `visible` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否对普通用户可见',
   `account_id` int(11) DEFAULT NULL COMMENT '上传者，软引用 db_account，不带外键',
-  `created_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '上传时间',
   PRIMARY KEY (`id`),
   KEY `idx_learning_resource_visible` (`visible`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='学习资源元数据，文件本体存放于磁盘';
 
 CREATE TABLE `db_notification` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `title` varchar(128) NOT NULL,
-  `content` varchar(1000) NOT NULL,
-  `link` varchar(255) DEFAULT NULL,
-  `type` varchar(32) NOT NULL DEFAULT 'system',
-  `is_read` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '接收人账号',
+  `title` varchar(128) NOT NULL COMMENT '通知标题',
+  `content` varchar(1000) NOT NULL COMMENT '通知正文',
+  `link` varchar(255) DEFAULT NULL COMMENT '点击跳转链接',
+  `type` varchar(32) NOT NULL DEFAULT 'system' COMMENT '通知类型，默认 system',
+  `is_read` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否已读',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT '发送时间',
   PRIMARY KEY (`id`),
   KEY `idx_notification_account_created` (`account_id`,`created_at`),
   CONSTRAINT `fk_notification_account` FOREIGN KEY (`account_id`) REFERENCES `db_account` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='站内通知';
 
 CREATE TABLE `db_question_set` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(100) NOT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `title` varchar(100) NOT NULL COMMENT '题集标题',
+  `description` varchar(255) DEFAULT NULL COMMENT '题集描述',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='题集';
 
 CREATE TABLE `db_question_set_item` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `set_id` int(11) NOT NULL,
-  `question_id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `set_id` int(11) NOT NULL COMMENT '题集 ID',
+  `question_id` int(11) NOT NULL COMMENT '题目 ID',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_question_set_item` (`set_id`,`question_id`),
   KEY `idx_question_set_item_question` (`question_id`),
   CONSTRAINT `fk_question_set_item_question` FOREIGN KEY (`question_id`) REFERENCES `db_test_question` (`id`),
   CONSTRAINT `fk_question_set_item_set` FOREIGN KEY (`set_id`) REFERENCES `db_question_set` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='题集与题目的关联';
 
 CREATE TABLE `db_resource_access_log` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `resource_id` int(11) NOT NULL,
-  `accessed_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `resource_id` int(11) NOT NULL COMMENT '资源 ID',
+  `accessed_at` datetime NOT NULL COMMENT '最近一次访问时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_access_log_account_resource` (`account_id`,`resource_id`),
   KEY `idx_resource_access_log_resource` (`resource_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='资源访问记录，每人每资源只保留最近一次';
 
 CREATE TABLE `db_study_group` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `owner_id` int(11) NOT NULL,
-  `invite_code` varchar(8) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `name` varchar(50) NOT NULL COMMENT '小组名称',
+  `owner_id` int(11) NOT NULL COMMENT '创建者账号 ID',
+  `invite_code` varchar(8) NOT NULL COMMENT '邀请码，唯一',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_study_group_invite_code` (`invite_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='学习小组，invite_code 用于邀请加入';
 
 CREATE TABLE `db_study_group_member` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `group_id` int(11) NOT NULL,
-  `account_id` int(11) NOT NULL,
-  `role` varchar(10) NOT NULL,
-  `joined_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` int(11) NOT NULL COMMENT '小组 ID',
+  `account_id` int(11) NOT NULL COMMENT '成员账号',
+  `role` varchar(10) NOT NULL COMMENT '成员角色：owner / member',
+  `joined_at` datetime NOT NULL COMMENT '加入时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_study_group_member` (`group_id`,`account_id`),
   KEY `idx_study_group_member_account` (`account_id`),
   CONSTRAINT `fk_study_group_member_group` FOREIGN KEY (`group_id`) REFERENCES `db_study_group` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组成员及角色';
 
 CREATE TABLE `db_study_group_message` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `group_id` int(11) NOT NULL,
-  `account_id` int(11) NOT NULL,
-  `type` varchar(10) NOT NULL,
-  `title` varchar(100) DEFAULT NULL,
-  `content` varchar(2000) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` int(11) NOT NULL COMMENT '小组 ID',
+  `account_id` int(11) NOT NULL COMMENT '发送人账号',
+  `type` varchar(10) NOT NULL COMMENT '消息类型：text / task',
+  `title` varchar(100) DEFAULT NULL COMMENT '标题，任务消息使用',
+  `content` varchar(2000) NOT NULL COMMENT '消息内容',
+  `created_at` datetime NOT NULL COMMENT '发送时间',
   PRIMARY KEY (`id`),
   KEY `idx_study_group_message_group` (`group_id`,`id`),
   CONSTRAINT `fk_study_group_message_group` FOREIGN KEY (`group_id`) REFERENCES `db_study_group` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组消息，type=task 的消息即任务';
 
 CREATE TABLE `db_test_question` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `type_id` int(11) NOT NULL,
-  `kind` varchar(20) NOT NULL,
-  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`content`)),
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `type_id` int(11) NOT NULL COMMENT '所属测试类型',
+  `kind` varchar(20) NOT NULL COMMENT '题型：single / multiple / blank',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '题目 JSON（题干、选项、答案、解析）' CHECK (json_valid(`content`)),
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_test_question_type_kind` (`type_id`,`kind`),
   CONSTRAINT `fk_test_question_type` FOREIGN KEY (`type_id`) REFERENCES `db_test_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='题库题目，content 为 JSON 结构';
 
 CREATE TABLE `db_test_record` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `category` varchar(20) NOT NULL,
-  `source` varchar(10) DEFAULT NULL,
-  `type_id` int(11) DEFAULT NULL,
-  `set_id` int(11) DEFAULT NULL,
-  `type_name` varchar(100) DEFAULT NULL,
-  `total_count` int(11) NOT NULL,
-  `correct_count` int(11) NOT NULL,
-  `wrong_count` int(11) NOT NULL,
-  `score` int(11) NOT NULL,
-  `duration_seconds` int(11) NOT NULL DEFAULT 0,
-  `detail` longtext DEFAULT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账号 ID',
+  `category` varchar(20) NOT NULL COMMENT '测试大类：word / knowledge',
+  `source` varchar(10) DEFAULT NULL COMMENT '单词测试词表来源：cet4 / cet6',
+  `type_id` int(11) DEFAULT NULL COMMENT '知识测试题目类型 ID',
+  `set_id` int(11) DEFAULT NULL COMMENT '知识测试题集 ID',
+  `type_name` varchar(100) DEFAULT NULL COMMENT '测试类型名称快照',
+  `total_count` int(11) NOT NULL COMMENT '题目总数',
+  `correct_count` int(11) NOT NULL COMMENT '正确数',
+  `wrong_count` int(11) NOT NULL COMMENT '错误数',
+  `score` int(11) NOT NULL COMMENT '得分',
+  `duration_seconds` int(11) NOT NULL DEFAULT 0 COMMENT '用时（秒）',
+  `detail` longtext DEFAULT NULL COMMENT '知识测试答题明细 JSON',
+  `created_at` datetime NOT NULL COMMENT '提交时间',
   PRIMARY KEY (`id`),
   KEY `idx_test_record_account` (`account_id`,`category`,`created_at`),
   KEY `idx_test_record_type` (`type_id`),
   KEY `fk_test_record_set` (`set_id`),
   CONSTRAINT `fk_test_record_set` FOREIGN KEY (`set_id`) REFERENCES `db_question_set` (`id`),
   CONSTRAINT `chk_test_record_detail` CHECK (`detail` is null or json_valid(`detail`))
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='测试提交记录，detail 为作答明细 JSON';
 
 CREATE TABLE `db_test_type` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `code` varchar(50) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `code` varchar(50) NOT NULL COMMENT '类型编码，唯一',
+  `name` varchar(100) NOT NULL COMMENT '类型名称',
+  `description` varchar(255) DEFAULT NULL COMMENT '类型描述',
+  `created_at` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_test_type_code` (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='测试类型（词汇 / 语法等）';
 
 SET FOREIGN_KEY_CHECKS = 1;

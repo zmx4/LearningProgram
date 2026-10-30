@@ -14,7 +14,13 @@ import { createAppRouter } from '@/router'
 import { setNetRouter } from '@/net'
 import i18n from '@/i18n'
 
-import 'element-plus/dist/index.css'
+// Element Plus 样式按需引入：模板里的 el-* 组件由 unplugin-vue-components 自动注入样式，
+// 这里只补编程式调用的服务组件（ElMessage / ElMessageBox / v-loading），
+// 它们不经过模板解析，不显式引入会丢失样式。
+// 不要再引入 element-plus/dist/index.css（全量约 360KB，会与按需样式重复）。
+import 'element-plus/es/components/message/style/css'
+import 'element-plus/es/components/message-box/style/css'
+import 'element-plus/es/components/loading/style/css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@/assets/markdown.css'
 import '@/assets/common.css'
