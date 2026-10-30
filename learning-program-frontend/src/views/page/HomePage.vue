@@ -41,6 +41,7 @@ const checkInStatus = ref<CheckInStatus>({
 const progressSummary = ref<ProgressSummary | null>(null)
 const guestCourses = ref<GuestCourse[]>([])
 const loading = ref(false)
+const heroRef = ref<HTMLElement | null>(null)
 const today = now.toISOString().slice(0, 10)
 
 const stats = computed(() => [
@@ -122,17 +123,34 @@ function checkIn() {
   })
 }
 
+function updateHeroLight(event: PointerEvent) {
+  if (!heroRef.value || event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const bounds = heroRef.value.getBoundingClientRect()
+  const x = ((event.clientX - bounds.left) / bounds.width) * 100
+  const y = ((event.clientY - bounds.top) / bounds.height) * 100
+  heroRef.value.style.setProperty('--hero-light-x', `${Math.max(0, Math.min(100, x))}%`)
+  heroRef.value.style.setProperty('--hero-light-y', `${Math.max(0, Math.min(100, y))}%`)
+  heroRef.value.style.setProperty('--hero-orbit-x', `${(x - 50) * 0.12}px`)
+  heroRef.value.style.setProperty('--hero-orbit-y', `${(y - 50) * 0.12}px`)
+}
+
+function resetHeroLight() {
+  heroRef.value?.style.setProperty('--hero-orbit-x', '0px')
+  heroRef.value?.style.setProperty('--hero-orbit-y', '0px')
+}
+
 onMounted(() => {
   if (isLoggedIn) {
     loadCheckInStatus()
   }
   loadProgressSummary()
 })
+
 </script>
 
 <template>
   <main class="content">
-        <div class="hero-card">
+        <div ref="heroRef" class="hero-card" @pointermove="updateHeroLight" @pointerleave="resetHeroLight">
           <div>
             <p class="card-label">{{ t('home.plan') }}</p>
             <h2>{{ t('home.focus') }}</h2>
@@ -474,6 +492,10 @@ h1 {
 }
 
 .hero-card {
+  --hero-light-x: 50%;
+  --hero-light-y: 50%;
+  --hero-orbit-x: 0px;
+  --hero-orbit-y: 0px;
   position: relative;
   display: flex;
   min-height: 260px;
@@ -483,17 +505,53 @@ h1 {
   padding: 42px 48px;
   border-radius: 18px;
   color: var(--el-color-white);
-  background: linear-gradient(120deg, var(--el-color-primary), var(--el-color-primary-light-3));
-  box-shadow: var(--el-box-shadow);
+  background:
+    radial-gradient(circle at var(--hero-light-x) var(--hero-light-y), color-mix(in srgb, var(--el-color-white) 18%, transparent), transparent 28%),
+    linear-gradient(120deg, var(--el-color-primary-dark-2), var(--el-color-primary) 52%, var(--el-color-primary-light-3));
+  box-shadow: 0 20px 46px color-mix(in srgb, var(--el-color-primary-dark-2) 28%, transparent);
+  isolation: isolate;
+  transition: background .35s ease, box-shadow .35s ease;
+}
+
+.hero-card::before,
+.hero-card::after {
+  position: absolute;
+  pointer-events: none;
+  content: '';
+}
+
+.hero-card::before {
+  inset: 12px;
+  border: 1px solid color-mix(in srgb, var(--el-color-white) 18%, transparent);
+  border-radius: 12px;
+  opacity: .7;
+}
+
+.hero-card::after {
+  width: 280px;
+  height: 280px;
+  top: -150px;
+  right: 12%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--el-color-white) 10%, transparent);
+  filter: blur(1px);
+  transform: translate3d(var(--hero-orbit-x), var(--hero-orbit-y), 0);
+  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
 }
 
 .hero-card h2 {
+  position: relative;
+  z-index: 1;
   margin-bottom: 12px;
-  font-size: 34px;
-  letter-spacing: -.025em;
+  max-width: 10ch;
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -.04em;
 }
 
 .hero-copy {
+  position: relative;
+  z-index: 1;
   max-width: 470px;
   margin-bottom: 24px;
   color: var(--el-color-primary-light-9);
@@ -502,6 +560,8 @@ h1 {
 }
 
 .primary-button {
+  position: relative;
+  z-index: 1;
   padding: 12px 22px;
   border: 0;
   border-radius: 8px;
@@ -526,12 +586,14 @@ h1 {
 }
 
 .hero-decoration {
+  z-index: 1;
   position: relative;
   width: 190px;
   height: 160px;
   margin-right: 5%;
   opacity: .95;
-  transform: scale(1.08);
+  transform: translate3d(var(--hero-orbit-x), var(--hero-orbit-y), 0) scale(1.08);
+  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
 }
 
 .decoration-circle {
@@ -890,4 +952,18 @@ h1 {
     align-items: flex-start;
     flex-direction: column;
   }}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card,
+  .hero-card::after,
+  .hero-decoration,
+  .primary-button {
+    transition: none;
+  }
+
+  .hero-card::after,
+  .hero-decoration {
+    transform: none;
+  }
+}
 </style>
