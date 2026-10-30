@@ -16,7 +16,7 @@ import {
   UserFilled,
   Menu,
 } from '@element-plus/icons-vue'
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useMediaQuery} from '@vueuse/core'
 import {currentRole, currentUsername, logout, publicGet, unauthorized} from '@/net'
@@ -40,6 +40,8 @@ const {t} = useI18n()
 const isMobile = useMediaQuery('(max-width: 760px)')
 const sidebarExpanded = ref(false)
 const mobileNavOpen = ref(false)
+const sidebarRef = ref<HTMLElement | null>(null)
+const menuButtonRef = ref<HTMLButtonElement | null>(null)
 const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
 // 主界面允许游客浏览：未登录时隐藏用户区（铃铛/头像/退出），显示登录入口
@@ -77,6 +79,7 @@ const navigationSections: Record<string, string> = {
   '/discussions': 'discussions',
   '/groups': 'groups',
   '/leaderboard': 'leaderboard',
+  '/admin': 'admin',
 }
 
 const activeSection = computed(() => {
@@ -108,6 +111,42 @@ function onSidebarEnter() {
 function onSidebarLeave() {
   if (!isMobile.value) sidebarExpanded.value = false
 }
+
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (!isMobile.value || !mobileNavOpen.value) return
+
+  if (event.key === 'Escape') {
+    mobileNavOpen.value = false
+    return
+  }
+
+  if (event.key !== 'Tab' || !sidebarRef.value) return
+  const focusable = Array.from(
+      sidebarRef.value.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+      ),
+  ).filter(element => element.getClientRects().length > 0)
+  if (!focusable.length) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+watch(mobileNavOpen, async (open) => {
+  await nextTick()
+  if (open) {
+    sidebarRef.value?.querySelector<HTMLElement>('.nav-item')?.focus()
+  } else if (isMobile.value) {
+    menuButtonRef.value?.focus()
+  }
+})
 
 function dailyWordCacheKey(source: DailyWordSource): string {
   return `learning-daily-word-${source}-${new Date().toISOString().slice(0, 10)}`
@@ -153,10 +192,12 @@ function onDailyWordSettingsChanged(event: Event) {
 onMounted(() => {
   loadDailyWord()
   window.addEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+  document.addEventListener('keydown', onDocumentKeydown)
 })
 
 onUnmounted(() => {
   window.removeEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+  document.removeEventListener('keydown', onDocumentKeydown)
 })
 </script>
 
@@ -168,8 +209,12 @@ onUnmounted(() => {
         @click="closeMobileNav"
     ></div>
     <aside
+        id="main-navigation"
+        ref="sidebarRef"
         class="sidebar"
         :class="{ expanded: navExpanded, 'is-mobile': isMobile }"
+        :aria-hidden="isMobile && !mobileNavOpen ? 'true' : undefined"
+        :inert="isMobile && !mobileNavOpen"
         @mouseenter="onSidebarEnter"
         @mouseleave="onSidebarLeave"
     >
@@ -180,6 +225,8 @@ onUnmounted(() => {
             class="sidebar-toggle"
             type="button"
             :aria-label="navExpanded ? t('common.collapseSidebar') : t('common.expandSidebar')"
+            :aria-expanded="navExpanded"
+            aria-controls="main-navigation"
             @click="toggleSidebar"
         >
           <el-icon>
@@ -196,6 +243,7 @@ onUnmounted(() => {
             class="nav-item"
             :class="{ active: activeSection === item.name }"
             type="button"
+            :aria-label="t(item.label)"
             :aria-current="activeSection === item.name ? 'page' : undefined"
             @click="router.push({ name: item.name })"
         >
@@ -208,6 +256,7 @@ onUnmounted(() => {
             v-if="isAdmin"
             class="nav-item"
             type="button"
+            :aria-label="t('navigation.admin')"
             :aria-current="activeSection === 'admin' ? 'page' : undefined"
             @click="router.push({ name: 'admin' })"
         >
@@ -241,6 +290,8 @@ onUnmounted(() => {
 
       <div class="sidebar-footer">
         <button class="nav-item" type="button" :class="{ active: activeSection === 'settings' }"
+                :aria-label="t('common.settings')"
+                :aria-current="activeSection === 'settings' ? 'page' : undefined"
                 @click="router.push({ name: 'settings' })">
           <el-icon>
             <Setting/>
@@ -254,6 +305,7 @@ onUnmounted(() => {
       <header class="topbar">
         <div class="topbar-title">
           <button
+              ref="menuButtonRef"
               class="menu-button"
               type="button"
               :aria-label="t(mobileNavOpen ? 'common.closeMenu' : 'common.openMenu')"
@@ -706,9 +758,9 @@ onUnmounted(() => {
 .menu-button {
   display: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   padding: 0;
   border: 1px solid var(--el-border-color);
   border-radius: 10px;
@@ -815,6 +867,27 @@ onUnmounted(() => {
   .logout-button {
     padding: 8px 10px;
     font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .brand > span,
+  .sidebar .nav-item span,
+  .daily-word,
+  .page-fade-slide-enter-active,
+  .page-fade-slide-leave-active,
+  .icon-button,
+  .profile,
+  .logout-button,
+  .login-button {
+    transition-duration: .01ms;
+    animation-duration: .01ms;
+    animation-iteration-count: 1;
+  }
+
+  .nav-overlay {
+    animation: none;
   }
 }
 </style>

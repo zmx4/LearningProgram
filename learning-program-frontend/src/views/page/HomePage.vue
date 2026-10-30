@@ -473,11 +473,11 @@ h1 {
 .hero-card {
   position: relative;
   display: flex;
-  min-height: 224px;
+  min-height: 260px;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  padding: 34px 42px;
+  padding: 42px 48px;
   border-radius: 18px;
   color: var(--el-color-white);
   background: linear-gradient(120deg, var(--el-color-primary), var(--el-color-primary-light-3));
@@ -485,8 +485,9 @@ h1 {
 }
 
 .hero-card h2 {
-  margin-bottom: 10px;
-  font-size: 28px;
+  margin-bottom: 12px;
+  font-size: 34px;
+  letter-spacing: -.025em;
 }
 
 .hero-copy {
@@ -498,15 +499,27 @@ h1 {
 }
 
 .primary-button {
-  padding: 11px 20px;
+  padding: 12px 22px;
   border: 0;
   border-radius: 8px;
   color: var(--el-color-primary);
   background: var(--el-color-white);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--el-color-primary-dark-2) 24%, transparent);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px color-mix(in srgb, var(--el-color-primary-dark-2) 30%, transparent);
+}
+
+.primary-button:focus-visible {
+  outline: 2px solid var(--el-color-white);
+  outline-offset: 3px;
 }
 
 .hero-decoration {
@@ -514,7 +527,8 @@ h1 {
   width: 190px;
   height: 160px;
   margin-right: 5%;
-  opacity: .8;
+  opacity: .95;
+  transform: scale(1.08);
 }
 
 .decoration-circle {
@@ -811,7 +825,12 @@ h1 {
   }
 
   .hero-card {
-    padding: 28px;
+    min-height: 240px;
+    padding: 32px 28px;
+  }
+
+  .hero-card h2 {
+    font-size: 30px;
   }
 
   .hero-decoration {
