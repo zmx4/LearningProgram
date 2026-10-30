@@ -48,14 +48,17 @@ const stats = computed(() => [
     label: 'home.ongoingCourses',
     value: progressSummary.value ? String(progressSummary.value.ongoingCount) : '—',
     hint: 'home.ongoingHint',
+    tone: 'primary',
   }, {
     label: 'home.weeklyTime',
     value: progressSummary.value ? formatDuration(progressSummary.value.weeklySeconds) : '—',
     hint: 'home.weeklyHint',
+    tone: 'warning',
   }, {
     label: 'home.completedCourses',
     value: progressSummary.value ? String(progressSummary.value.completedCount) : '—',
     hint: 'home.completedHint',
+    tone: 'success',
   },
 ])
 
@@ -154,7 +157,7 @@ onMounted(() => {
         </div>
 
         <div class="stats-grid">
-          <article v-for="stat in stats" :key="stat.label" class="stat-card">
+          <article v-for="stat in stats" :key="stat.label" class="stat-card" :class="`stat-card--${stat.tone}`">
             <p>{{ t(stat.label) }}</p>
             <strong>{{ stat.value }}</strong>
             <span>{{ t(stat.hint) }}</span>
@@ -191,8 +194,8 @@ onMounted(() => {
             </button>
           </div>
           <div class="check-in-summary">
-            <span>{{ t('home.points') }} <strong>{{ checkInStatus.points }}</strong></span>
-            <span>{{ t('home.streak') }} <strong>{{ checkInStatus.streak }}</strong>{{ t('home.days') }}</span>
+            <span class="check-in-metric check-in-metric--points">{{ t('home.points') }} <strong>{{ checkInStatus.points }}</strong></span>
+            <span class="check-in-metric check-in-metric--streak">{{ t('home.streak') }} <strong>{{ checkInStatus.streak }}</strong>{{ t('home.days') }}</span>
           </div>
           <div class="calendar-heading">
             <button type="button" :aria-label="t('home.previousMonth')" @click="changeMonth(-1)"><el-icon><ArrowLeft /></el-icon></button>
@@ -620,7 +623,26 @@ h1 {
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }
-.check-in-summary strong { margin: 0 3px; color: var(--el-color-primary); font-size: 20px; }
+.check-in-metric {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: var(--el-fill-color-lighter);
+}
+.check-in-metric strong { font-size: 20px; }
+.check-in-metric--points {
+  color: var(--el-color-warning);
+  background: color-mix(in srgb, var(--el-color-warning-light-9) 72%, var(--el-bg-color));
+}
+.check-in-metric--points strong { color: var(--el-color-warning-dark-2); }
+.check-in-metric--streak {
+  color: var(--el-color-success);
+  background: color-mix(in srgb, var(--el-color-success-light-9) 72%, var(--el-bg-color));
+}
+.check-in-metric--streak strong { color: var(--el-color-success-dark-2); }
 .calendar-heading { margin: 12px 0; }
 .calendar-heading button {
   display: grid;
@@ -652,11 +674,24 @@ h1 {
 .points-empty { margin: 0; color: var(--el-text-color-placeholder); font-size: 12px; }
 
 .stat-card {
+  position: relative;
+  overflow: hidden;
   padding: 22px 24px;
   border: 1px solid var(--el-border-color-light);
   border-radius: 14px;
   background: var(--el-bg-color);
 }
+
+.stat-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: '';
+  background: var(--el-color-primary);
+}
+
+.stat-card--warning::before { background: var(--el-color-warning); }
+.stat-card--success::before { background: var(--el-color-success); }
 
 .guest-course-grid {
   display: grid;
@@ -748,6 +783,10 @@ h1 {
   color: var(--el-text-color-primary);
   font-size: 30px;
 }
+
+.stat-card--primary strong { color: var(--el-color-primary); }
+.stat-card--warning strong { color: var(--el-color-warning-dark-2); }
+.stat-card--success strong { color: var(--el-color-success-dark-2); }
 
 .stat-card span {
   color: var(--el-text-color-placeholder);
