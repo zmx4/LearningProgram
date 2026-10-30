@@ -196,6 +196,7 @@ onUnmounted(() => {
             class="nav-item"
             :class="{ active: activeSection === item.name }"
             type="button"
+            :aria-current="activeSection === item.name ? 'page' : undefined"
             @click="router.push({ name: item.name })"
         >
           <el-icon>
@@ -207,6 +208,7 @@ onUnmounted(() => {
             v-if="isAdmin"
             class="nav-item"
             type="button"
+            :aria-current="activeSection === 'admin' ? 'page' : undefined"
             @click="router.push({ name: 'admin' })"
         >
           <el-icon>
@@ -254,7 +256,8 @@ onUnmounted(() => {
           <button
               class="menu-button"
               type="button"
-              :aria-label="t('common.openMenu')"
+              :aria-label="t(mobileNavOpen ? 'common.closeMenu' : 'common.openMenu')"
+              :aria-expanded="mobileNavOpen"
               @click="toggleSidebar"
           >
             <el-icon>
@@ -262,7 +265,6 @@ onUnmounted(() => {
             </el-icon>
           </button>
           <div>
-            <p class="eyebrow">LEARNING SPACE</p>
             <h1>{{ isLoggedIn ? t('common.welcomeBack') : t('common.welcomeGuest') }}</h1>
           </div>
         </div>
@@ -381,6 +383,17 @@ onUnmounted(() => {
 .sidebar-toggle:hover {
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+}
+
+.sidebar-toggle:focus-visible,
+.nav-item:focus-visible,
+.menu-button:focus-visible,
+.icon-button:focus-visible,
+.profile:focus-visible,
+.logout-button:focus-visible,
+.login-button:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 .sidebar:not(.expanded) .brand > span,
@@ -502,7 +515,7 @@ onUnmounted(() => {
   font-size: 14px;
   text-align: left;
   cursor: pointer;
-  transition: .2s;
+  transition: color .2s ease, background-color .2s ease;
 }
 
 .nav-item span {
@@ -596,6 +609,15 @@ onUnmounted(() => {
   place-items: center;
   color: var(--el-text-color-secondary);
   font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  transition: color .2s ease, background-color .2s ease;
+}
+
+.icon-button:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
 
 .notification-dot {
@@ -617,6 +639,12 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   cursor: pointer;
+  border-radius: 8px;
+  transition: background-color .2s ease;
+}
+
+.profile:hover {
+  background: var(--el-fill-color-light);
 }
 
 .avatar {
@@ -641,6 +669,8 @@ onUnmounted(() => {
   border-radius: 8px;
   color: var(--el-text-color-regular);
   font-size: 13px;
+  cursor: pointer;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
 }
 
 .logout-button:hover {
@@ -657,10 +687,13 @@ onUnmounted(() => {
   background: var(--el-color-primary);
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s ease, box-shadow .2s ease;
 }
 
 .login-button:hover {
   background: var(--el-color-primary-light-3);
+  box-shadow: var(--el-box-shadow-light);
 }
 
 .topbar-title {
