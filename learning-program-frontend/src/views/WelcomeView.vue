@@ -32,8 +32,9 @@
 <style scoped>
 .welcome-shell {
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
   display: flex;
 }
 
@@ -50,7 +51,11 @@
 }
 
 .right-card {
+  box-sizing: border-box;
   width: 400px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
   z-index: 1;
   background-color: var(--el-bg-color);
 }
@@ -72,8 +77,8 @@
 
   .right-card {
     width: 100%;
-    height: 100%;
-    overflow-y: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
 </style>

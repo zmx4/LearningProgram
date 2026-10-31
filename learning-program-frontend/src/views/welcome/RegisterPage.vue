@@ -5,16 +5,16 @@
       <div style="font-size: 14px;color: grey">{{ $t('welcome.registerDescription') }}</div>
     </div>
     <div style="margin-top: 50px">
-      <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
+      <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef" @submit.prevent="register">
         <el-form-item prop="username">
-          <el-input v-model="form.username" :maxlength="8" type="text" :placeholder="$t('welcome.username')">
+          <el-input v-model="form.username" :maxlength="8" type="text" :aria-label="$t('welcome.username')" :placeholder="$t('welcome.username')">
             <template #prefix>
               <el-icon><User /></el-icon>
             </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.password')">
+          <el-input v-model="form.password" @input="revalidatePasswordRepeat" :maxlength="policy.maxLength" type="password" show-password :aria-label="$t('welcome.password')" :placeholder="$t('welcome.password')">
             <template #prefix>
               <el-icon><Lock /></el-icon>
             </template>
@@ -22,31 +22,31 @@
           <PasswordPolicyHint :requirements="policy.requirements" :value="form.password" :username="form.username" :email="form.email" />
         </el-form-item>
         <el-form-item prop="password_repeat">
-          <el-input v-model="form.password_repeat" :maxlength="policy.maxLength" type="password" :placeholder="$t('welcome.repeatPassword')">
+          <el-input v-model="form.password_repeat" :maxlength="policy.maxLength" type="password" show-password :aria-label="$t('welcome.repeatPassword')" :placeholder="$t('welcome.repeatPassword')">
             <template #prefix>
               <el-icon><Lock /></el-icon>
             </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="email">
-          <el-input v-model="form.email" type="email" :placeholder="$t('welcome.email')">
+          <el-input v-model="form.email" type="email" :aria-label="$t('welcome.email')" :placeholder="$t('welcome.email')">
             <template #prefix>
               <el-icon><Message /></el-icon>
             </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="code">
-          <el-row :gutter="10" style="width: 100%">
-            <el-col :span="17">
-              <el-input v-model="form.code" :maxlength="6" type="text" :placeholder="$t('welcome.verificationCode')">
+          <el-row class="code-row" :gutter="10">
+            <el-col class="code-input" :span="16">
+              <el-input v-model="form.code" :maxlength="6" type="text" inputmode="numeric" :aria-label="$t('welcome.verificationCode')" :placeholder="$t('welcome.verificationCode')">
                 <template #prefix>
                   <el-icon><EditPen /></el-icon>
                 </template>
               </el-input>
             </el-col>
-            <el-col :span="5">
-              <el-button type="success" @click="validateEmail"
-                         :disabled="!isEmailValid || coldTime > 0">
+            <el-col class="code-action" :span="8">
+              <el-button type="primary" @click="validateEmail"
+                         :disabled="!isEmailValid || coldTime > 0 || codeLoading" :loading="codeLoading">
                 {{coldTime > 0 ? $t('welcome.waitSeconds', { seconds: coldTime }) : $t('welcome.getCode')}}
               </el-button>
             </el-col>
@@ -55,7 +55,7 @@
       </el-form>
     </div>
     <div style="margin-top: 80px">
-      <el-button style="width: 270px" type="warning" @click="register" plain>{{ $t('welcome.registerNow') }}</el-button>
+      <el-button style="width: 270px" type="primary" @click="register" plain :loading="registerLoading">{{ $t('welcome.registerNow') }}</el-button>
     </div>
     <div style="margin-top: 20px">
       <span style="font-size: 14px;line-height: 15px;color: grey">{{ $t('welcome.haveAccount') }} </span>
@@ -151,27 +151,38 @@ const rules = {
 const formRef = ref()
 const isEmailValid = ref(false)
 const coldTime = ref(0)
+const codeLoading = ref(false)
+const registerLoading = ref(false)
 
 const onValidate = (prop, isValid) => {
   if(prop === 'email')
     isEmailValid.value = isValid
 }
 
+const revalidatePasswordRepeat = () => {
+  if (form.password_repeat) formRef.value?.validateField('password_repeat')
+}
+
 const register = () => {
+  if (registerLoading.value) return
   if(!form.agree) {
     ElMessage.warning(t('welcome.agreementRequired'))
     return
   }
   formRef.value.validate((isValid) => {
     if(isValid) {
+      registerLoading.value = true
       publicPost('/api/auth/register', {
         username: form.username,
         password: form.password,
         email: form.email,
         code: form.code
       }, () => {
+        registerLoading.value = false
         ElMessage.success(t('welcome.registerSuccess'))
         router.push("/")
+      }, () => {
+        registerLoading.value = false
       })
     } else {
       ElMessage.warning(t('welcome.completeRegistration'))
@@ -180,8 +191,11 @@ const register = () => {
 }
 
 const validateEmail = () => {
-  coldTime.value = 60
-  publicGet(`/api/auth/ask-code?email=${form.email}&type=register`, () => {
+  if (codeLoading.value || coldTime.value > 0) return
+  codeLoading.value = true
+  publicGet(`/api/auth/ask-code?email=${encodeURIComponent(form.email)}&type=register`, () => {
+    codeLoading.value = false
+    coldTime.value = 60
     ElMessage.success(t('welcome.codeSent', { email: form.email }))
     const handle = setInterval(() => {
       coldTime.value--
@@ -190,6 +204,7 @@ const validateEmail = () => {
       }
     }, 1000)
   }, undefined, (message) => {
+    codeLoading.value = false
     ElMessage.warning(message)
     coldTime.value = 0
   })
@@ -197,5 +212,25 @@ const validateEmail = () => {
 </script>
 
 <style scoped>
+.code-row {
+  width: 100%;
+}
+
+.code-input {
+  min-width: 0;
+}
+
+.code-action {
+  display: flex;
+  min-width: 0;
+}
+
+.code-action .el-button {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 </style>
