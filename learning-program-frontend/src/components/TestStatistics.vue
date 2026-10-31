@@ -136,6 +136,29 @@ const totals = computed(() => {
   max-width: 34px;
   border-radius: 6px 6px 3px 3px;
   transition: height .3s ease;
+  transform-origin: bottom;
+  animation: trend-bar-in .55s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.trend-col:nth-child(2) .trend-bar { animation-delay: 50ms; }
+.trend-col:nth-child(3) .trend-bar { animation-delay: 100ms; }
+.trend-col:nth-child(4) .trend-bar { animation-delay: 150ms; }
+.trend-col:nth-child(5) .trend-bar { animation-delay: 200ms; }
+.trend-col:nth-child(6) .trend-bar { animation-delay: 250ms; }
+.trend-col:nth-child(7) .trend-bar { animation-delay: 300ms; }
+.trend-col:nth-child(8) .trend-bar { animation-delay: 350ms; }
+.trend-col:nth-child(9) .trend-bar { animation-delay: 400ms; }
+.trend-col:nth-child(10) .trend-bar { animation-delay: 450ms; }
+
+@keyframes trend-bar-in {
+  from {
+    opacity: .35;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }
 
 .trend-bar.good {
@@ -207,6 +230,13 @@ const totals = computed(() => {
   margin: 8px 0 0;
   color: var(--el-text-color-placeholder);
   text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-bar {
+    animation: none;
+    transition: none;
+  }
 }
 
 @media (max-width: 700px) {

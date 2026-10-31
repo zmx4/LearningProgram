@@ -37,6 +37,7 @@ const entries = [
           v-for="entry in entries"
           :key="entry.name"
           class="test-entry"
+          :style="{ '--entry-delay': `${entries.indexOf(entry) * 90}ms` }"
           type="button"
           @click="router.push({ name: entry.name })"
       >
@@ -106,6 +107,8 @@ const entries = [
   text-align: left;
   cursor: pointer;
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  animation: test-entry-in .5s cubic-bezier(.16, 1, .3, 1) both;
+  animation-delay: var(--entry-delay);
 }
 
 .test-entry:hover {
@@ -164,5 +167,22 @@ const entries = [
 
 .test-entry:hover .entry-action {
   color: var(--el-color-primary-light-3);
+}
+
+@keyframes test-entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-entry {
+    animation: none;
+  }
 }
 </style>

@@ -314,7 +314,7 @@ onMounted(() => {
       <p>{{ t('tests.knowledge.description') }}</p>
     </section>
 
-    <section v-if="!questions.length || completed" class="test-card start-card">
+    <section v-if="!questions.length || completed" :key="completed ? 'knowledge-result' : 'knowledge-ready'" class="test-card start-card">
       <template v-if="completed && result">
         <h3>{{ t('tests.knowledge.completed') }}</h3>
         <div class="result-score">
@@ -352,7 +352,7 @@ onMounted(() => {
       <p v-else class="empty-types">{{ t('tests.knowledge.noTypes') }}</p>
     </section>
 
-    <section v-else-if="currentQuestion" class="test-card question-card">
+    <section v-else-if="currentQuestion" :key="current" class="test-card question-card">
       <div class="question-meta">
         <span>{{ typeName }}</span>
         <span>{{ kindLabel(currentQuestion.kind) }}
@@ -396,7 +396,12 @@ onMounted(() => {
         <h3>{{ t('tests.knowledge.review') }}</h3>
         <span>{{ t('tests.knowledge.reviewHint') }}</span>
       </div>
-      <article v-for="(item, index) in reviewItems" :key="item.question.id" class="review-item">
+      <article
+          v-for="(item, index) in reviewItems"
+          :key="item.question.id"
+          class="review-item"
+          :style="{ '--review-delay': `${Math.min(index, 7) * 55}ms` }"
+      >
         <div class="review-item-head">
           <span class="review-no" :class="item.correct ? 'right' : 'wrong'">{{ index + 1 }}</span>
           <span class="review-kind">{{ kindLabel(item.question.kind) }}</span>
@@ -588,6 +593,10 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.question-card {
+  animation: question-in .32s cubic-bezier(.16, 1, .3, 1);
+}
+
 .blank-stem {
   margin-top: 30px;
   color: var(--el-text-color-primary);
@@ -640,6 +649,7 @@ onMounted(() => {
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   font-weight: 600;
+  animation: option-selected .2s ease-out;
 }
 
 .question-actions {
@@ -698,6 +708,8 @@ onMounted(() => {
 .review-item {
   padding: 18px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
+  animation: review-in .36s cubic-bezier(.16, 1, .3, 1) both;
+  animation-delay: var(--review-delay);
 }
 
 .review-item:last-child {
@@ -823,6 +835,42 @@ onMounted(() => {
 @media (max-width: 600px) {
   .answer-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes option-selected {
+  0% { transform: scale(.98); }
+  100% { transform: scale(1); }
+}
+
+@keyframes review-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes question-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-card,
+  .start-card,
+  .review-item,
+  .option-button.active {
+    animation: none;
   }
 }
 </style>

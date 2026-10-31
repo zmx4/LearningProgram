@@ -139,7 +139,7 @@ onMounted(loadHistory)
       <p>{{ t('tests.word.description') }}</p>
     </section>
 
-    <section v-if="!words.length || completed" class="test-card start-card">
+    <section v-if="!words.length || completed" :key="completed ? 'word-result' : 'word-ready'" class="test-card start-card">
       <h3>{{ completed ? t('tests.word.completed') : t('tests.word.ready') }}</h3>
       <p>{{ completed ? `${t('tests.word.score')}: ${result?.score}` : t('tests.word.description') }}</p>
       <div class="test-actions">
@@ -153,12 +153,12 @@ onMounted(loadHistory)
       </div>
     </section>
 
-    <section v-else class="test-card question-card">
+    <section v-else :key="current" class="test-card question-card">
       <div class="question-meta"><span>{{ source.toUpperCase() }}</span><strong>{{ progress }}</strong></div>
       <h3>{{ currentWord?.word }}</h3>
       <p>{{ t('tests.word.chooseTranslation') }}</p>
       <div class="answer-grid">
-        <button v-for="option in options" :key="option" type="button" @click="choose(option)">{{ option }}</button>
+        <button v-for="option in options" :key="option" class="answer-button" type="button" @click="choose(option)">{{ option }}</button>
       </div>
     </section>
 
@@ -301,6 +301,10 @@ onMounted(loadHistory)
   font-size: 32px;
 }
 
+.question-card {
+  animation: question-in .32s cubic-bezier(.16, 1, .3, 1);
+}
+
 .answer-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -312,6 +316,10 @@ onMounted(loadHistory)
   border: 0;
   border-radius: 9px;
   font: inherit;
+}
+
+.answer-button:active {
+  transform: scale(.98);
 }
 
 .history-heading h3 {
@@ -358,6 +366,39 @@ onMounted(loadHistory)
 .empty-history {
   color: var(--el-text-color-placeholder);
   text-align: center;
+}
+
+.start-card {
+  animation: result-in .38s cubic-bezier(.16, 1, .3, 1);
+}
+
+@keyframes question-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes result-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-card,
+  .start-card {
+    animation: none;
+  }
 }
 
 @media (max-width: 600px) {
