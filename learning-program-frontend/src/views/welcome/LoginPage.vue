@@ -5,9 +5,9 @@
       <div style="font-size: 14px;color: grey">{{ $t('welcome.loginDescription') }}</div>
     </div>
     <div style="margin-top: 50px">
-      <el-form :model="form" :rules="rules" ref="formRef">
+      <el-form :model="form" :rules="rules" ref="formRef" @submit.prevent="userLogin">
         <el-form-item prop="username">
-          <el-input v-model="form.username" maxlength="10" type="text" :placeholder="$t('welcome.usernameOrEmail')">
+          <el-input v-model="form.username" maxlength="10" type="text" :aria-label="$t('welcome.usernameOrEmail')" :placeholder="$t('welcome.usernameOrEmail')">
             <template #prefix>
               <el-icon>
                 <User/>
@@ -16,7 +16,7 @@
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" type="password" maxlength="20" style="margin-top: 10px" :placeholder="$t('welcome.password')">
+          <el-input v-model="form.password" type="password" maxlength="20" show-password :aria-label="$t('welcome.password')" style="margin-top: 10px" :placeholder="$t('welcome.password')">
             <template #prefix>
               <el-icon>
                 <Lock/>
@@ -37,11 +37,11 @@
       </el-form>
     </div>
     <div style="margin-top: 40px">
-      <el-button @click="userLogin()" style="width: 270px" type="success" plain>{{ $t('welcome.loginNow') }}</el-button>
+      <el-button @click="userLogin()" style="width: 270px" type="primary" plain :loading="loginLoading">{{ $t('welcome.loginNow') }}</el-button>
     </div>
     <el-dialog v-model="totpVisible" title="两步验证" width="360px" :close-on-click-modal="false">
       <p>请输入验证器应用中的6位验证码。</p>
-      <el-input v-model="totpCode" maxlength="6" inputmode="numeric" />
+      <el-input v-model="totpCode" maxlength="6" inputmode="numeric" aria-label="两步验证码" />
       <template #footer>
         <el-button @click="totpVisible = false">取消</el-button>
         <el-button type="primary" :loading="totpLoading" @click="submitTotp">验证并登录</el-button>
@@ -51,7 +51,7 @@
       <span style="color: grey;font-size: 13px">{{ $t('welcome.noAccount') }}</span>
     </el-divider>
     <div>
-      <el-button style="width: 270px" @click="router.push('/register')" type="warning" plain>{{ $t('welcome.register') }}</el-button>
+      <el-button style="width: 270px" @click="router.push('/register')" type="primary" plain>{{ $t('welcome.register') }}</el-button>
     </div>
     <div style="margin-top: 30px;text-align: center">
       <UserAgreementCheckbox v-model="form.agree" style="display: inline-block"/>
@@ -79,6 +79,7 @@ const form = reactive({
 })
 const totpVisible = ref(false)
 const totpLoading = ref(false)
+const loginLoading = ref(false)
 const totpCode = ref('')
 const totpChallenge = ref('')
 
@@ -92,13 +93,16 @@ const rules = {
 }
 
 function userLogin() {
+  if (loginLoading.value) return
   if(!form.agree) {
     ElMessage.warning(t('welcome.agreementRequired'))
     return
   }
   formRef.value.validate((isValid) => {
     if(isValid) {
+      loginLoading.value = true
       login(form.username, form.password, form.remember, () => router.push("/index"), (message, status, _url, data) => {
+        loginLoading.value = false
         if (status === 428 && data && typeof data === 'object' && 'challenge' in data) {
           totpChallenge.value = String(data.challenge)
           totpCode.value = ''
@@ -119,10 +123,12 @@ function submitTotp() {
   totpLoading.value = true
   verifyTotpLogin(totpChallenge.value, totpCode.value, form.remember, () => {
     totpLoading.value = false
+    loginLoading.value = false
     totpVisible.value = false
     void router.push('/index')
   }, (message) => {
     totpLoading.value = false
+    loginLoading.value = false
     ElMessage.warning(message)
   })
 }
