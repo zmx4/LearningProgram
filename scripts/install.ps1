@@ -694,11 +694,12 @@ function Write-Summary {
     foreach ($item in $script:Summary) { Write-Info $item }
 
     Write-Host "`n下一步：" -ForegroundColor White
-    Write-Host '  1) 启动后端：在同一个 PowerShell 窗口加载 .env 后运行，或直接加 -Start 参数启动'
+    Write-Host '  1) 一键启动（推荐）：powershell -ExecutionPolicy Bypass -File scripts\start.ps1   # 后端 + 前端，Ctrl+C 一起停'
+    Write-Host '     也可以手工启动后端：在同一个 PowerShell 窗口加载 .env 后运行，或直接加 -Start 参数启动'
     Write-Host '     Get-Content learning-program-backend\.env | Where-Object { $_ -match "^export " } | ForEach-Object { $kv = ($_ -replace "^export ", "") -split "=", 2; [Environment]::SetEnvironmentVariable($kv[0], $kv[1].Trim([char]34), "Process") }'
     Write-Host '     cd learning-program-backend; .\mvnw.cmd spring-boot:run'
     Write-Host "     接口地址：http://localhost:$BackendPort"
-    Write-Host "  2) 启动前端：cd learning-program-frontend; $($script:FrontendPm) run dev"
+    Write-Host "  2) 手工启动前端：cd learning-program-frontend; $($script:FrontendPm) run dev"
     Write-Host "     页面地址：http://localhost:$FrontendPort"
     Write-Host "  3) 管理员账号与更多说明见 docs\INSTALLATION.md`n"
 }

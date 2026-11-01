@@ -56,6 +56,33 @@ PowerShell 版参数名一致，用开关形式：`-Yes`、`-NoDb`、`-NoBuild`�
 - 未安装 `mysql` 客户端时脚本会跳过建库与建表，并打印需要手工执行的步骤。
 - `.env` 与 `.env.local` 均已被 `.gitignore` 忽略；脚本生成前会备份同名旧文件，不影响已有手工配置。
 
+## 一键启动脚本
+
+安装完成后，`scripts/` 下提供两个行为一致的启动脚本，自动完成：加载后端 `.env` 环境变量、
+端口预检（1231 / 5173 已被监听时跳过对应组件）、前端依赖缺失时自动 `pnpm install`，
+然后后台启动后端、前台启动前端（日志都打在当前终端），**Ctrl+C 一次性停掉前后端**：
+
+| 脚本 | 适用环境 | 运行方式 |
+| --- | --- | --- |
+| `scripts/start.sh` | Git Bash / WSL / Linux / macOS | `bash scripts/start.sh` |
+| `scripts/start.ps1` | Windows PowerShell（5.1+） | `powershell -ExecutionPolicy Bypass -File scripts\start.ps1` |
+
+参数说明（bash 版 / PowerShell 开关）：
+
+| bash 版 | PowerShell 版 | 行为 |
+| --- | --- | --- |
+| （无参数） | （无参数） | 启动后端 + 前端（默认，SPA 模式） |
+| `--backend` | `-Backend` | 只启动后端 |
+| `--frontend` | `-Frontend` | 只启动前端 |
+| `--ssr` | `-Ssr` | 前端以 SSR 模式启动（`node server.mjs`），配合后端一起启动 |
+| `-h` / `--help` | `-Help` | 显示用法 |
+
+补充说明：
+
+- 首次使用请先运行一键安装脚本生成 `learning-program-backend/.env`，启动脚本找不到该文件会直接报错。
+- `JAVA_HOME` 未设置时，脚本会尝试固定到本机的 JDK 21（WSL/Ubuntu 默认 java 25 缺少编译能力）。
+- 端口预检只是跳过启动并提示，不会尝试杀掉已占用端口的进程；如需强制重启请先手动停止。
+
 ## 环境要求
 
 | 软件 | 版本 |
@@ -229,6 +256,8 @@ Set-Location .\learning-program-backend
 
 ## 启动后端
 
+> 也可以用一键启动脚本 `bash scripts/start.sh --backend`（PowerShell：`-Backend`），见上文「一键启动脚本」。
+
 在项目根目录执行：
 
 ```powershell
@@ -250,6 +279,8 @@ Set-Location .\learning-program-backend
 ```
 
 ## 启动前端
+
+> 也可以用一键启动脚本 `bash scripts/start.sh --frontend`（PowerShell：`-Frontend`；`--ssr` / `-Ssr` 切换 SSR 模式），见上文「一键启动脚本」。
 
 另开一个终端，在项目根目录执行：
 

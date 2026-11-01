@@ -88,9 +88,11 @@ LearningProgram/
 │   ├── src/router/              # 前端路由和路由守卫
 │   ├── src/utils/               # 前端工具函数
 │   └── src/views/               # 页面组件（welcome / page / admin）
-├── scripts/                     # 一键安装脚本与建表脚本
-│   ├── install.sh               # bash 版（Git Bash / WSL / Linux / macOS）
-│   ├── install.ps1              # PowerShell 版（Windows 原生）
+├── scripts/                     # 一键安装/启动脚本与建表脚本
+│   ├── install.sh               # bash 版安装（Git Bash / WSL / Linux / macOS）
+│   ├── install.ps1              # PowerShell 版安装（Windows 原生）
+│   ├── start.sh                 # bash 版一键启动（后端 + 前端，Ctrl+C 一起停）
+│   ├── start.ps1                # PowerShell 版一键启动（Windows 原生）
 │   └── learning.sql             # 整库 DDL（28 张表），安装脚本自动导入
 └── README.md
 ```
@@ -114,6 +116,21 @@ powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 
 ```bash
 MYSQL_USERNAME=root MYSQL_PASSWORD=secret bash scripts/install.sh -y
+```
+
+安装完成后，可以用一键启动脚本同时拉起后端与前端（前台运行，Ctrl+C 一起停止）：
+
+```bash
+# Git Bash / WSL / Linux / macOS
+bash scripts/start.sh             # 后端 + 前端
+bash scripts/start.sh --backend   # 只启动后端
+bash scripts/start.sh --frontend  # 只启动前端
+bash scripts/start.sh --ssr       # 前端以 SSR 模式启动
+```
+
+```powershell
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 ```
 
 完整参数说明与手工安装步骤见 [安装与运行](./docs/INSTALLATION.md)。

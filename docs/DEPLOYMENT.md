@@ -186,6 +186,10 @@ pnpm run build:ssr     # 类型检查 + 客户端/服务端双构建，产物在
 pnpm run start         # 即 node server.mjs --prod，默认监听 3000，PORT 环境变量可覆盖
 ```
 
+> 说明：构建依赖 vite、类型检查等开发依赖，构建机上用完整的 `pnpm install`。
+> 若构建在本地/CI 完成后只把产物上传到服务器运行，服务器上改用 `pnpm install --prod`
+> 安装生产依赖即可，不会安装 impeccable 等仅开发使用的工具。
+
 服务器上需要常驻运行（示例用 systemd，路径按实际情况调整）：
 
 ```ini

@@ -662,9 +662,10 @@ print_summary() {
   done
 
   printf '\n%s下一步：%s\n' "$C_BOLD" "$C_RESET"
-  printf '  1) 启动后端：source learning-program-backend/.env && cd learning-program-backend && ./mvnw spring-boot:run\n'
+  printf '  1) 一键启动（推荐）：bash scripts/start.sh   # 后端 + 前端，Ctrl+C 一起停\n'
+  printf '     也可以手工启动后端：source learning-program-backend/.env && cd learning-program-backend && ./mvnw spring-boot:run\n'
   printf '     接口地址：http://localhost:%s\n' "$DEFAULT_BACKEND_PORT"
-  printf '  2) 启动前端：cd learning-program-frontend && %s run dev\n' "${FRONTEND_PM:-npm}"
+  printf '  2) 手工启动前端：cd learning-program-frontend && %s run dev\n' "${FRONTEND_PM:-npm}"
   printf '     页面地址：http://localhost:%s\n' "$DEFAULT_FRONTEND_PORT"
   printf '  3) 管理员账号与更多说明见 docs/INSTALLATION.md\n\n'
 }
