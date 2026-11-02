@@ -1,0 +1,85 @@
+%% 01 系统数据流图（Level 1）
+%% 依据 docs/architecture/flows/*.mmd、docs/architecture/data/*.mmd、scripts/learning.sql
+%% 与后端 Controller / Service 实现整理；箭头表示数据流方向。
+%% 证据：
+%% - 认证/验证码：AccountServiceImpl、EmailCodeService、TwoFactorServiceImpl、JwtUtils
+%% - 课程与积分：CourseProgressServiceImpl、CheckInServiceImpl、AccountPointsServiceImpl
+%% - 小组与任务：StudyGroupServiceImpl（course/resource/member_visit/text 四类任务项）
+%% - 讨论与通知：DiscussionServiceImpl、NotificationServiceImpl、AdminServiceImpl
+%% - 资源：LearningResourceServiceImpl、ResourceController（下载写访问流水）
+%% - 邮件：MailDispatcher、RabbitMailProducer/Consumer、application.yaml（upload-dir / rabbitmq）
+flowchart LR
+  subgraph EXT["外部实体"]
+    direction TB
+    U["用户<br/>游客 / 学生"]
+    A["管理员"]
+  end
+
+  subgraph PROC["处理过程"]
+    direction TB
+    P1(["1 认证与会话"])
+    P2(["2 课程学习"])
+    P3(["3 测试与评分"])
+    P4(["4 签到与积分"])
+    P5(["5 学习小组"])
+    P6(["6 讨论与通知"])
+    P7(["7 管理后台"])
+    P8(["8 邮件投递"])
+    P9(["9 资源中心"])
+  end
+
+  subgraph STORE["数据存储"]
+    direction TB
+    D1[("D1 账号 / 积分库")]
+    D2[("D2 课程 / 题库 / 成绩库")]
+    D3[("D3 小组 / 社区 / 资源库")]
+    D4[("D4 Redis<br/>验证码 / 2FA / JWT")]
+    D5[("D5 文件存储<br/>uploads/resources")]
+    D6[("D6 RabbitMQ<br/>邮件队列")]
+  end
+
+  M["邮件服务器<br/>SMTP"]
+
+  U -->|"注册 / 登录 / 验证码"| P1
+  P1 -->|"JWT / 用户信息 / 错误提示"| U
+  P1 <-->|"账号数据"| D1
+  P1 <-->|"验证码 / 挑战 / 黑名单"| D4
+  P1 -->|"验证码邮件"| P8
+
+  P8 <-->|"邮件消息"| D6
+  P8 -->|"SMTP 发信（失败写日志）"| M
+
+  U -->|"章节学习 / 进度上报"| P2
+  P2 -->|"课程 / 进度汇总"| U
+  P2 <-->|"课程 / 章节 / 学习流水"| D2
+  P2 -->|"完成奖励积分"| D1
+
+  U -->|"作答 / 查询历史"| P3
+  P3 -->|"题目 / 成绩 / 汇总"| U
+  P3 <-->|"题目 / 题集 / 成绩"| D2
+
+  U -->|"签到"| P4
+  P4 -->|"签到记录 / 积分"| U
+  P4 <-->|"签到记录 / 积分总账"| D1
+
+  U -->|"建组 / 群聊 / 任务"| P5
+  P5 -->|"小组 / 任务进度"| U
+  P5 <-->|"小组 / 成员 / 消息"| D3
+  P5 -.->|"课程完成度"| D2
+
+  U -->|"发帖 / 评论"| P6
+  P6 -->|"帖子 / 通知"| U
+  P6 <-->|"帖子 / 评论"| D3
+  P6 -->|"站内通知"| D1
+
+  A -->|"管理操作"| P7
+  P7 -->|"管理结果"| A
+  P7 <-->|"用户 / 通知"| D1
+  P7 <-->|"课程 / 题库 / 题集"| D2
+  P7 <-->|"资源元数据"| D3
+  P7 -->|"上传 / 删除文件"| D5
+
+  U -->|"资源列表 / 下载"| P9
+  P9 -->|"资源文件"| U
+  P9 <-->|"元数据 / 访问流水"| D3
+  P9 -->|"读取文件"| D5
