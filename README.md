@@ -94,6 +94,8 @@ LearningProgram/
 │   ├── start.sh                 # bash 版一键启动（后端 + 前端，Ctrl+C 一起停）
 │   ├── start.ps1                # PowerShell 版一键启动（Windows 原生）
 │   └── learning.sql             # 整库 DDL（28 张表），安装脚本自动导入
+├── LICENSE                     # MIT 开源许可证全文
+├── THIRD_PARTY_NOTICES.md      # 第三方依赖许可声明
 └── README.md
 ```
 
@@ -142,6 +144,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 - [接口文档](./docs/API.md)：认证、个人资料、课程、测试、讨论、排行榜、通知、资源和管理员接口。
 - [部署文档](./docs/DEPLOYMENT.md)：前端构建产物托管与 Nginx 反向代理配置。
 - [后端类图](./docs/CLASS_DIAGRAM.puml)：controller / service / mapper / entity 分层与领域实体关系（[渲染 PNG](./docs/CLASS_DIAGRAM.png)）。
+- [第三方组件许可声明](./THIRD_PARTY_NOTICES.md)：前后端依赖许可证清单、需特别注意的条款与分发核对清单。
 
 ## 开发约定
 
@@ -162,4 +165,10 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 
 ## 许可证
 
-项目目前未声明正式开源许可证，仅用于学习和开发交流。若要公开发布或用于商业用途，请先补充许可证并确认第三方依赖的许可要求。
+本项目采用 [MIT License](./LICENSE) 开源（SPDX: `MIT`）。
+
+> Copyright (c) 2026 Tick Zhong
+
+你可以自由使用、复制、修改、合并、发布、分发、再授权和销售本软件的副本，唯一条件是**在软件的所有副本或实质性部分中保留上述版权声明和许可声明**。软件按“原样”提供，不附带任何明示或暗示的担保，作者不承担由此产生的任何责任。
+
+完整条款见仓库根目录的 [LICENSE](./LICENSE)。项目引用的第三方依赖（Spring Boot、Vue、Element Plus、MyBatis-Plus 等）各自遵循其原有许可证，清单、特殊条款与分发核对事项见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)；使用、分发时请一并遵守。
