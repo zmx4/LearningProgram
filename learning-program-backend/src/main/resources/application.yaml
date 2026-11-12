@@ -103,3 +103,8 @@ server:
   # 所有用户都会被当成代理的 IP、共享同一份限流额度（10 次 / 3 秒）。
   # 本地直连（没有该请求头）时行为不变；只有可信代理发来的头才会被采纳。
   forward-headers-strategy: native
+
+oss:
+  endpoint: {OSS_ENDPOINT:100.120.61.73:9000}
+  access-key: {OSS_ACCESS_KEY:bGh9KfjXQlA9pBsc7Osq}
+  secret-key: {OSS_SECRET_KEY:DrGD1m57iL3W6BslZK1tazbYnBEC4lPArrlbEkGL}
