@@ -4,10 +4,12 @@ import com.tick.entity.RestBean;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
 import com.tick.service.LearningResourceService;
+import com.tick.storage.StoredFile;
+import com.tick.storage.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -23,8 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -54,9 +54,13 @@ public class ResourceController {
         if (resource == null || (!Boolean.TRUE.equals(resource.getVisible()) && !isAdmin())) {
             return notFound("资源不存在");
         }
-        Path path = resourceService.resolveStoredPath(resource.getStoredName());
-        if (!Files.exists(path)) {
-            return notFound("资源文件已丢失，请联系管理员");
+        StoredFile file = resourceService.openFile(resource);
+        if (file == null) {
+            // 资源在 OSS 而对象存储被关掉时，说清原因，别让管理员以为文件真丢了
+            boolean storedInOss = StorageType.from(resource.getStorage()) == StorageType.OSS;
+            return notFound(storedInOss && !resourceService.objectStorageEnabled()
+                    ? "该资源存放在对象存储，当前未启用对象存储，请联系管理员"
+                    : "资源文件已丢失，请联系管理员");
         }
         // 访问流水只用于小组任务判定，写失败不应阻断下载
         try {
@@ -66,10 +70,15 @@ public class ResourceController {
         }
         ContentDisposition disposition = ContentDisposition.attachment()
                 .filename(resource.getFileName(), StandardCharsets.UTF_8).build();
-        return ResponseEntity.ok()
+        // 文件可能来自本地磁盘或对象存储，统一以流的形式回写，
+        // 显式带上长度让浏览器能显示下载进度
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
                 .contentType(safeMediaType(resource.getContentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                .body(new FileSystemResource(path));
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
+        if (file.size() > 0) {
+            builder.contentLength(file.size());
+        }
+        return builder.body(new InputStreamResource(file.stream()));
     }
 
     private boolean isAdmin() {

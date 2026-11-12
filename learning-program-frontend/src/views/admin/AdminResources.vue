@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Delete, Download, Plus, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadFile } from 'element-plus'
@@ -17,20 +17,44 @@ interface ResourceItem {
   visible: boolean
   uploaderName: string | null
   createdAt: string
+  storage: 'local' | 'oss'
+}
+
+/** 当前生效的资源存储方式，由后端 oss.enable 决定 */
+interface StorageStatus {
+  type: 'local' | 'oss'
+  objectStorageEnabled: boolean
+  bucket: string | null
 }
 
 const resources = ref<ResourceItem[]>([])
+const storageStatus = ref<StorageStatus | null>(null)
 const loading = ref(false)
 const uploading = ref(false)
 const downloadingId = ref<number | null>(null)
 const selectedFile = ref<File | null>(null)
 const { t } = useI18n()
 
+const objectStorageEnabled = computed(() => storageStatus.value?.objectStorageEnabled === true)
+
+const storageHint = computed(() => {
+  if (!storageStatus.value) return ''
+  return objectStorageEnabled.value
+    ? t('admin.storageOssHint', { bucket: storageStatus.value.bucket ?? '—' })
+    : t('admin.storageLocalHint')
+})
+
 const form = reactive({
   title: '',
   description: '',
   visible: true,
 })
+
+function loadStorageStatus() {
+  get<StorageStatus>('/api/admin/resources/storage', data => {
+    storageStatus.value = data
+  })
+}
 
 function loadResources() {
   loading.value = true
@@ -115,7 +139,10 @@ async function removeResource(item: ResourceItem) {
   }
 }
 
-onMounted(loadResources)
+onMounted(() => {
+  loadResources()
+  loadStorageStatus()
+})
 </script>
 
 <template>
@@ -134,6 +161,12 @@ onMounted(loadResources)
           <UploadFilled/>
         </el-icon>
         <h3>{{ t('admin.uploadResource') }}</h3></div>
+      <div v-if="storageStatus" class="storage-status">
+        <el-tag size="small" effect="plain" :type="objectStorageEnabled ? 'success' : 'info'">
+          {{ objectStorageEnabled ? t('admin.storageOss') : t('admin.storageLocal') }}
+        </el-tag>
+        <span class="storage-hint">{{ storageHint }}</span>
+      </div>
       <el-form label-position="top" @submit.prevent="uploadResource">
         <el-form-item :label="t('admin.resourceFile')">
           <el-upload
@@ -184,6 +217,13 @@ onMounted(loadResources)
         <el-table-column :label="t('admin.fileSize')" width="100" align="center">
           <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
         </el-table-column>
+        <el-table-column :label="t('admin.fileStorage')" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain" :type="row.storage === 'oss' ? 'success' : 'info'">
+              {{ row.storage === 'oss' ? t('admin.storageOss') : t('admin.storageLocal') }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column :label="t('admin.visibleOnPage')" width="90" align="center">
           <template #default="{ row }">
             <el-switch v-model="row.visible" @change="toggleVisible(row)"/>
@@ -212,6 +252,18 @@ onMounted(loadResources)
 .switch-hint {
   margin-left: 10px;
   color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+.storage-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.storage-hint {
+  color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 </style>

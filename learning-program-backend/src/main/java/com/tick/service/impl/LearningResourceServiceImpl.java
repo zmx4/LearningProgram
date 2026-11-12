@@ -5,19 +5,23 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
+import com.tick.entity.vo.response.StorageStatusVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.mapper.LearningResourceMapper;
 import com.tick.mapper.ResourceAccessLogMapper;
 import com.tick.service.LearningResourceService;
-import org.springframework.beans.factory.annotation.Value;
+import com.tick.storage.ResourceStorage;
+import com.tick.storage.ResourceStorageManager;
+import com.tick.storage.StoredFile;
+import com.tick.storage.StorageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,21 +38,22 @@ import java.util.stream.Collectors;
 @Service
 public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMapper, LearningResource>
         implements LearningResourceService {
+    private static final Logger log = LoggerFactory.getLogger(LearningResourceServiceImpl.class);
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
     private static final int MAX_FILE_NAME_LENGTH = 255;
-    // 托管文件名的扩展名只保留字母数字，防止把路径分隔符等写进磁盘文件名
+    // 托管文件名的扩展名只保留字母数字，防止把路径分隔符等写进磁盘文件名 / 对象键
     private static final Pattern SAFE_EXTENSION = Pattern.compile("^[a-zA-Z0-9]{1,10}$");
 
     private final AccountMapper accountMapper;
     private final ResourceAccessLogMapper accessLogMapper;
-    private final Path storageDir;
+    private final ResourceStorageManager storageManager;
 
     public LearningResourceServiceImpl(AccountMapper accountMapper,
                                        ResourceAccessLogMapper accessLogMapper,
-                                       @Value("${learning.resources.upload-dir:./uploads/resources}") String uploadDir) {
+                                       ResourceStorageManager storageManager) {
         this.accountMapper = accountMapper;
         this.accessLogMapper = accessLogMapper;
-        this.storageDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.storageManager = storageManager;
     }
 
     @Override
@@ -91,16 +96,17 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
 
         String storedName = UUID.randomUUID().toString().replace("-", "")
                 + extensionOf(originalName);
-        try {
-            Files.createDirectories(storageDir);
-            file.transferTo(storageDir.resolve(storedName).toFile());
+        StorageType storageType = defaultStorageType();
+        ResourceStorage storage = storageManager.forType(storageType);
+        try (InputStream stream = file.getInputStream()) {
+            storage.store(storedName, stream, file.getSize(), file.getContentType());
         } catch (IOException exception) {
             throw new IllegalStateException("文件保存失败，请稍后再试");
         }
 
         LearningResource resource = new LearningResource(null, normalizedTitle, normalizedDescription,
-                originalName, storedName, file.getContentType(), file.getSize(), visible, accountId,
-                LocalDateTime.now());
+                originalName, storedName, storageType.code(), file.getContentType(), file.getSize(),
+                visible, accountId, LocalDateTime.now());
         save(resource);
         return toVO(resource, uploaderNames(List.of(resource)).get(accountId));
     }
@@ -124,12 +130,52 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
             throw new IllegalArgumentException("资源不存在");
         }
         removeById(id);
-        deleteStoredFile(resource.getStoredName());
+        deleteStoredFile(resource);
     }
 
     @Override
     public LearningResource getResource(Integer id) {
         return id == null ? null : getById(id);
+    }
+
+    @Override
+    public StoredFile openFile(LearningResource resource) {
+        if (resource == null || resource.getStoredName() == null || resource.getStoredName().isBlank()) {
+            return null;
+        }
+        ResourceStorage storage = storageManager.forType(StorageType.from(resource.getStorage()));
+        try {
+            InputStream stream = storage.open(resource.getStoredName());
+            if (stream == null) {
+                return null;
+            }
+            long size = resource.getFileSize() == null ? -1 : resource.getFileSize();
+            return new StoredFile(stream, size);
+        } catch (IllegalArgumentException exception) {
+            // stored_name 被改成带路径的值：按文件不存在处理，别把异常抛成 400 打断下载
+            log.warn("资源文件名非法，按文件丢失处理: id={}, storedName={}",
+                    resource.getId(), resource.getStoredName());
+            return null;
+        } catch (IOException exception) {
+            throw new IllegalStateException("资源文件读取失败，请稍后再试");
+        }
+    }
+
+    @Override
+    public StorageStatusVO storageStatus() {
+        boolean enabled = storageManager.objectStorageEnabled();
+        return new StorageStatusVO(storageManager.defaultType().code(), enabled,
+                enabled ? storageManager.ossBucket() : null);
+    }
+
+    @Override
+    public StorageType defaultStorageType() {
+        return storageManager.defaultType();
+    }
+
+    @Override
+    public boolean objectStorageEnabled() {
+        return storageManager.objectStorageEnabled();
     }
 
     @Override
@@ -141,21 +187,19 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     }
 
     /**
-     * 存储目录下的托管文件路径。stored_name 由服务端生成（UUID + 校验过的扩展名），不含路径成分。
+     * 清理文件。删库成功而清理失败时不回滚业务，只记日志：遗留对象不影响功能，
+     * 也避免对象存储抖动把删除接口拖成失败。
      */
-    @Override
-    public Path resolveStoredPath(String storedName) {
-        return storageDir.resolve(storedName).normalize();
-    }
-
-    private void deleteStoredFile(String storedName) {
-        if (storedName == null || storedName.isBlank()) {
+    private void deleteStoredFile(LearningResource resource) {
+        if (resource.getStoredName() == null || resource.getStoredName().isBlank()) {
             return;
         }
+        ResourceStorage storage = storageManager.forType(StorageType.from(resource.getStorage()));
         try {
-            Files.deleteIfExists(resolveStoredPath(storedName));
-        } catch (IOException exception) {
-            // 磁盘清理失败不阻塞删除，遗留文件不影响业务
+            storage.delete(resource.getStoredName());
+        } catch (IOException | RuntimeException exception) {
+            log.warn("资源文件清理失败: id={}, storage={}, storedName={}",
+                    resource.getId(), resource.getStorage(), resource.getStoredName(), exception);
         }
     }
 
@@ -211,6 +255,7 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     private ResourceVO toVO(LearningResource resource, String uploaderName) {
         return new ResourceVO(resource.getId(), resource.getTitle(), resource.getDescription(),
                 resource.getFileName(), resource.getFileSize(), resource.getContentType(),
-                resource.getVisible(), uploaderName, resource.getCreatedAt());
+                resource.getVisible(), uploaderName, resource.getCreatedAt(),
+                StorageType.from(resource.getStorage()).code());
     }
 }

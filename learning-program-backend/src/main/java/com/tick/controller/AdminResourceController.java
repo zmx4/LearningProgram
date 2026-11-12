@@ -3,6 +3,7 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.ResourceVisibleVO;
 import com.tick.entity.vo.response.ResourceVO;
+import com.tick.entity.vo.response.StorageStatusVO;
 import com.tick.service.LearningResourceService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +35,14 @@ public class AdminResourceController {
     @GetMapping
     public RestBean<List<ResourceVO>> listAll() {
         return RestBean.success(resourceService.listAll());
+    }
+
+    /**
+     * 当前资源存储方式（本地磁盘 / 对象存储），资源页据此提示新上传文件的去向。
+     */
+    @GetMapping("/storage")
+    public RestBean<StorageStatusVO> storageStatus() {
+        return RestBean.success(resourceService.storageStatus());
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

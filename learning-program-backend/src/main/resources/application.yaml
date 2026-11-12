@@ -57,9 +57,9 @@ spring:
     connection-timeout: 3s
 learning:
   resources:
-    # 学习资源文件的存储目录（相对路径基于后端进程工作目录）
-    upload-dir: ./uploads/resources
-    enable-oss: true
+    # 学习资源文件的本地存储目录（相对路径基于后端进程工作目录）。
+    # 只在未启用对象存储（oss.enable=false）或读取历史本地文件时使用
+    upload-dir: ${RESOURCE_UPLOAD_DIR:./uploads/resources}
   mail:
     # 验证码投递方式：log=只写日志（开发默认，无需 SMTP）；smtp=真实发信
     delivery: log
@@ -105,7 +105,18 @@ server:
   # 本地直连（没有该请求头）时行为不变；只有可信代理发来的头才会被采纳。
   forward-headers-strategy: native
 
+# 对象存储（S3 兼容协议：MinIO、阿里云 OSS、腾讯云 COS、七牛等）
+# enable=true 时学习资源的上传与下载都走对象存储；false（默认）时使用 learning.resources.upload-dir。
+# 切换开关不影响已上传文件：每条资源记录着自己存放的位置，老文件仍按原位置读取。
 oss:
-  endpoint: {OSS_ENDPOINT:100.120.61.73:9000}
-  access-key: {OSS_ACCESS_KEY:bGh9KfjXQlA9pBsc7Osq}
-  secret-key: {OSS_SECRET_KEY:DrGD1m57iL3W6BslZK1tazbYnBEC4lPArrlbEkGL}
+  enable: ${OSS_ENABLE:false}
+  # 必须带协议前缀；不写 http:// 时启动会自动补上
+  endpoint: ${OSS_ENDPOINT:http://100.120.61.73:9000}
+  # 凭证由环境变量注入，这里只放本地开发用的默认值
+  access-key: ${OSS_ACCESS_KEY:bGh9KfjXQlA9pBsc7Osq}
+  secret-key: ${OSS_SECRET_KEY:DrGD1m57iL3W6BslZK1tazbYnBEC4lPArrlbEkGL}
+  # 存放学习资源文件的桶，启动时不存在会自动创建（前提是账号有建桶权限）
+  bucket-name: ${OSS_BUCKET:learning-resources}
+  # MinIO、nginx 反代等 path-style 直连为 true；阿里云 OSS 等虚拟主机风格需要 false
+  path-style-access: ${OSS_PATH_STYLE:true}
+  region: ${OSS_REGION:us-east-1}

@@ -207,7 +207,8 @@ CREATE TABLE `db_learning_resource` (
   `title` varchar(100) NOT NULL COMMENT '资源标题',
   `description` varchar(255) DEFAULT NULL COMMENT '资源描述',
   `file_name` varchar(255) NOT NULL COMMENT '原始文件名（展示与下载用）',
-  `stored_name` varchar(100) NOT NULL COMMENT '磁盘存储文件名（UUID + 扩展名）',
+  `stored_name` varchar(100) NOT NULL COMMENT '托管文件名（UUID + 扩展名），对应本地磁盘文件名或对象存储对象键',
+  `storage` varchar(16) NOT NULL DEFAULT 'local' COMMENT '文件存放位置：local=本地磁盘，oss=对象存储',
   `content_type` varchar(100) DEFAULT NULL COMMENT '文件 MIME 类型',
   `file_size` bigint(20) NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
   `visible` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否对普通用户可见',
@@ -215,7 +216,7 @@ CREATE TABLE `db_learning_resource` (
   `created_at` datetime NOT NULL COMMENT '上传时间',
   PRIMARY KEY (`id`),
   KEY `idx_learning_resource_visible` (`visible`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='学习资源元数据，文件本体存放于磁盘';
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='学习资源元数据，文件本体存放于本地磁盘或对象存储';
 
 CREATE TABLE `db_notification` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',

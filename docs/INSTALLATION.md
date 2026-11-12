@@ -156,6 +156,8 @@ MySQL 与 Redis 的连接信息通过环境变量注入，仓库内的 `applicat
 > `learning.mail.queue.enabled=false`，不配任何 SMTP / broker 也能正常启动，
 > 验证码会输出到服务端日志。
 
+> 学习资源的对象存储同样是**可选**的（`OSS_*` 变量，默认关闭），见下文「学习资源的对象存储」。
+
 bash / zsh 设置示例：
 
 ```bash
@@ -227,6 +229,30 @@ JWT 签名密钥（`spring.security.jwt.key`）和有效期目前仍写在 `appl
    未装 broker 却打开了开关也不会失败 —— 投递异常会打一条 warn 并回退成直接发送
 
 > 注意：真实发信时验证码会出现在邮件正文里，接口响应中**永远不会**返回验证码。
+
+## 学习资源的对象存储（可选）
+
+学习资源默认保存在后端本地目录（`learning.resources.upload-dir`，默认 `./uploads/resources`）；
+如果需要把文件放到对象存储，把 `oss.enable` 打开即可，开关切换后新上传的文件写入对象存储，
+**已有文件不受影响**（每行资源记录着自己存放的位置，仍从原位置读取）。
+
+| 配置项 | 环境变量 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `oss.enable` | `OSS_ENABLE` | `false` | 总开关。`false` 用本地目录，`true` 用对象存储 |
+| `oss.endpoint` | `OSS_ENDPOINT` | `http://100.120.61.73:9000` | 服务地址，不写协议时自动补 `http://` |
+| `oss.access-key` / `oss.secret-key` | `OSS_ACCESS_KEY` / `OSS_SECRET_KEY` | 开发用默认值 | 生产环境务必用环境变量覆盖 |
+| `oss.bucket-name` | `OSS_BUCKET` | `learning-resources` | 存放资源的桶，启动时不存在会尝试自动创建 |
+| `oss.path-style-access` | `OSS_PATH_STYLE` | `true` | MinIO / nginx 反代为 `true`；阿里云 OSS 等虚拟主机风格为 `false` |
+| `oss.region` | `OSS_REGION` | `us-east-1` | 签名区域，MinIO 可保持默认 |
+
+兼容任何 S3 协议的服务（MinIO、阿里云 OSS、腾讯云 COS、七牛等）。启用后：
+
+- 上传：文件以 `resources/{UUID}.{ext}` 为对象键写入桶，数据库记录 `storage=oss`；
+- 下载：`/api/resources/{id}/download` 由后端从存储读出后转发，**不暴露对象存储凭证**，访问流水照常记录；
+- 删除：数据库记录与桶内对象一并清理（清理失败只记 warn，不影响删除结果）。
+
+> `oss.enable=true` 但缺少 `endpoint` / 凭证 / 桶名时，后端会在启动阶段直接报错并给出具体缺哪一项，
+> 不会等到第一次上传才失败。只想用本地磁盘就保持 `false`，不需要安装任何对象存储服务。
 
 ## 密码强度策略
 

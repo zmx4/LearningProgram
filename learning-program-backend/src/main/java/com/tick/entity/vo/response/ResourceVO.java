@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 /**
  * 学习资源视图。管理端返回全部（含 visible 与上传者），学员端仅返回 visible 的资源。
+ * storage 表示文件实际存放位置（local=本地磁盘，oss=对象存储）。
  */
 @Data
 @NoArgsConstructor
@@ -22,4 +23,5 @@ public class ResourceVO {
     private Boolean visible;
     private String uploaderName;
     private LocalDateTime createdAt;
+    private String storage;
 }

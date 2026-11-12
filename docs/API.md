@@ -724,7 +724,10 @@ Markdown 文本（前端渲染，内嵌 HTML 会被转义）、`id` 为已有章
 ## 学习资源接口
 
 管理员在管理端上传资料文件（单文件上限 50MB），文件本体保存在后端 `learning.resources.upload-dir`
-配置的目录（默认 `./uploads/resources`），元数据存于 `db_learning_resource`。资源带 `visible` 标记：
+配置的目录（默认 `./uploads/resources`），也可以改存到对象存储：`oss.enable=true` 时新文件写入
+`oss.bucket-name` 指定的桶（S3 兼容协议，MinIO / 阿里云 OSS / 腾讯云 COS 均可）。
+元数据存于 `db_learning_resource`，其中 `storage` 字段记录每个文件的实际位置（`local` / `oss`），
+所以切换存储方式后，之前上传的文件仍从原位置读取。资源带 `visible` 标记：
 **只有 `visible` 为 `true` 的资源出现在学员端列表**；隐藏资源对非管理员一律按不存在处理（列表不返回、下载 `404`）。
 
 ### 查询可见资源
@@ -743,13 +746,15 @@ GET /api/resources/{id}/download
 Authorization: ******
 ```
 
-以 `attachment` 方式返回文件本体，文件名取自上传时的原始文件名。资源不存在、不可见或磁盘文件丢失返回 `404`。
+以 `attachment` 方式返回文件本体，文件名取自上传时的原始文件名。资源不存在、不可见或存储中的文件已丢失返回 `404`。
+文件无论存放在本地磁盘还是对象存储，都由后端代理输出，前端不需要也不应该拿到对象存储的访问凭证。
 每次成功下载会写入一条 `db_resource_access_log` 访问流水，用于小组任务中 resource 类型任务项的完成判定。
 
 ### 资源管理（管理员）
 
 ```http
 GET    /api/admin/resources                    全部资源（含隐藏与上传者）
+GET    /api/admin/resources/storage            当前存储方式（本地磁盘 / 对象存储）
 POST   /api/admin/resources                    上传资源（multipart/form-data）
 PUT    /api/admin/resources/{id}               修改是否在页面上显示
 DELETE /api/admin/resources/{id}               删除资源（文件一并删除）
@@ -758,9 +763,18 @@ Authorization: Bearer <admin-token>
 
 上传请求体为 `multipart/form-data`：`file`（必填，≤50MB）、`title`（必填，≤100 字符）、
 `description`（≤255，可缺省）、`visible`（可缺省，默认 `true`）。服务端以 UUID 重命名落盘，
-保留原始文件名用于展示与下载。参数非法返回 `400`。
+保留原始文件名用于展示与下载。参数非法返回 `400`。返回体中的 `storage`（`local` / `oss`）表示该文件实际存放在哪一侧。
 
-修改显示状态请求体为 `{ "visible": true }`。删除时数据库记录与磁盘文件一并移除，不可恢复。
+修改显示状态请求体为 `{ "visible": true }`。删除时数据库记录与存储中的文件一并移除，不可恢复。
+
+存储方式接口返回：
+
+```json
+{ "type": "oss", "objectStorageEnabled": true, "bucket": "learning-resources" }
+```
+
+`type` 是新上传文件的去向（取 `local` / `oss`），`bucket` 仅在启用对象存储时有值。
+该状态由后端 `oss.enable` 配置决定，管理端只做展示。
 
 ## 讨论区接口
 

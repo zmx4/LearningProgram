@@ -276,12 +276,17 @@ erDiagram
 | title | VARCHAR(100) | NOT NULL | |
 | description | VARCHAR(255) | NULL | |
 | file_name | VARCHAR(255) | NOT NULL | 原始文件名 |
-| stored_name | VARCHAR(100) | NOT NULL | 磁盘存储名（对应 `learning.resources.upload-dir`） |
+| stored_name | VARCHAR(100) | NOT NULL | 托管文件名（对应本地磁盘文件名或对象存储对象键） |
+| storage | VARCHAR(16) | NOT NULL DEFAULT 'local' | 文件存放位置：`local` 本地磁盘 / `oss` 对象存储 |
 | content_type | VARCHAR(100) | NULL | MIME 类型 |
 | file_size | BIGINT | NOT NULL DEFAULT 0 | 字节数，单个上限 50MB |
 | visible | TINYINT(1) | NOT NULL DEFAULT 1 | 是否在学员端展示 |
 | account_id | INT | NULL | 上传者，软引用 db_account，不带外键 |
 | created_at | DATETIME | NOT NULL | 索引 `(visible, created_at)` |
+
+`storage` 记录文件实际存放位置：`local` 表示在 `learning.resources.upload-dir` 目录，`oss` 表示在对象存储
+（`oss.bucket-name` 桶内，对象键为 `resources/{stored_name}`）。只有启用对象存储后新上传的资源才是 `oss`；
+已有库执行 `scripts/migrations/2026-11-12-learning-resource-storage.sql` 补字段，存量记录默认为 `local`。
 
 ## 学习小组
 
