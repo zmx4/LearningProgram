@@ -59,6 +59,7 @@ learning:
   resources:
     # 学习资源文件的存储目录（相对路径基于后端进程工作目录）
     upload-dir: ./uploads/resources
+    enable-oss: true
   mail:
     # 验证码投递方式：log=只写日志（开发默认，无需 SMTP）；smtp=真实发信
     delivery: log
