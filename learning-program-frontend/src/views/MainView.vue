@@ -19,7 +19,7 @@ import {
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useMediaQuery} from '@vueuse/core'
-import {currentRole, currentUsername, logout, publicGet, unauthorized} from '@/net'
+import {currentRole, currentUserId, currentUsername, get, logout, publicGet, unauthorized} from '@/net'
 import {useI18n} from 'vue-i18n'
 import {
   dailyWordSettingsChangedEvent,
@@ -27,6 +27,7 @@ import {
   type DailyWordSettings,
   type DailyWordSource,
 } from '@/utils/dailyWord'
+import {avatarUrl, profileUpdatedEvent, type ProfileData} from '@/utils/profile'
 
 interface DailyWord {
   id: number
@@ -46,6 +47,8 @@ const username = ref(currentUsername() || t('common.user'))
 const isAdmin = currentRole() === 'admin'
 // 主界面允许游客浏览：未登录时隐藏用户区（铃铛/头像/退出），显示登录入口
 const isLoggedIn = !unauthorized()
+// 顶栏头像：未设置头像或未启用对象存储时为空，回退为默认图标
+const avatarSrc = ref('')
 
 // On mobile the sidebar is an off-canvas drawer driven by mobileNavOpen;
 // on desktop it keeps the hover/click-to-expand rail behaviour.
@@ -190,14 +193,33 @@ function onDailyWordSettingsChanged(event: Event) {
   loadDailyWord()
 }
 
+function applyAvatar(profile: ProfileData) {
+  const id = currentUserId()
+  avatarSrc.value = profile.avatar && profile.avatarEnabled && id !== null
+    ? avatarUrl(id, profile.avatar)
+    : ''
+}
+
+function loadAvatar() {
+  if (!isLoggedIn) return
+  get<ProfileData>('/api/profile', applyAvatar, () => {})
+}
+
+function onProfileUpdated(event: Event) {
+  applyAvatar((event as CustomEvent<ProfileData>).detail)
+}
+
 onMounted(() => {
   loadDailyWord()
+  loadAvatar()
   window.addEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+  window.addEventListener(profileUpdatedEvent, onProfileUpdated)
   document.addEventListener('keydown', onDocumentKeydown)
 })
 
 onUnmounted(() => {
   window.removeEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
+  window.removeEventListener(profileUpdatedEvent, onProfileUpdated)
   document.removeEventListener('keydown', onDocumentKeydown)
 })
 </script>
@@ -333,7 +355,8 @@ onUnmounted(() => {
             <button class="profile" type="button" :aria-label="t('common.openProfile')"
                     @click="router.push({ name: 'profile' })">
               <div class="avatar" :aria-label="t('common.userAvatar')">
-                <el-icon>
+                <img v-if="avatarSrc" :src="avatarSrc" alt="" />
+                <el-icon v-else>
                   <UserFilled/>
                 </el-icon>
               </div>
@@ -709,6 +732,13 @@ onUnmounted(() => {
   color: var(--el-color-white);
   background: var(--el-color-info);
   font-size: 18px;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .profile-name {

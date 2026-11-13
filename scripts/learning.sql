@@ -14,6 +14,7 @@ CREATE TABLE `db_account` (
   `register_time` datetime NOT NULL DEFAULT current_timestamp() COMMENT '注册时间',
   `phone` varchar(30) DEFAULT NULL COMMENT '手机号',
   `bio` varchar(120) DEFAULT NULL COMMENT '个人简介',
+  `avatar` varchar(100) DEFAULT NULL COMMENT '头像托管文件名（UUID + 扩展名），存放于对象存储 avatars/ 前缀下，仅启用对象存储时可用',
   `points` int(11) NOT NULL DEFAULT 0 COMMENT '遗留积分字段，有效积分见 db_account_points',
   `totp_secret` varchar(64) DEFAULT NULL COMMENT '两步验证 TOTP 密钥',
   `totp_enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用两步验证',

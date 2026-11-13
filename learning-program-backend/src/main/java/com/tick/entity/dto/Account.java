@@ -22,6 +22,7 @@ public class Account {
     String email;
     String phone;
     String bio;
+    String avatar;
     String role;
     Integer points;
     @TableField("totp_secret")
@@ -33,23 +34,25 @@ public class Account {
 
     public Account(Integer id, String username, String password, String email,
                    String phone, String bio, String role, Date registerDate) {
-        this(id, username, password, email, phone, bio, role, 0, null, false, registerDate);
+        this(id, username, password, email, phone, bio, null, role, 0, null, false, registerDate);
     }
 
     public Account(Integer id, String username, String password, String email,
                    String phone, String bio, String role, Integer points, Date registerDate) {
-        this(id, username, password, email, phone, bio, role, points, null, false, registerDate);
+        this(id, username, password, email, phone, bio, null, role, points, null, false, registerDate);
     }
 
+    // 参数顺序必须与 db_account 查询列顺序一致，MyBatis 按构造器自动映射结果集
     public Account(Integer id, String username, String password, String email,
-                   String phone, String bio, String role, Integer points, String totpSecret,
-                   Boolean totpEnabled, Date registerDate) {
+                   String phone, String bio, String avatar, String role, Integer points,
+                   String totpSecret, Boolean totpEnabled, Date registerDate) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.email = email;
         this.phone = phone;
         this.bio = bio;
+        this.avatar = avatar;
         this.role = role;
         this.points = points;
         this.totpSecret = totpSecret;

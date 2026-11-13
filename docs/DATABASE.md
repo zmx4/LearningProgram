@@ -90,6 +90,7 @@ erDiagram
 | register_time | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 注册时间 |
 | phone | VARCHAR(30) | NULL | 手机号 |
 | bio | VARCHAR(120) | NULL | 个人简介 |
+| avatar | VARCHAR(100) | NULL | 头像托管文件名（UUID + 扩展名），存放于对象存储 `avatars/` 前缀下，仅启用对象存储时可用 |
 | points | INT | NOT NULL DEFAULT 0 | 早期遗留字段，注册时固定写 0；有效积分以 `db_account_points` 为准 |
 
 ### db_account_points 积分总账

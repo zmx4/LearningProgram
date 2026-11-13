@@ -201,6 +201,13 @@ export default {
     readFailed: '个人信息读取失败，已恢复默认值',
     saved: '个人信息已保存',
     restored: '已恢复默认信息',
+    changeAvatar: '更换头像',
+    avatarAlt: '用户头像',
+    removeAvatar: '移除头像',
+    avatarUploaded: '头像已更新',
+    avatarRemoved: '头像已移除',
+    avatarTooLarge: '头像图片不能超过 2MB',
+    avatarTypeInvalid: '仅支持 JPG / PNG / GIF / WebP 图片',
   },
   notifications: {
     all: '全部消息',
@@ -210,7 +217,7 @@ export default {
   },
   user: {
     back: '返回上一页',
-    avatar: '临时头像',
+    avatar: '用户头像',
     learner: '学习者',
     bio: '个人简介',
     noBio: '这个人还没有填写个人简介',

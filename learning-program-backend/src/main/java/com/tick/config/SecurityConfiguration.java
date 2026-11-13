@@ -61,6 +61,9 @@ public class SecurityConfiguration {
                                 // 进度上报等写接口仍要求登录
                                 .requestMatchers(HttpMethod.GET, "/api/courses/progress").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/dictionary/**").permitAll()
+                                // 头像供 <img> 标签直接加载，浏览器不会带 Authorization 头，故公开读取；
+                                // 上传 / 移除仍走 /api/profile/avatar，需要登录
+                                .requestMatchers(HttpMethod.GET, "/api/user/*/avatar").permitAll()
                                 // 未处理的错误会被转发到 /error。这里若要求认证，任何错误最终都会
                                 // 变成 401「Full authentication is required to access this resource」，
                                 // 前端会误判成登录过期并清除登录态，真正的错误信息也丢失了。

@@ -262,9 +262,14 @@ Authorization: Bearer <token>
   "email": "alice@example.com",
   "phone": "",
   "bio": "",
-  "role": "user"
+  "role": "user",
+  "avatar": null,
+  "avatarEnabled": false
 }
 ```
+
+`avatar` 为头像托管文件名（未设置时为 `null`）；`avatarEnabled` 表示头像功能是否可用，
+仅当后端启用对象存储（`oss.enable=true`）时为 `true`。
 
 ### 更新当前用户资料
 
@@ -303,6 +308,29 @@ Content-Type: application/json
 ```
 
 新密码需满足「密码强度策略」，校验不通过返回 `400`；旧密码不正确或新密码与当前密码相同时同样返回 `400`。
+
+### 上传头像
+
+```http
+POST /api/profile/avatar
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+表单字段 `file` 为头像图片，仅支持 JPG / PNG / GIF / WebP，大小不超过 2MB，
+服务端会校验文件头魔数与声明类型一致。成功后返回与 `GET /api/profile` 相同结构的资料
+（`avatar` 为新的托管文件名），旧头像文件会被清理。
+
+头像功能仅在启用对象存储（`oss.enable=true`）时可用，未启用时返回 `400`。
+
+### 移除头像
+
+```http
+DELETE /api/profile/avatar
+Authorization: Bearer <token>
+```
+
+清空头像并删除对象存储中的文件，返回更新后的资料。未启用对象存储时只清空数据库记录。
 
 ## 通知接口
 
@@ -352,7 +380,20 @@ GET /api/user/{id}
 Authorization: Bearer <token>
 ```
 
-返回用户名与个人简介。
+返回用户名、个人简介与头像托管文件名（`avatar`，未设置或未启用对象存储时为 `null`）。
+
+### 读取用户头像
+
+```http
+GET /api/user/{id}/avatar
+```
+
+公开接口（供 `<img>` 标签直接加载，无需 token），以图片流返回头像，
+`Content-Type` 按托管文件名的扩展名确定。用户不存在、未设置头像、
+未启用对象存储或文件丢失时返回 `404`。
+
+建议以 `?v=<avatar 托管文件名>` 作为版本标识拼 URL：头像更新后文件名变化，
+可绕过浏览器缓存（响应带 `Cache-Control: public, max-age=86400`）。
 
 ## 单词接口
 

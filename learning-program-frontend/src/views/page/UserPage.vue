@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowLeft, UserFilled } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '@/net'
 import { useI18n } from 'vue-i18n'
+import { avatarUrl } from '@/utils/profile'
 
 interface UserInfo {
   username: string
   bio: string
+  avatar: string | null
 }
 
 const route = useRoute()
@@ -15,6 +17,13 @@ const router = useRouter()
 const user = ref<UserInfo | null>(null)
 const loading = ref(true)
 const { t } = useI18n()
+
+const avatarSrc = computed(() => {
+  const avatar = user.value?.avatar
+  if (!avatar) return ''
+  const id = Number(route.params.id)
+  return Number.isFinite(id) ? avatarUrl(id, avatar) : ''
+})
 
 function loadUser() {
   loading.value = true
@@ -40,7 +49,8 @@ watch(() => route.params.id, loadUser)
     <section v-loading="loading" class="user-card">
       <template v-if="user">
         <div class="user-avatar" :aria-label="t('user.avatar')">
-          <el-icon><UserFilled /></el-icon>
+          <img v-if="avatarSrc" :src="avatarSrc" :alt="t('user.avatar')" />
+          <el-icon v-else><UserFilled /></el-icon>
         </div>
         <h2>{{ user.username }}</h2>
         <p class="user-label">{{ t('user.learner') }}</p>
@@ -92,6 +102,7 @@ watch(() => route.params.id, loadUser)
   background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
   font-size: 38px;
 }
+.user-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 h2 { margin: 0 0 6px; font-size: 25px; }
 .user-label { margin: 0 0 30px; color: var(--el-text-color-secondary); font-size: 13px; }
 .user-details {
