@@ -3,8 +3,7 @@ package com.tick.config;
 import com.pig4cloud.plugin.oss.OssProperties;
 import com.pig4cloud.plugin.oss.service.OssTemplate;
 import com.tick.storage.OssResourceStorage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -21,10 +20,10 @@ import org.springframework.context.annotation.Configuration;
  * oss-spring-boot-starter 自带的 OssTemplate 带 {@code @ConditionalOnMissingBean}，
  * 检测到这里的 Bean 后会自动让位。
  */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OssProperties.class)
 public class ObjectStorageConfiguration {
-    private static final Logger log = LoggerFactory.getLogger(ObjectStorageConfiguration.class);
 
     @Bean
     @ConditionalOnProperty(prefix = "oss", name = "enable", havingValue = "true")
