@@ -14,8 +14,7 @@ import com.tick.storage.ResourceStorage;
 import com.tick.storage.ResourceStorageManager;
 import com.tick.storage.StoredFile;
 import com.tick.storage.StorageType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,10 +34,10 @@ import java.util.stream.Collectors;
 /**
  * 学习资源服务实现。
  */
+@Slf4j
 @Service
 public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMapper, LearningResource>
         implements LearningResourceService {
-    private static final Logger log = LoggerFactory.getLogger(LearningResourceServiceImpl.class);
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
     private static final int MAX_FILE_NAME_LENGTH = 255;
     // 托管文件名的扩展名只保留字母数字，防止把路径分隔符等写进磁盘文件名 / 对象键

@@ -1,8 +1,7 @@
 package com.tick.storage;
 
 import com.pig4cloud.plugin.oss.service.OssTemplate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.InputStream;
@@ -13,8 +12,8 @@ import java.io.InputStream;
  * <p>
  * 对象键统一加 {@link #OBJECT_PREFIX} 前缀，桶里可以同时放别的东西而不会和资源文件打架。
  */
+@Slf4j
 public class OssResourceStorage implements ResourceStorage {
-    private static final Logger log = LoggerFactory.getLogger(OssResourceStorage.class);
     private static final String OBJECT_PREFIX = "resources/";
 
     private final OssTemplate ossTemplate;
