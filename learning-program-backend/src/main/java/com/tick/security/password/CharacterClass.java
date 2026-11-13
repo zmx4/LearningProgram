@@ -1,5 +1,7 @@
 package com.tick.security.password;
 
+import lombok.Getter;
+
 import java.util.function.Predicate;
 
 /**
@@ -18,7 +20,9 @@ public enum CharacterClass {
     SPECIAL("special", "特殊字符",
             character -> !Character.isLetterOrDigit(character) && !Character.isWhitespace(character));
 
+    @Getter
     private final String code;
+    @Getter
     private final String label;
     private final Predicate<Character> matcher;
 
@@ -26,14 +30,6 @@ public enum CharacterClass {
         this.code = code;
         this.label = label;
         this.matcher = matcher;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getLabel() {
-        return label;
     }
 
     public boolean matches(char character) {

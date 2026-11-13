@@ -17,7 +17,7 @@ public final class AccountInfoRule implements PasswordRule {
 
     @Override
     public Optional<String> check(PasswordContext context) {
-        if (!context.hasPassword()) {
+        if (context.hasPassword()) {
             return Optional.empty();
         }
         String password = context.rawPassword().toLowerCase(Locale.ROOT);

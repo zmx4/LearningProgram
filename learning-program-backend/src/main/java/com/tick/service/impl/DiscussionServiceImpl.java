@@ -124,7 +124,7 @@ public class DiscussionServiceImpl extends ServiceImpl<DiscussionPostMapper, Dis
         if (post == null) {
             throw new NotFoundException("文章不存在");
         }
-        if (!mayDelete(accountId, post.getAccountId())) {
+        if (mayDelete(accountId, post.getAccountId())) {
             throw new SecurityException("只能删除自己发表的文章");
         }
         // 评论由 db_discussion_comment 的外键 ON DELETE CASCADE 一并删除
@@ -188,7 +188,7 @@ public class DiscussionServiceImpl extends ServiceImpl<DiscussionPostMapper, Dis
         if (comment == null) {
             throw new NotFoundException("评论不存在");
         }
-        if (!mayDelete(accountId, comment.getAccountId())) {
+        if (mayDelete(accountId, comment.getAccountId())) {
             throw new SecurityException("只能删除自己发表的评论");
         }
         discussionCommentMapper.deleteById(comment.getId());
@@ -248,13 +248,13 @@ public class DiscussionServiceImpl extends ServiceImpl<DiscussionPostMapper, Dis
     /** 作者本人或管理员可以删除。 */
     private boolean mayDelete(Integer accountId, Integer ownerId) {
         if (accountId == null) {
-            return false;
-        }
-        if (accountId.equals(ownerId)) {
             return true;
         }
+        if (accountId.equals(ownerId)) {
+            return false;
+        }
         Account account = accountService.getById(accountId);
-        return account != null && "admin".equals(account.getRole());
+        return account == null || !"admin".equals(account.getRole());
     }
 
     private Map<Integer, String> authorNames(Collection<Integer> accountIds) {

@@ -24,6 +24,6 @@ public record PasswordContext(String password, String username, String email) {
     }
 
     public boolean hasPassword() {
-        return !rawPassword().isEmpty();
+        return rawPassword().isEmpty();
     }
 }

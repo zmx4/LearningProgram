@@ -16,7 +16,7 @@ import com.tick.security.password.PasswordPolicy;
 import com.tick.service.AccountService;
 import com.tick.service.NotificationService;
 import jakarta.annotation.Resource;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,10 +24,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
-import java.sql.Wrapper;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 账号服务实现。
@@ -90,7 +89,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
-    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
+    @NullMarked
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = this.findAccountByUsernameOrEmail(username);
 
         if (account == null) {
@@ -108,7 +108,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 .eq("username", text).or()
                 .eq("email", text)
                 .list();
-        return rows.isEmpty() ? null : rows.get(0);
+        return rows.isEmpty() ? null : rows.getFirst();
     }
 
     @Override
@@ -269,6 +269,6 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     private boolean emailEquals(String first, String second) {
-        return first == null ? second == null : first.equals(second);
+        return Objects.equals(first, second);
     }
 }

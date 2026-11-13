@@ -203,7 +203,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
             throw new IllegalArgumentException("章节不属于该课程");
         }
         int duration = vo.getDurationSeconds() == null ? 0
-                : Math.min(Math.max(vo.getDurationSeconds(), 0), MAX_REPORT_SECONDS);
+                : Math.clamp(vo.getDurationSeconds(), 0, MAX_REPORT_SECONDS);
 
         LocalDateTime now = LocalDateTime.now();
         CourseProgress progress = lambdaQuery()

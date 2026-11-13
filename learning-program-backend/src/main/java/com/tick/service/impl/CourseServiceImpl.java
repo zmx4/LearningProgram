@@ -14,6 +14,7 @@ import com.tick.mapper.CourseMapper;
 import com.tick.mapper.CourseQuestionSetMapper;
 import com.tick.mapper.QuestionSetMapper;
 import com.tick.service.CourseService;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -167,7 +168,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
             throw new IllegalArgumentException("课程描述不能超过 500 个字符");
         }
 
-        Integer rewardPoints = vo.getRewardPoints() == null ? 0 : vo.getRewardPoints();
+        int rewardPoints = vo.getRewardPoints() == null ? 0 : vo.getRewardPoints();
         if (rewardPoints < 0 || rewardPoints > 100000) {
             throw new IllegalArgumentException("奖励积分需在 0 到 100000 之间");
         }
@@ -180,6 +181,19 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
             throw new IllegalArgumentException("课程图标不能超过 16 个字符");
         }
 
+        List<CourseSaveVO.ChapterItem> chapters = createChapters(vo);
+
+        List<Integer> setIds = vo.getQuestionSetIds() == null ? List.of()
+                : List.copyOf(new LinkedHashSet<>(vo.getQuestionSetIds()));
+        if (!setIds.isEmpty() && questionSetMapper.selectCount(new LambdaQueryWrapper<QuestionSet>()
+                .in(QuestionSet::getId, setIds)) != setIds.size()) {
+            throw new IllegalArgumentException("课程中包含不存在的题集");
+        }
+
+        return new Normalized(title, description, icon, vo.getSortOrder(), rewardPoints, chapters, setIds);
+    }
+
+    private static @NonNull List<CourseSaveVO.ChapterItem> createChapters(CourseSaveVO vo) {
         List<CourseSaveVO.ChapterItem> chapters = new ArrayList<>();
         if (vo.getChapters() != null) {
             for (CourseSaveVO.ChapterItem item : vo.getChapters()) {
@@ -190,29 +204,26 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
                 if (chapterTitle.isEmpty()) {
                     throw new IllegalArgumentException("章节标题不能为空");
                 }
-                if (chapterTitle.length() > 150) {
-                    throw new IllegalArgumentException("章节标题不能超过 150 个字符");
-                }
-                String content = item.getContent() == null ? null : item.getContent().trim();
-                if (content != null && content.isEmpty()) {
-                    content = null;
-                }
-                CourseSaveVO.ChapterItem normalizedItem = new CourseSaveVO.ChapterItem();
-                normalizedItem.setId(item.getId());
-                normalizedItem.setTitle(chapterTitle);
-                normalizedItem.setContent(content);
+                CourseSaveVO.ChapterItem normalizedItem = getNormalizedItem(item, chapterTitle);
                 chapters.add(normalizedItem);
             }
         }
+        return chapters;
+    }
 
-        List<Integer> setIds = vo.getQuestionSetIds() == null ? List.of()
-                : List.copyOf(new LinkedHashSet<>(vo.getQuestionSetIds()));
-        if (!setIds.isEmpty() && questionSetMapper.selectCount(new LambdaQueryWrapper<QuestionSet>()
-                .in(QuestionSet::getId, setIds)) != setIds.size()) {
-            throw new IllegalArgumentException("课程中包含不存在的题集");
+    private static CourseSaveVO.@NonNull ChapterItem getNormalizedItem(CourseSaveVO.ChapterItem item, String chapterTitle) {
+        if (chapterTitle.length() > 150) {
+            throw new IllegalArgumentException("章节标题不能超过 150 个字符");
         }
-
-        return new Normalized(title, description, icon, vo.getSortOrder(), rewardPoints, chapters, setIds);
+        String content = item.getContent() == null ? null : item.getContent().trim();
+        if (content != null && content.isEmpty()) {
+            content = null;
+        }
+        CourseSaveVO.ChapterItem normalizedItem = new CourseSaveVO.ChapterItem();
+        normalizedItem.setId(item.getId());
+        normalizedItem.setTitle(chapterTitle);
+        normalizedItem.setContent(content);
+        return normalizedItem;
     }
 
     private AdminCourseVO toVO(Course course, boolean withChapters) {

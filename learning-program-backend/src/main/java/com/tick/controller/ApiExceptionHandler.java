@@ -5,8 +5,7 @@ import com.tick.exception.ConflictException;
 import com.tick.exception.NotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -32,9 +31,9 @@ import java.util.stream.Collectors;
  * 这样前端 handleResponse 能拿到真正的 message；若返回真实的 4xx，axios 会直接走 catch，
  * 前端反而只能显示「发生了一些错误」。
  */
+@Slf4j
 @RestControllerAdvice
 public class ApiExceptionHandler {
-    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     /** {@code @Valid @RequestBody} 校验失败，取第一条错误信息。 */
     @ExceptionHandler(MethodArgumentNotValidException.class)

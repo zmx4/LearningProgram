@@ -62,9 +62,9 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 .filter(row -> Objects.equals(row.getAccountId(), accountId))
                 .findFirst()
                 .orElse(null);
-        int rankedUsers = rows.isEmpty() || rows.get(0).getRankedUsers() == null
+        int rankedUsers = rows.isEmpty() || rows.getFirst().getRankedUsers() == null
                 ? 0
-                : rows.get(0).getRankedUsers();
+                : rows.getFirst().getRankedUsers();
 
         return new LeaderboardVO(
                 metric.getCode(),

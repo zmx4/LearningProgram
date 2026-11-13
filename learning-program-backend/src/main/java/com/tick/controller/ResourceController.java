@@ -6,8 +6,7 @@ import com.tick.entity.vo.response.ResourceVO;
 import com.tick.service.LearningResourceService;
 import com.tick.storage.StoredFile;
 import com.tick.storage.StorageType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -31,10 +30,10 @@ import java.util.List;
  * 学习资源的读取与下载接口，登录用户可访问。仅展示 visible 的资源；
  * 隐藏资源对非管理员一律按不存在处理。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/resources")
 public class ResourceController {
-    private static final Logger log = LoggerFactory.getLogger(ResourceController.class);
 
     private final LearningResourceService resourceService;
 
