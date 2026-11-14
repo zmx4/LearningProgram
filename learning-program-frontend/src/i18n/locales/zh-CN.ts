@@ -208,6 +208,10 @@ export default {
     avatarRemoved: '头像已移除',
     avatarTooLarge: '头像图片不能超过 2MB',
     avatarTypeInvalid: '仅支持 JPG / PNG / GIF / WebP 图片',
+    avatarCropTitle: '裁剪头像',
+    avatarCropHint: '拖动调整位置，滚轮缩放图片',
+    avatarCropCancel: '取消',
+    avatarCropConfirm: '确认并上传',
   },
   notifications: {
     all: '全部消息',

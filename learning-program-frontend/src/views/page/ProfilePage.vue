@@ -42,6 +42,8 @@ const saving = ref(false)
 const loading = ref(false)
 const avatarUploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const pendingAvatarFile = ref<File | null>(null)
+const cropDialogVisible = ref(false)
 
 const avatarSrc = computed(() => {
   const id = currentUserId()
@@ -114,9 +116,20 @@ function onAvatarSelected(event: Event) {
     ElMessage.warning(t('profile.avatarTooLarge'))
     return
   }
+  // 先进入裁剪弹窗，确认后再上传
+  pendingAvatarFile.value = file
+  cropDialogVisible.value = true
+}
+
+function onAvatarCropped(blob: Blob) {
+  if (avatarUploading.value) return
+  if (blob.size > 2 * 1024 * 1024) {
+    ElMessage.warning(t('profile.avatarTooLarge'))
+    return
+  }
   avatarUploading.value = true
   const payload = new FormData()
-  payload.append('file', file)
+  payload.append('file', blob, 'avatar.png')
   post<ProfileData>('/api/profile/avatar', payload, (data) => {
     applyProfile(data)
     avatarUploading.value = false
@@ -180,6 +193,7 @@ onMounted(loadProfile)
         :aria-label="t('profile.changeAvatar')"
         @change="onAvatarSelected"
       />
+      <AvatarCropDialog v-model="cropDialogVisible" :file="pendingAvatarFile" @confirm="onAvatarCropped" />
 
       <el-form label-position="top" class="profile-form" @submit.prevent="saveProfile">
         <div class="form-grid">
