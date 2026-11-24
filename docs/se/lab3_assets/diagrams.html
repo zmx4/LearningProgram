@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>LearningProgram 实验3 图</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  body { font-family: "Noto Sans CJK SC", "Microsoft YaHei", "SimHei", sans-serif; color: #111; }
+  .fig { display: inline-block; padding: 24px; background: #fff; }
+  .fig + .fig { display: block; margin-top: 50px; }
+
+  /* ============ 程序结构图 ============ */
+  .tree { position: relative; background: #fff; }
+
+  /* ============ 盒图 ============ */
+  .ns { border: 2px solid #111; background: #fff; }
+  .ns .item { border-top: 1.2px solid #111; }
+  .ns .item:first-child { border-top: none; }
+  .ns .stmt { padding: 9px 16px; text-align: center; font-size: 18px; line-height: 1.5; }
+  .ns .stmt.small { font-size: 16px; }
+  .ns .ifcond { padding: 8px 16px; text-align: center; font-size: 18px; border-bottom: 1.2px solid #111; background: #f4f4f4; font-weight: 600; }
+  .ns .branches { display: flex; align-items: stretch; }
+  .ns .branch { flex: 1 1 0; min-width: 0; border-right: 1.2px solid #111; }
+  .ns .branch:last-child { border-right: none; }
+  .ns .branchhead { font-size: 13px; font-weight: 700; padding: 2px 8px; border-bottom: 1px dashed #999; color: #444; }
+  .ns .branchbody { padding: 0; }
+  .ns .branchbody .stmt { font-size: 16px; padding: 8px 12px; }
+  .ns .loophead { padding: 7px 16px; font-size: 17px; font-weight: 600; border-bottom: 1.2px solid #111; background: #f4f4f4; text-align: center; }
+  .ns .loopfoot { padding: 4px 16px; font-size: 13px; color: #333; border-top: 1.2px dashed #777; text-align: center; }
+  .ns .loopbody { border-left: 5px solid #111; margin-left: 12px; margin-right: 12px; }
+  .ns .loopbody .item:first-child { border-top: none; }
+  .ns .casehead { padding: 7px 16px; font-size: 17px; font-weight: 600; border-bottom: 1.2px solid #111; background: #f4f4f4; text-align: center; }
+  .ns .caserow { display: flex; align-items: stretch; border-top: 1.2px solid #111; }
+  .ns .caserow:first-of-type { border-top: none; }
+  .ns .caselabel { width: 150px; flex: 0 0 150px; padding: 8px 10px; font-size: 15px; font-weight: 600; border-right: 1.2px solid #111; text-align: center; background: #fafaef; display: flex; align-items: center; justify-content: center; }
+  .ns .casebody { flex: 1 1 auto; min-width: 0; }
+  .ns .casebody .stmt { font-size: 15.5px; padding: 7px 10px; }
+  .ns .casebody .ifcond { font-size: 15px; padding: 6px 10px; }
+  .ns .note { font-size: 14px; padding: 6px 14px; color: #333; }
+
+  /* ============ 流程图 ============ */
+  .flow svg { display: block; background: #fff; }
+</style>
+</head>
+<body>
+
+<div id="fig-structure" class="fig" role="img" aria-label="图3.1 系统程序结构图"></div>
+<div id="fig-flow" class="fig" role="img" aria-label="图3.2 系统主程序流程图"></div>
+<div id="fig-ns-main" class="fig" role="img" aria-label="图3.3 系统主程序盒图"></div>
+<div id="fig-ns-login" class="fig" role="img" aria-label="图3.4 登录子模块盒图"></div>
+<div id="fig-ns-course" class="fig" role="img" aria-label="图3.5 课程学习与进度上报盒图"></div>
+<div id="fig-ns-test" class="fig" role="img" aria-label="图3.6 在线测试盒图"></div>
+<div id="fig-ns-group" class="fig" role="img" aria-label="图3.7 学习小组任务盒图"></div>
+<div id="fig-ns-checkin" class="fig" role="img" aria-label="图3.8 每日签到与积分盒图"></div>
+<div id="fig-ns-admin" class="fig" role="img" aria-label="图3.9 后台课程维护盒图"></div>
+
+<script>
+/* ---------------- 通用 ---------------- */
+const NS = 'http://www.w3.org/2000/svg';
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------------- 1. 程序结构图 (SVG) ---------------- */
+(function(){
+  const modules = [
+    { id:'M1 账号与认证', children:['登录','注册','找回密码','两步验证','退出登录'] },
+    { id:'M2 个人资料',   children:['资料查询与修改','头像管理','修改密码'] },
+    { id:'M3 课程学习',   children:['课程列表','章节学习','进度上报','完成奖励'] },
+    { id:'M4 单词与测试', children:['词典与词表','单词测试','知识测试','历史汇总'] },
+    { id:'M5 互动交流',   children:['讨论区','小组创建与加入','组内消息','小组任务'] },
+    { id:'M6 激励与通知', children:['每日签到','积分总账','排行榜','站内通知'] },
+    { id:'M7 学习资源',   children:['资源浏览','资源下载','访问日志'] },
+    { id:'M8 系统管理',   children:['用户管理','课程管理','题库题集管理','资源与通知'] }
+  ];
+  const W = 820, top = 20, childH = 34, childGap = 5, moduleGap = 26, moduleH = 46;
+  let y = top;
+  const rows = modules.map(m => {
+    const h = Math.max(moduleH, m.children.length * childH + (m.children.length - 1) * childGap);
+    const r = { ...m, y, h, childH, childGap };
+    y += h + moduleGap;
+    return r;
+  });
+  const H = rows[rows.length-1].y + rows[rows.length-1].h + 34 + 52 + 40;
+  const rootW = 190, rootH = 110, rootX = 16, rootY = (rows[0].y + rows[rows.length-1].y + rows[rows.length-1].h)/2 - rootH/2;
+  const trunkX = 238;
+  const moduleX = 262, moduleW = 182;
+  const childX = 468, childW = 300;
+
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Noto Sans CJK SC, Microsoft YaHei, sans-serif">`;
+  s += `<defs><style>
+    .mod{font-size:18px;font-weight:700;fill:#111}
+    .chi{font-size:16px;fill:#111}
+    .rt{font-size:19px;font-weight:700;fill:#111}
+    .bar{font-size:16px;fill:#111}
+    .ln{stroke:#111;stroke-width:1.8;fill:none}
+    .box{fill:#fff;stroke:#111;stroke-width:1.8}
+    .mhead{fill:#eef4fb;stroke:#111;stroke-width:2}
+    .rhead{fill:#e8f0fe;stroke:#111;stroke-width:2.4}
+    .support{fill:#f7f7f7;stroke:#111;stroke-width:1.6}
+  </style></defs>`;
+
+  // 根
+  s += `<rect class="rhead" x="${rootX}" y="${rootY}" width="${rootW}" height="${rootH}" rx="4"/>`;
+  s += `<text class="rt" x="${rootX+rootW/2}" y="${rootY+45}" text-anchor="middle">LearningProgram</text>`;
+  s += `<text class="rt" x="${rootX+rootW/2}" y="${rootY+74}" text-anchor="middle">在线学习平台</text>`;
+  s += `<text class="chi" x="${rootX+rootW/2}" y="${rootY+97}" text-anchor="middle">主控程序</text>`;
+  // 根到主干
+  s += `<path class="ln" d="M ${rootX+rootW} ${rootY+rootH/2} H ${trunkX}"/>`;
+
+  // 主干
+  const firstY = rows[0].y + rows[0].h/2;
+  const lastY = rows[rows.length-1].y + rows[rows.length-1].h/2;
+  s += `<path class="ln" d="M ${trunkX} ${firstY} V ${lastY}"/>`;
+
+  rows.forEach(r => {
+    const cy = r.y + r.h/2;
+    // 主干到模块
+    s += `<path class="ln" d="M ${trunkX} ${cy} H ${moduleX}"/>`;
+    const mh = 56;
+    s += `<rect class="mhead" x="${moduleX}" y="${cy-mh/2}" width="${moduleW}" height="${mh}" rx="3"/>`;
+    s += `<text class="mod" x="${moduleX+moduleW/2}" y="${cy+6}" text-anchor="middle">${esc(r.id)}</text>`;
+    // 模块到子功能
+    const bracketX = childX - 24;
+    const cy0 = r.y + r.childH/2;
+    const cyN = r.y + (r.children.length-1)*(r.childH+r.childGap) + r.childH/2;
+    s += `<path class="ln" d="M ${moduleX+moduleW} ${cy} H ${bracketX}"/>`;
+    s += `<path class="ln" d="M ${bracketX} ${cy0} V ${cyN}"/>`;
+    r.children.forEach((c, i) => {
+      const yy = r.y + i*(r.childH+r.childGap);
+      const ccy = yy + r.childH/2;
+      s += `<path class="ln" d="M ${bracketX} ${ccy} H ${childX}"/>`;
+      s += `<rect class="box" x="${childX}" y="${yy}" width="${childW}" height="${r.childH}" rx="2"/>`;
+      s += `<text class="chi" x="${childX+16}" y="${ccy+6}">${esc(c)}</text>`;
+    });
+  });
+
+  // 公共支撑
+  const sy = rows[rows.length-1].y + rows[rows.length-1].h + 34;
+  s += `<rect class="support" x="${rootX}" y="${sy}" width="${W-rootX-20}" height="${52}" rx="4"/>`;
+  s += `<text class="bar" x="${rootX+20}" y="${sy+33}">公共支撑：JWT 过滤器　统一响应 RestBean　异常处理　文件存储　邮件验证码　密码策略</text>`;
+  s += `</svg>`;
+  document.getElementById('fig-structure').innerHTML = s;
+})();
+
+/* ---------------- 2. 主程序流程图 (SVG) ---------------- */
+(function(){
+  const W = 1120, H = 1220;
+  let defs = `<defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#111"/>
+    </marker>
+    <style>
+      .n{fill:#fff;stroke:#111;stroke-width:1.8}
+      .t{font-size:20px;fill:#111;font-family:Noto Sans CJK SC,Microsoft YaHei,sans-serif}
+      .lbl{font-size:17px;fill:#111;font-family:Noto Sans CJK SC,Microsoft YaHei,sans-serif}
+      .e{stroke:#111;stroke-width:1.8;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="${NS}">${defs}`;
+
+  function textLines(cx, cy, lines, cls='n t', lh=26){
+    const start = cy - (lines.length-1)*lh/2 + 7;
+    return lines.map((l,i)=>`<text class="${cls}" x="${cx}" y="${start+i*lh}" text-anchor="middle">${esc(l)}</text>`).join('');
+  }
+  function rect(x,y,w,h,lines,rx=0){ return `<rect class="n" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>` + textLines(x+w/2,y+h/2,lines); }
+  function diamond(cx,cy,w,h,lines){ return `<polygon class="n" points="${cx-w/2},${cy} ${cx},${cy-h/2} ${cx+w/2},${cy} ${cx},${cy+h/2}"/>` + textLines(cx,cy,lines,'n t',24); }
+  function edge(points, label, lx, ly){ 
+    const d = points.map((p,i)=>(i===0?'M':'L')+` ${p[0]} ${p[1]}`).join(' ');
+    let out = `<path class="e" d="${d}"/>`;
+    if(label) out += `<rect x="${lx-30}" y="${ly-15}" width="60" height="24" fill="#fff"/><text class="lbl" x="${lx}" y="${ly+2}" text-anchor="middle">${esc(label)}</text>`;
+    return out;
+  }
+
+  // 节点
+  s += rect(310, 24, 180, 48, ['开始'], 24);
+  s += rect(250, 108, 300, 52, ['加载系统配置']);
+  s += rect(220, 196, 360, 52, ['初始化 MySQL、Redis 与邮件服务']);
+  s += rect(260, 284, 280, 48, ['显示欢迎页']);
+  s += diamond(400, 390, 300, 100, ['本地令牌有效？']);
+  s += rect(690, 355, 270, 70, ['登录 / 注册 / 找回密码页']);
+  s += diamond(825, 490, 270, 96, ['账号密码认证成功？']);
+  s += rect(690, 570, 270, 56, ['提示错误，返回认证页']);
+  s += rect(280, 490, 240, 54, ['加载用户与角色菜单']);
+  s += rect(280, 572, 240, 50, ['进入主界面']);
+  s += diamond(400, 700, 300, 100, ['用户选择退出？']);
+  s += rect(160, 810, 480, 80, ['按事件调用相应模块', 'M1～M8']);
+  s += rect(290, 930, 220, 50, ['等待下一个事件']);
+  s += rect(700, 800, 200, 62, ['注销令牌', '清理会话']);
+  s += rect(720, 1090, 160, 48, ['结束'], 24);
+
+  // 边
+  s += edge([[400,72],[400,108]]);
+  s += edge([[400,160],[400,196]]);
+  s += edge([[400,248],[400,284]]);
+  s += edge([[400,332],[400,340]]);
+  // 已登录？ 是 -> 加载菜单
+  s += edge([[400,440],[400,490]], '是', 425, 470);
+  // 否 -> 登录页
+  s += edge([[550,390],[690,390]], '否', 620, 378);
+  // 登录页 -> 认证？
+  s += edge([[825,425],[825,442]]);
+  // 认证成功 -> 加载菜单
+  s += edge([[690,490],[600,490],[600,517],[520,517]], '是', 640, 474);
+  // 认证失败 -> 提示错误
+  s += edge([[825,538],[825,570]], '否', 850, 558);
+  // 提示错误 -> 返回登录页
+  s += edge([[960,598],[1025,598],[1025,390],[960,390]], '重试', 1000, 580);
+  // 加载菜单 -> 主界面
+  s += edge([[400,544],[400,572]]);
+  // 主界面 -> 退出？
+  s += edge([[400,622],[400,650]]);
+  // 退出？ 否 -> 事件调度
+  s += edge([[400,750],[400,810]], '否', 428, 785);
+  // 事件调度 -> 等待
+  s += edge([[400,890],[400,930]]);
+  // 等待 -> 循环回退出？
+  s += edge([[290,955],[95,955],[95,700],[250,700]], '循环', 120, 940);
+  // 退出？ 是 -> 注销
+  s += edge([[550,700],[700,700],[700,800]], '是', 640, 682);
+  // 注销 -> 结束
+  s += edge([[800,862],[800,1090]]);
+
+  s += `</svg>`;
+  document.getElementById('fig-flow').innerHTML = `<div class="flow">${s}</div>`;
+})();
+
+/* ---------------- 3. 盒图渲染 ---------------- */
+function renderNodes(nodes){
+  return nodes.map((n, i) => `<div class="item">${renderNode(n)}</div>`).join('');
+}
+function renderNode(n){
+  if(n.t === 'stmt') return `<div class="stmt ${n.small?'small':''}">${n.text}</div>`;
+  if(n.t === 'if') return `<div class="ifbox">
+      <div class="ifcond">${n.cond}</div>
+      <div class="branches">
+        <div class="branch"><div class="branchhead">T（真）</div><div class="branchbody">${renderNodes(n.yes)}</div></div>
+        <div class="branch"><div class="branchhead">F（假）</div><div class="branchbody">${renderNodes(n.no)}</div></div>
+      </div></div>`;
+  if(n.t === 'while') return `<div class="loopbox">
+      <div class="loophead">当 ${n.cond} 时循环</div>
+      <div class="loopbody">${renderNodes(n.body)}</div>
+      <div class="loopfoot">结束循环</div></div>`;
+  if(n.t === 'case') return `<div class="casebox">
+      <div class="casehead">${n.head}</div>
+      ${n.rows.map(r=>`<div class="caserow"><div class="caselabel">${r.label}</div><div class="casebody">${renderNodes(r.body)}</div></div>`).join('')}
+    </div>`;
+  return '';
+}
+function renderNS(id, nodes, width, extra=''){
+  const el = document.getElementById(id);
+  el.innerHTML = `<div class="ns" style="width:${width}px">${renderNodes(nodes)}${extra}</div>`;
+}
+
+/* 3.3 主程序盒图 */
+renderNS('fig-ns-main', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'系统初始化：加载配置，连接 MySQL 与 Redis，初始化邮件服务'},
+  {t:'if', cond:'本地存在有效登录令牌？', yes:[
+    {t:'stmt', text:'JWT 校验通过，加载用户与角色'},
+    {t:'if', cond:'角色为管理员？', yes:[
+      {t:'stmt', text:'加载管理后台菜单'}
+    ], no:[
+      {t:'stmt', text:'加载学习者菜单'}
+    ]}
+  ], no:[
+    {t:'stmt', text:'显示登录 / 注册 / 找回密码页'},
+    {t:'stmt', text:'执行身份认证'},
+    {t:'if', cond:'认证成功？', yes:[
+      {t:'stmt', text:'签发 JWT，按“记住我”保存令牌'}
+    ], no:[
+      {t:'stmt', text:'提示错误，返回认证页'}
+    ]}
+  ]},
+  {t:'stmt', text:'进入主界面'},
+  {t:'while', cond:'用户未选择退出', body:[
+    {t:'stmt', text:'等待用户事件'},
+    {t:'stmt', text:'按事件调用 M1～M8 中的相应模块'},
+    {t:'stmt', text:'刷新界面状态'}
+  ]},
+  {t:'stmt', text:'注销令牌，清理会话'},
+  {t:'stmt', text:'结束'}
+], 780);
+
+/* 3.4 登录子模块盒图 */
+renderNS('fig-ns-login', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'输入用户名 / 邮箱、密码与“记住我”选项'},
+  {t:'case', head:'按认证结果分派（case）', rows:[
+    {label:'① 表单不完整', body:[
+      {t:'stmt', text:'提示必填项错误，返回输入'}
+    ]},
+    {label:'② 账号或密码错误', body:[
+      {t:'stmt', text:'提示“用户名或密码错误”，返回输入'}
+    ]},
+    {label:'③ 2FA 验证码错误', body:[
+      {t:'stmt', text:'返回 428 要求输入 6 位 TOTP；验证码错误时提示并返回输入'}
+    ]},
+    {label:'④ 认证成功', body:[
+      {t:'stmt', text:'未启用 2FA，或 2FA 验证通过'},
+      {t:'stmt', text:'签发 JWT'},
+      {t:'stmt', text:'按“记住我”写入 localStorage 或 sessionStorage'},
+      {t:'stmt', text:'跳转主界面'}
+    ]}
+  ]},
+  {t:'stmt', text:'结束'}
+], 720);
+
+/* 3.5 课程学习与进度上报盒图 */
+renderNS('fig-ns-course', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'进入课程学习页（/courses/:id）'},
+  {t:'stmt', text:'加载课程、章节、关联题集与当前学习进度'},
+  {t:'case', head:'按课程加载结果分派（case）', rows:[
+    {label:'课程不存在', body:[
+      {t:'stmt', text:'提示“课程不存在”，返回课程列表'}
+    ]},
+    {label:'课程存在', body:[
+      {t:'stmt', text:'显示章节目录与 Markdown 正文'},
+      {t:'while', cond:'未离开课程页', body:[
+        {t:'stmt', text:'等待用户操作'},
+        {t:'case', head:'按用户操作分派（case）', rows:[
+          {label:'阅读章节', body:[
+            {t:'stmt', text:'上报章节 ID 与本次学习时长'},
+            {t:'if', cond:'未登录或参数无效？', yes:[
+              {t:'stmt', text:'提示登录或参数错误，不写库'}
+            ], no:[
+              {t:'stmt', text:'新增或更新 db_course_progress，并写入学习流水'},
+              {t:'stmt', text:'重新计算已完成章数、完成率与状态'},
+              {t:'if', cond:'全部章节完成且未发放奖励？', yes:[
+                {t:'stmt', text:'按课程 reward_points 发放积分，写入 db_course_reward'}
+              ], no:[
+                {t:'stmt', text:'保持当前状态，不重复发放'}
+              ]},
+              {t:'stmt', text:'刷新进度条与完成状态'}
+            ]}
+          ]},
+          {label:'进入关联测试', body:[
+            {t:'stmt', text:'跳转测试模块，携带题集 ID'}
+          ]},
+          {label:'离开页面', body:[
+            {t:'stmt', text:'结束循环'}
+          ]}
+        ]}
+      ]}
+    ]}
+  ]},
+  {t:'stmt', text:'结束'}
+], 780);
+
+/* 3.6 在线测试盒图 */
+renderNS('fig-ns-test', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'进入测试中心'},
+  {t:'if', cond:'选择单词测试？', yes:[
+    {t:'stmt', text:'选择 CET-4 / CET-6 与题量（1～100）'},
+    {t:'stmt', text:'随机抽取单词生成题目'}
+  ], no:[
+    {t:'stmt', text:'选择题集与题型'},
+    {t:'stmt', text:'加载题目与选项'}
+  ]},
+  {t:'stmt', text:'开始答题'},
+  {t:'while', cond:'尚未交卷', body:[
+    {t:'stmt', text:'显示当前题目'},
+    {t:'stmt', text:'记录用户作答'},
+    {t:'stmt', text:'切换到下一题'}
+  ]},
+  {t:'if', cond:'存在未作答题目？', yes:[
+    {t:'stmt', text:'提示确认后交卷'}
+  ], no:[
+    {t:'stmt', text:'直接交卷'}
+  ]},
+  {t:'stmt', text:'提交成绩到 /api/tests/words/results 或 /api/tests/knowledge/results'},
+  {t:'if', cond:'参数校验通过？', yes:[
+    {t:'stmt', text:'计算正确数与正确率'},
+    {t:'stmt', text:'保存 db_test_record（category=word/knowledge）'},
+    {t:'stmt', text:'显示成绩与答案解析'}
+  ], no:[
+    {t:'stmt', text:'提示参数错误，返回答题页'}
+  ]},
+  {t:'stmt', text:'加载历史成绩与汇总统计'},
+  {t:'stmt', text:'结束'}
+], 760);
+
+/* 3.7 学习小组任务盒图 */
+renderNS('fig-ns-group', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'进入学习小组页'},
+  {t:'case', head:'按小组加入状态分派（case）', rows:[
+    {label:'尚未加入小组', body:[
+      {t:'stmt', text:'创建小组（生成邀请码）或凭邀请码加入'},
+      {t:'stmt', text:'写入 db_study_group_member，刷新小组信息'}
+    ]},
+    {label:'已加入小组', body:[
+      {t:'stmt', text:'加载小组信息、成员、消息与任务'}
+    ]}
+  ]},
+  {t:'while', cond:'未离开小组页', body:[
+    {t:'stmt', text:'等待用户操作'},
+    {t:'case', head:'按用户操作分派（case）', rows:[
+      {label:'发送消息', body:[
+        {t:'stmt', text:'校验成员身份 → 保存 db_study_group_message → 刷新消息列表'}
+      ]},
+      {label:'发布任务', body:[
+        {t:'stmt', text:'仅组长可用：录入任务项 → 保存 db_group_task_item'}
+      ]},
+      {label:'更新进度', body:[
+        {t:'stmt', text:'写入 db_group_task_progress（唯一约束防重复）→ 刷新完成矩阵'}
+      ]},
+      {label:'查看成员', body:[
+        {t:'stmt', text:'读取成员学习进度、签到与测试数据'}
+      ]},
+      {label:'离开页面', body:[
+        {t:'stmt', text:'结束循环'}
+      ]}
+    ]}
+  ]},
+  {t:'stmt', text:'结束'}
+], 800);
+
+/* 3.8 每日签到与积分盒图 */
+renderNS('fig-ns-checkin', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'进入签到页'},
+  {t:'stmt', text:'查询本月签到记录、连续天数与积分余额'},
+  {t:'case', head:'按签到状态分派（case）', rows:[
+    {label:'今日已签到', body:[
+      {t:'stmt', text:'显示“已签到”与连续签到天数，不再重复签到'}
+    ]},
+    {label:'未签到、未登录', body:[
+      {t:'stmt', text:'跳转登录页'}
+    ]},
+    {label:'未签到、已登录、今日已有记录', body:[
+      {t:'stmt', text:'返回已有签到记录，保证接口幂等'}
+    ]},
+    {label:'未签到、已登录、今日无记录', body:[
+      {t:'stmt', text:'计算连续天数：昨日有记录则 +1，否则重置为 1'},
+      {t:'stmt', text:'本次签到积分 = 连续天数'},
+      {t:'stmt', text:'保存 db_check_in；若唯一约束冲突则读取已有记录'},
+      {t:'stmt', text:'db_account_points 增加签到积分'},
+      {t:'stmt', text:'刷新签到日历、连续天数与积分余额'}
+    ]}
+  ]},
+  {t:'stmt', text:'结束'}
+], 760);
+
+/* 3.9 后台课程维护盒图 */
+renderNS('fig-ns-admin', [
+  {t:'stmt', text:'开始'},
+  {t:'stmt', text:'进入后台课程管理（校验 admin 角色）'},
+  {t:'stmt', text:'加载课程列表（含章节数与关联题集）'},
+  {t:'while', cond:'未退出课程管理', body:[
+    {t:'stmt', text:'等待管理员操作'},
+    {t:'case', head:'按管理员操作分派（case）', rows:[
+      {label:'新建课程', body:[
+        {t:'stmt', text:'输入课程信息、章节与关联题集'},
+        {t:'if', cond:'表单校验通过？', yes:[
+          {t:'stmt', text:'保存课程 → 保存章节 → 保存题集关联 → 刷新列表'}
+        ], no:[
+          {t:'stmt', text:'提示错误，保留输入'}
+        ]}
+      ]},
+      {label:'编辑课程', body:[
+        {t:'stmt', text:'读取课程详情并修改'},
+        {t:'if', cond:'课程存在？', yes:[
+          {t:'stmt', text:'全量更新课程、章节与题集关联 → 刷新'}
+        ], no:[
+          {t:'stmt', text:'提示课程不存在'}
+        ]}
+      ]},
+      {label:'删除课程', body:[
+        {t:'stmt', text:'弹出二次确认'},
+        {t:'if', cond:'确认删除？', yes:[
+          {t:'stmt', text:'级联删除章节、题集关联与学习进度 → 刷新'}
+        ], no:[
+          {t:'stmt', text:'取消操作'}
+        ]}
+      ]},
+      {label:'退出', body:[
+        {t:'stmt', text:'结束循环'}
+      ]}
+    ]}
+  ]},
+  {t:'stmt', text:'结束'}
+], 800);
+
+</script>
+<script>
+/* 单图模式：?fig=fig-ns-main 时只保留目标图并缩放页面，便于整页截图 */
+(function(){
+  const params = new URLSearchParams(location.search);
+  const target = params.get('fig');
+  if (!target) return;
+  document.querySelectorAll('.fig').forEach(el => { if (el.id !== target) el.remove(); });
+  const zoom = parseFloat(params.get('zoom') || '1');
+  if (zoom && zoom !== 1) {
+    document.documentElement.style.zoom = String(zoom);
+  }
+  document.body.style.padding = '0';
+})();
+</script>
+</body>
+</html>
