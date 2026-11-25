@@ -5,6 +5,7 @@ import com.tick.entity.vo.response.TotpSetupVO;
 import com.tick.mail.EmailCodeService;
 import com.tick.mail.MailType;
 import com.tick.mapper.AccountMapper;
+import com.tick.ratelimit.RateLimit;
 import com.tick.service.TotpService;
 import com.tick.service.TwoFactorService;
 import com.tick.utils.Const;
@@ -35,6 +36,8 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 300, keyExpression = "#accountId",
+            message = "两步验证设置操作过于频繁，请 5 分钟后再试")
     public TotpSetupVO setup(Integer accountId, String emailCode) {
         Account account = accountMapper.selectById(accountId);
         if (account == null) return null;
@@ -50,6 +53,8 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 300, keyExpression = "#accountId",
+            message = "验证尝试过于频繁，请 5 分钟后再试")
     public String enable(Integer accountId, int code) {
         Account account = accountMapper.selectById(accountId);
         if (account == null) return "登录状态无效";
@@ -83,6 +88,8 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 300, keyExpression = "#challenge",
+            message = "验证尝试过于频繁，请重新登录")
     public Account verifyLoginChallenge(String challenge, int code) {
         String key = Const.TOTP_LOGIN_CHALLENGE + challenge;
         String accountId = redis.opsForValue().get(key);

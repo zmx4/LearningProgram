@@ -11,6 +11,7 @@ import com.tick.exception.ConflictException;
 import com.tick.mail.EmailCodeService;
 import com.tick.mail.MailType;
 import com.tick.mapper.AccountMapper;
+import com.tick.ratelimit.RateLimit;
 import com.tick.security.password.PasswordGenerator;
 import com.tick.security.password.PasswordPolicy;
 import com.tick.service.AccountService;
@@ -18,6 +19,7 @@ import com.tick.service.NotificationService;
 import jakarta.annotation.Resource;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -112,6 +114,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 60, keyExpression = "#vo.email",
+            message = "注册操作过于频繁，请稍后再试")
     public String registerEmailAccount(EmailRegisterVO vo) {
         String email = vo.getEmail();
         String username = vo.getUsername();
@@ -144,6 +148,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    @PreAuthorize("hasRole('admin')")
     public String createAccount(String username, String email, String password) {
         if (this.existsAccountByEmail(email)) return "此email已被其他用户注册.";
         if (this.existsAccountByUsername(username)) return "此用户名已被其他用户注册.";
@@ -168,6 +173,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 60, keyExpression = "#accountId",
+            message = "修改密码操作过于频繁，请稍后再试")
     public String changePassword(Integer accountId, ChangePasswordVO vo) {
         Account account = this.getById(accountId);
         if (account == null) return "登录状态无效";
@@ -181,6 +188,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    @PreAuthorize("hasRole('admin')")
     public String resetPassword(Integer accountId) {
         Account account = this.getById(accountId);
         if (account == null) return null;
@@ -212,6 +220,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    @RateLimit(limit = 5, windowSeconds = 60, keyExpression = "#vo.email",
+            message = "重置密码操作过于频繁，请稍后再试")
     public String restEmailAccountPassword(EmailRegisterVO vo) {
         String email = vo.getEmail();
         String verify = this.resetConfirm(new ConfirmRestVO(email, vo.getCode()));

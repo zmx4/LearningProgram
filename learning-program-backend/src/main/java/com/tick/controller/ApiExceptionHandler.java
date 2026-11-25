@@ -3,6 +3,7 @@ package com.tick.controller;
 import com.tick.entity.RestBean;
 import com.tick.exception.ConflictException;
 import com.tick.exception.NotFoundException;
+import com.tick.exception.TooManyRequestsException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +93,13 @@ public class ApiExceptionHandler {
     public RestBean<Void> handleConflict(ConflictException exception) {
         String message = exception.getMessage();
         return RestBean.failure(409, message == null || message.isBlank() ? "请求与当前数据状态冲突" : message);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public RestBean<Void> handleTooManyRequests(TooManyRequestsException exception) {
+        String message = exception.getMessage();
+        return RestBean.failure(429, message == null || message.isBlank()
+                ? "操作过于频繁，请稍后再试" : message);
     }
 
     /** 服务层表达越权操作的信号。 */

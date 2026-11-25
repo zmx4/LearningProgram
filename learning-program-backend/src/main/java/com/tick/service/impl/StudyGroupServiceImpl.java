@@ -40,6 +40,7 @@ import com.tick.mapper.ResourceAccessLogMapper;
 import com.tick.mapper.StudyGroupMapper;
 import com.tick.mapper.StudyGroupMemberMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
+import com.tick.monitor.Monitored;
 import com.tick.service.AccountService;
 import com.tick.service.StudyGroupService;
 import org.springframework.dao.DuplicateKeyException;
@@ -294,6 +295,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
 
     @Override
     @Transactional
+    @Monitored(slowThresholdMillis = 800)
     public GroupTaskVO completeTaskItem(Integer accountId, Integer groupId, Integer taskId, Integer itemId) {
         StudyGroupMember self = membership(groupId, accountId);
         if (self == null) {

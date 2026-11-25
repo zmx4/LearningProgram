@@ -10,6 +10,7 @@ import com.tick.entity.vo.response.BatchCreateResultVO;
 import com.tick.service.AccountService;
 import com.tick.service.AdminService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +29,7 @@ import java.util.Set;
  * 管理员平台接口：用户列表、角色调整、删除、批量创建、随机密码重置与定向通知发送。
  * 挂在 /api/admin 下，由 SecurityConfiguration 限定为 admin 角色。
  */
+@PreAuthorize("hasRole('admin')")
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {

@@ -27,6 +27,7 @@ import com.tick.mapper.CourseRewardMapper;
 import com.tick.mapper.CourseStudyLogMapper;
 import com.tick.mapper.QuestionSetItemMapper;
 import com.tick.mapper.QuestionSetMapper;
+import com.tick.monitor.Monitored;
 import com.tick.service.AccountPointsService;
 import com.tick.service.CourseProgressService;
 import org.springframework.dao.DuplicateKeyException;
@@ -190,6 +191,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
 
     @Override
     @Transactional
+    @Monitored(slowThresholdMillis = 800)
     public CourseStudyResultVO recordStudy(Integer accountId, Integer courseId, CourseStudyRecordVO vo) {
         Course course = courseId == null ? null : courseMapper.selectById(courseId);
         if (course == null) {

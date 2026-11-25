@@ -4,6 +4,7 @@ import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.EmailRegisterVO;
 import com.tick.exception.ConflictException;
 import com.tick.exception.NotFoundException;
+import com.tick.exception.TooManyRequestsException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -134,6 +135,15 @@ class ApiExceptionHandlerTest {
 
         assertEquals(400, response.code());
         assertEquals("请求参数不合法", response.message());
+    }
+
+    @Test
+    void tooManyRequestsKeepsRateLimitMessage() {
+        RestBean<Void> response = handler.handleTooManyRequests(
+                new TooManyRequestsException("验证尝试过于频繁，请重新登录"));
+
+        assertEquals(429, response.code());
+        assertEquals("验证尝试过于频繁，请重新登录", response.message());
     }
 
     @Test

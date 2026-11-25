@@ -9,6 +9,7 @@ import com.tick.entity.vo.response.BatchCreateResultVO.BatchCreateError;
 import com.tick.service.AccountService;
 import com.tick.service.AdminService;
 import com.tick.service.NotificationService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.Set;
 /**
  * 管理员批量操作实现。
  */
+@PreAuthorize("hasRole('admin')")
 @Service
 public class AdminServiceImpl implements AdminService {
     private static final Set<String> SUPPORTED_TARGETS = Set.of("all", "role", "users");

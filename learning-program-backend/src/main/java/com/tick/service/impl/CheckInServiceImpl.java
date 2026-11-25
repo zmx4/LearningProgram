@@ -3,6 +3,7 @@ package com.tick.service.impl;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.CheckInRecord;
 import com.tick.mapper.CheckInRecordMapper;
+import com.tick.monitor.Monitored;
 import com.tick.service.AccountPointsService;
 import com.tick.service.CheckInService;
 import com.tick.entity.vo.response.CheckInSummaryVO;
@@ -63,6 +64,7 @@ public class CheckInServiceImpl extends ServiceImpl<CheckInRecordMapper, CheckIn
 
     @Override
     @Transactional
+    @Monitored(slowThresholdMillis = 500)
     public CheckInRecord checkIn(Integer accountId) {
         LocalDate today = LocalDate.now();
         CheckInRecord existing = query().eq("account_id", accountId)
