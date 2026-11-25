@@ -1,5 +1,6 @@
 package com.tick.controller;
 
+import com.tick.audit.Audited;
 import com.tick.entity.RestBean;
 import com.tick.entity.vo.request.GroupMessageCreateVO;
 import com.tick.entity.vo.request.GroupTaskCreateVO;
@@ -143,6 +144,9 @@ public class StudyGroupController {
                 : RestBean.failure(404, "小组不存在或你不是小组成员");
     }
 
+    @Audited(action = "GROUP_REMOVE_MEMBER", resourceType = "study_group",
+            operatorIdExpression = "#accountId", resourceIdExpression = "#groupId",
+            targetIdExpression = "#memberAccountId")
     @DeleteMapping("/{id}/members/{memberId}")
     public RestBean<Void> removeMember(@PathVariable Integer id,
                                        @PathVariable Integer memberId,

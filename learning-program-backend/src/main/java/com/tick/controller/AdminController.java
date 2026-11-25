@@ -1,5 +1,6 @@
 package com.tick.controller;
 
+import com.tick.audit.Audited;
 import com.tick.entity.RestBean;
 import com.tick.entity.dto.Account;
 import com.tick.entity.vo.request.AdminBatchCreateVO;
@@ -43,6 +44,8 @@ public class AdminController {
         return RestBean.success(accountService.list().stream().map(AdminUserVO::from).toList());
     }
 
+    @Audited(action = "ADMIN_UPDATE_ROLE", resourceType = "account",
+            operatorIdExpression = "#currentId", resourceIdExpression = "#id")
     @PutMapping("/users/{id}/role")
     public RestBean<Void> updateRole(@PathVariable Integer id,
                                      @RequestBody Map<String, String> body,
@@ -63,6 +66,8 @@ public class AdminController {
         return RestBean.success();
     }
 
+    @Audited(action = "ADMIN_DELETE_USER", resourceType = "account",
+            operatorIdExpression = "#currentId", resourceIdExpression = "#id")
     @DeleteMapping("/users/{id}")
     public RestBean<Void> deleteUser(@PathVariable Integer id,
                                      @RequestAttribute("id") Integer currentId) {
@@ -75,8 +80,11 @@ public class AdminController {
         return RestBean.success();
     }
 
+    @Audited(action = "ADMIN_RESET_PASSWORD", resourceType = "account",
+            operatorIdExpression = "#currentId", resourceIdExpression = "#id")
     @PutMapping("/users/{id}/password")
-    public RestBean<Map<String, String>> resetPassword(@PathVariable Integer id) {
+    public RestBean<Map<String, String>> resetPassword(@PathVariable Integer id,
+                                                       @RequestAttribute("id") Integer currentId) {
         Account account = accountService.getById(id);
         if (account == null) {
             return RestBean.failure(404, "用户不存在");

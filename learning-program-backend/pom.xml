@@ -45,6 +45,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.mysql</groupId>
@@ -133,6 +137,7 @@
                             <goal>compile</goal>
                         </goals>
                         <configuration>
+                            <parameters>true</parameters>
                             <annotationProcessorPaths>
                                 <path>
                                     <groupId>org.projectlombok</groupId>
@@ -148,6 +153,7 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
+                            <parameters>true</parameters>
                             <annotationProcessorPaths>
                                 <path>
                                     <groupId>org.projectlombok</groupId>
