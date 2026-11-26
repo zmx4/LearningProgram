@@ -12,6 +12,7 @@ import com.tick.entity.vo.response.GroupTaskProgressVO;
 import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
+import com.tick.service.GroupTaskService;
 import com.tick.service.StudyGroupService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,9 +33,12 @@ import java.util.List;
 @RequestMapping("/api/groups")
 public class StudyGroupController {
     private final StudyGroupService studyGroupService;
+    private final GroupTaskService groupTaskService;
 
-    public StudyGroupController(StudyGroupService studyGroupService) {
+    public StudyGroupController(StudyGroupService studyGroupService,
+                                GroupTaskService groupTaskService) {
         this.studyGroupService = studyGroupService;
+        this.groupTaskService = groupTaskService;
     }
 
     @GetMapping
@@ -90,7 +94,7 @@ public class StudyGroupController {
     public RestBean<GroupMessageVO> postTask(@PathVariable Integer id,
                                              @RequestBody GroupTaskCreateVO vo,
                                              @RequestAttribute("id") Integer accountId) {
-        GroupMessageVO message = studyGroupService.postTask(accountId, id, vo);
+        GroupMessageVO message = groupTaskService.postTask(accountId, id, vo);
         return message == null
                 ? RestBean.failure(404, "小组不存在或你不是小组成员")
                 : RestBean.success(message);
@@ -99,7 +103,7 @@ public class StudyGroupController {
     @GetMapping("/{id}/tasks")
     public RestBean<List<GroupTaskVO>> tasks(@PathVariable Integer id,
                                              @RequestAttribute("id") Integer accountId) {
-        List<GroupTaskVO> tasks = studyGroupService.listTasks(accountId, id);
+        List<GroupTaskVO> tasks = groupTaskService.listTasks(accountId, id);
         return tasks == null
                 ? RestBean.failure(404, "小组不存在或你不是小组成员")
                 : RestBean.success(tasks);
@@ -109,7 +113,7 @@ public class StudyGroupController {
     public RestBean<GroupTaskProgressVO> taskProgress(@PathVariable Integer id,
                                                       @PathVariable Integer taskId,
                                                       @RequestAttribute("id") Integer accountId) {
-        GroupTaskProgressVO progress = studyGroupService.taskProgress(accountId, id, taskId);
+        GroupTaskProgressVO progress = groupTaskService.taskProgress(accountId, id, taskId);
         return progress == null
                 ? RestBean.failure(404, "任务不存在或你不是小组成员")
                 : RestBean.success(progress);
@@ -120,7 +124,7 @@ public class StudyGroupController {
                                                   @PathVariable Integer taskId,
                                                   @PathVariable Integer itemId,
                                                   @RequestAttribute("id") Integer accountId) {
-        GroupTaskVO task = studyGroupService.completeTaskItem(accountId, id, taskId, itemId);
+        GroupTaskVO task = groupTaskService.completeTaskItem(accountId, id, taskId, itemId);
         return task == null
                 ? RestBean.failure(404, "任务项不存在或你不是小组成员")
                 : RestBean.success(task);
@@ -130,7 +134,7 @@ public class StudyGroupController {
     public RestBean<GroupMemberDetailVO> memberDetail(@PathVariable Integer id,
                                                       @PathVariable Integer memberId,
                                                       @RequestAttribute("id") Integer accountId) {
-        GroupMemberDetailVO detail = studyGroupService.memberDetail(accountId, id, memberId);
+        GroupMemberDetailVO detail = groupTaskService.memberDetail(accountId, id, memberId);
         return detail == null
                 ? RestBean.failure(404, "成员不存在或你不是小组成员")
                 : RestBean.success(detail);

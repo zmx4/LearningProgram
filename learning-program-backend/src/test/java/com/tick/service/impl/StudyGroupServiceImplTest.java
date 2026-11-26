@@ -2,14 +2,7 @@ package com.tick.service.impl;
 
 import com.tick.entity.dto.StudyGroupMember;
 import com.tick.exception.NotFoundException;
-import com.tick.mapper.CourseChapterMapper;
-import com.tick.mapper.CourseMapper;
-import com.tick.mapper.CourseProgressMapper;
 import com.tick.mapper.GroupMemberVisitMapper;
-import com.tick.mapper.GroupTaskItemMapper;
-import com.tick.mapper.GroupTaskProgressMapper;
-import com.tick.mapper.LearningResourceMapper;
-import com.tick.mapper.ResourceAccessLogMapper;
 import com.tick.mapper.StudyGroupMemberMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
 import com.tick.service.AccountService;
@@ -32,15 +25,8 @@ class StudyGroupServiceImplTest {
         return new StudyGroupServiceImpl(
                 memberMapper,
                 mock(StudyGroupMessageMapper.class),
-                mock(GroupTaskItemMapper.class),
-                mock(GroupTaskProgressMapper.class),
                 mock(GroupMemberVisitMapper.class),
-                mock(ResourceAccessLogMapper.class),
-                mock(CourseMapper.class),
-                mock(CourseChapterMapper.class),
-                mock(CourseProgressMapper.class),
-                mock(LearningResourceMapper.class),
-                mock(AccountService.class));
+                new StudyGroupMemberQuery(memberMapper, mock(AccountService.class)));
     }
 
     private StudyGroupMember member(int id, int accountId, String role) {

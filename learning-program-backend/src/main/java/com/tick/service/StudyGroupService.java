@@ -1,21 +1,18 @@
 package com.tick.service;
 
 import com.tick.entity.vo.request.GroupMessageCreateVO;
-import com.tick.entity.vo.request.GroupTaskCreateVO;
 import com.tick.entity.vo.request.StudyGroupCreateVO;
 import com.tick.entity.vo.request.StudyGroupJoinVO;
-import com.tick.entity.vo.response.GroupMemberDetailVO;
 import com.tick.entity.vo.response.GroupMessageVO;
-import com.tick.entity.vo.response.GroupTaskProgressVO;
-import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
 
 import java.util.List;
 
 /**
- * 学习小组服务：创建/加入小组、邀请码入群、聊天消息与学习任务。
+ * 学习小组服务：创建/加入小组、邀请码入群与聊天消息。
  * 一个人可以加入或创建多个小组；非成员不可查看小组内容与成员。
+ * 学习任务相关接口见 {@link GroupTaskService}。
  */
 public interface StudyGroupService {
     /**
@@ -47,35 +44,6 @@ public interface StudyGroupService {
      * 发布普通消息，组长组员均可，仅成员可发，非成员返回 null。
      */
     GroupMessageVO postMessage(Integer accountId, Integer groupId, GroupMessageCreateVO vo);
-
-    /**
-     * 发布学习任务，仅组长可发；非组长抛 {@link SecurityException}，非成员返回 null。
-     * 可同时绑定任务项（课程/资源/组员访问/纯文本），用于追踪组员完成情况。
-     */
-    GroupMessageVO postTask(Integer accountId, Integer groupId, GroupTaskCreateVO vo);
-
-    /**
-     * 小组全部学习任务（含绑定项、当前用户完成状态与全组总进度），仅成员可见，非成员返回 null。
-     */
-    List<GroupTaskVO> listTasks(Integer accountId, Integer groupId);
-
-    /**
-     * 组员手动标记纯文本任务项完成（幂等）。自动判定类任务项抛 {@link IllegalArgumentException}；
-     * 非成员或任务项不属于该小组返回 null。完成后返回该任务的最新进度。
-     */
-    GroupTaskVO completeTaskItem(Integer accountId, Integer groupId, Integer taskId, Integer itemId);
-
-    /**
-     * 组长查看单个任务的完成矩阵（任务项 × 成员）。非组长抛 {@link SecurityException}，
-     * 非成员或任务不存在返回 null。
-     */
-    GroupTaskProgressVO taskProgress(Integer accountId, Integer groupId, Integer taskId);
-
-    /**
-     * 小组成员详细信息：基本信息 + 该成员在各任务上的完成进度。仅成员可见，
-     * 非成员或目标不在小组中返回 null。
-     */
-    GroupMemberDetailVO memberDetail(Integer accountId, Integer groupId, Integer memberAccountId);
 
     /**
      * 退出小组：普通成员直接退出；组长退出即解散小组（成员与消息级联删除）。
