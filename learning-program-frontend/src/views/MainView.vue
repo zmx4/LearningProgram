@@ -675,9 +675,16 @@ onUnmounted(() => {
   letter-spacing: .13em;
 }
 
+.topbar-title > div {
+  min-width: 0;
+}
+
 .topbar h1 {
   margin: 0;
+  overflow: hidden;
   font-size: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar-actions {
@@ -893,7 +900,16 @@ onUnmounted(() => {
   }
 
   .topbar h1 {
-    font-size: 19px;
+    font-size: 17px;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
   }
 
   .eyebrow {
@@ -909,8 +925,10 @@ onUnmounted(() => {
   }
 
   .logout-button {
+    flex: 0 0 auto;
     padding: 8px 10px;
     font-size: 12px;
+    white-space: nowrap;
   }
 }
 
