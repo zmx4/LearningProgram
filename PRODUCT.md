@@ -12,11 +12,11 @@ Learners preparing for structured study goals who want one place to study, pract
 
 ## Product Purpose
 
-LearningProgram helps learners build a consistent study habit by combining courses, vocabulary and knowledge practice, progress tracking, social learning, and lightweight rewards.
+LearningProgram helps learners build a consistent study habit through group-based co-learning: group owners publish tasks, members learn through courses and practice, and progress, points, group rankings, and notifications close the feedback loop.
 
 ## Positioning
 
-A unified learning loop connects structured courses and practice with accountability features such as study groups, check-ins, points, rankings, and discussion.
+The homepage is “My Groups”. Study groups are the primary product line, while courses, resources, tests, and check-ins act as task inputs and evidence. Group task progress, points, rankings, and notifications feed back into the group; discussion remains a separate global community for now.
 
 ## Operating Context
 
@@ -24,7 +24,10 @@ Learners use the web application for account-based study workflows: they browse 
 
 ## Capabilities and Constraints
 
-- The product includes registration, username or email login, remember-me sessions, JWT authentication, password recovery, profiles, courses, chapters, CET-4/CET-6 vocabulary, vocabulary and knowledge tests, dictionary lookup, daily words, learning resources, discussions, comments, study groups, group messages and tasks, check-ins, points, rankings, notifications, and an administration area.
+- The primary workflow is group co-learning: create or join a group, publish tasks with due dates, learn through courses/resources/tests, track group progress, earn points, view group rankings, and receive notifications.
+- Supporting capabilities include registration, username or email login, remember-me sessions, JWT authentication, password recovery, profiles, courses, chapters, CET-4/CET-6 vocabulary, vocabulary and knowledge tests, dictionary lookup, daily words, learning resources, discussions, comments, check-ins, rankings, notifications, and an administration area.
+- Group task queries are read-only. Settlement runs only after learning write transactions commit, and the finish ledger guarantees one reward per member per task.
+- Legacy `member_visit` tasks remain readable and judgeable, but new task creation does not offer that item type.
 - Preserve the existing Vue 3, TypeScript, Vite, Vue Router, Vue i18n, Element Plus, Axios, and SSR-capable web stack.
 - Chinese is the first supported application language.
 - Learner and administrator roles are part of the product model. Administrator access is protected by the backend security layer.

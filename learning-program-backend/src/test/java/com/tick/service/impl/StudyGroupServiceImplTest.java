@@ -15,10 +15,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.security.SecureRandom;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -90,6 +93,20 @@ class StudyGroupServiceImplTest {
                 .thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> service().removeMember(1, 10, 2));
+    }
+
+    @Test
+    void inviteCodeUsesTheFullAlphabetRange() {
+        SecureRandom random = mock(SecureRandom.class);
+        when(random.nextInt(32)).thenReturn(31);
+        StudyGroupServiceImpl service = service();
+        ReflectionTestUtils.setField(service, "random", random);
+        ReflectionTestUtils.setField(service, "baseMapper", mock(StudyGroupMapper.class));
+
+        String code = ReflectionTestUtils.invokeMethod(service, "generateInviteCode");
+
+        assertEquals("99999999", code);
+        verify(random, times(8)).nextInt(32);
     }
 
     @Test

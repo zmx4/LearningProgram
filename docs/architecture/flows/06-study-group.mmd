@@ -1,7 +1,7 @@
 %% 06 学习小组
 %% 由 scripts/generate-flowcharts.mjs 生成；如需修改请改脚本后重新生成。
 flowchart TD
-  s0(["学习小组列表<br/>GET /api/groups"])
+  s0(["我的小组<br/>GET /api/groups/overview"])
   d0{"选择操作"}
   p1["创建小组<br/>POST /api/groups"]
   p2["生成 8 位邀请码<br/>insert group + owner membership"]
@@ -9,21 +9,24 @@ flowchart TD
   p3["邀请码加入<br/>POST /api/groups/join"]
   d1{"邀请码有效且未加入？"}
   x1["返回邀请码无效 / 已在小组"]
-  p4[("insert member(role=member)")]
-  e1(["进入小组"])
+  p4[("insert member(role=member)<br/>通知组长")]
   p5["GET /api/groups/{id}<br/>成员校验 + 记录本次访问"]
-  p6["聊天：GET / POST /{id}/messages<br/>仅成员可见"]
-  p7["组长发布任务 POST /{id}/tasks<br/>保存 type=task 消息 + 任务项"]
-  p8["任务项类型：course / resource /<br/>member_visit / text"]
-  p9["GET /{id}/tasks<br/>按任务项实时计算完成度"]
-  d2{"任务项类型"}
-  p10["text：组员手动标记<br/>写 group_task_progress"]
-  p11["course：章节覆盖率 100%"]
-  p12["resource：任务发布后的<br/>资源访问流水"]
-  p13["member_visit：任务发布后的<br/>小组访问记录"]
-  p14["组长查看进度<br/>GET /{id}/tasks/{taskId}/progress"]
-  p15["退出 POST /{id}/leave<br/>组长退出=解散；组员退出=移除成员"]
-  p16["组长移除组员<br/>DELETE /{id}/members/{memberId}"]
+  p6["组长发布任务 POST /{id}/tasks<br/>截止时间 + 非空任务项"]
+  p7["course / resource / text<br/>word_test / question_set"]
+  p8[("insert task + items<br/>通知其他组员")]
+  p9["任务提交后<br/>结算现有成员"]
+  p10["课程 / 资源 / 测试 / 签到<br/>写事务发布学习事件"]
+  p11["AFTER_COMMIT<br/>settleForAccount"]
+  d2{"加入后任务的非空项<br/>是否全部完成？"}
+  p12[("insert db_group_task_finish<br/>唯一键 task_id + account_id")]
+  d3{"台账插入成功？"}
+  x2["重复事件<br/>直接结束，不重复奖励"]
+  p13["发放积分<br/>通知组长"]
+  p14["GET /{id}/tasks<br/>只读计算进度，不结算"]
+  p15["GET /api/groups/overview<br/>小组汇总 + 今日待办"]
+  p16["GET /{id}/leaderboard?metric=tasks<br/>组内任务榜"]
+  p17["聊天：GET / POST /{id}/messages<br/>仅成员可见"]
+  p18["退出 / 移除组员<br/>组长退出=解散"]
 
   s0 --> d0
   d0 -->|"创建"| p1
@@ -33,29 +36,33 @@ flowchart TD
   p3 --> d1
   d1 -->|"否"| x1
   d1 -->|"是"| p4
-  p4 --> e1
   e0 --> p5
-  e1 --> p5
+  p4 --> p5
   p5 --> p6
   p6 --> p7
   p7 --> p8
   p8 --> p9
-  p9 --> d2
-  d2 -->|"text"| p10
-  d2 -->|"course"| p11
-  d2 -->|"resource"| p12
-  d2 -->|"member_visit"| p13
-  p10 --> p14
-  p11 --> p14
-  p12 --> p14
+  p8 -->|"成员学习"| p10
+  p9 --> p11
+  p10 --> p11
+  p11 --> d2
+  d2 -->|"是"| p12
+  d2 -->|"否"| p14
+  p12 --> d3
+  d3 -->|"否"| x2
+  d3 -->|"是"| p13
   p13 --> p14
   p14 --> p15
   p15 --> p16
+  p16 --> p17
+  p17 --> p18
 
   %% 证据：
-  %% - StudyGroupController.java:31-153（小组、消息、任务、成员接口）
-  %% - StudyGroupServiceImpl.java:144-195（创建与邀请码加入）
-  %% - StudyGroupServiceImpl.java:197-248（详情访问记录、群聊）
-  %% - StudyGroupServiceImpl.java:250-331（组长发布任务、手动完成）
-  %% - StudyGroupServiceImpl.java:333-440（进度、退出、移除成员）
-  %% - StudyGroupServiceImpl.java:542-569（四类任务项完成判定）
+  %% - GroupOverviewServiceImpl.java（首页小组汇总与今日待办，批量读模型）
+  %% - StudyGroupServiceImpl.java（创建、邀请码加入、详情访问、退出与移除成员）
+  %% - GroupTaskServiceImpl.java（任务发布、测试项校验、只读进度查询）
+  %% - GroupTaskCompletionService.java 与 GroupTaskItemJudge（批量完成判定）
+  %% - GroupLearningActivityListener.java（AFTER_COMMIT 学习事件）
+  %% - GroupTaskSettlementService.java（完成台账、幂等积分与组长通知）
+  %% - LeaderboardServiceImpl.java（组内 tasks 榜）
+  %% - scripts/learning.sql:182-219（任务项、手动完成与整任务完成台账）

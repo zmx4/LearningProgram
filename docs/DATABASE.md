@@ -325,6 +325,7 @@ erDiagram
 | type | VARCHAR(10) | NOT NULL | `text` 普通消息 / `task` 学习任务 |
 | title | VARCHAR(100) | NULL | 任务标题，`type = task` 时有值 |
 | content | VARCHAR(2000) | NOT NULL | 消息或任务内容 |
+| due_at | DATETIME | NULL | 任务截止时间，旧任务与普通消息为空 |
 | created_at | DATETIME | NOT NULL | |
 
 聊天区按 `(group_id, id)` 倒序取最近 200 条再正序展示；删除小组会级联删除消息。
@@ -338,14 +339,17 @@ erDiagram
 | id | INT | PK, AUTO_INCREMENT | |
 | group_id | INT | NOT NULL | 冗余小组 id，索引 `(group_id)` |
 | message_id | INT | NOT NULL, FK → db_study_group_message(id) ON DELETE CASCADE | 任务消息 id，索引 `(message_id)` |
-| item_type | VARCHAR(20) | NOT NULL | `course` / `resource` / `member_visit` / `text` |
-| ref_id | INT | NULL | item_type 为 course / resource 时的课程或资源 id，软引用不带外键 |
-| title | VARCHAR(200) | NOT NULL | course/resource 自动取关联实体标题，其余为自定义说明 |
+| item_type | VARCHAR(20) | NOT NULL | `course` / `resource` / `text` / `word_test` / `question_set`；历史数据可为 `member_visit` |
+| ref_id | INT | NULL | course / resource / question_set 的课程、资源或题集 id，软引用不带外键 |
+| source | VARCHAR(16) | NULL | word_test 的词表来源：`cet4` / `cet6` |
+| pass_score | INT | NULL | word_test / question_set 的及格分，发布时必填且为 0–100 |
+| title | VARCHAR(200) | NOT NULL | 关联实体标题或自定义说明 |
 | sort_order | INT | NOT NULL DEFAULT 0 | 展示顺序 |
 
 完成判定：course 看 `db_course_progress` 是否覆盖课程全部章节；resource 看任务发布后是否有
-`db_resource_access_log` 访问流水；member_visit 看任务发布后 `db_group_member_visit.last_visit_at`；
-以上三类查询时实时计算，text 由组员手动标记并写入 `db_group_task_progress`。
+`db_resource_access_log` 访问流水；word_test / question_set 看任务发布后对应词表或题集的测试成绩是否达到
+`pass_score`；历史 member_visit 看任务发布后 `db_group_member_visit.last_visit_at`。以上类型查询时实时计算，
+text 由组员手动标记并写入 `db_group_task_progress`。新建任务表单不再提供 member_visit，已有任务保留可读与可判定。
 
 ### db_group_task_progress 任务项完成记录
 
@@ -357,6 +361,19 @@ erDiagram
 | completed_at | DATETIME | NOT NULL | |
 
 `(item_id, account_id)` 唯一，仅存 text 类型任务项的手动标记。
+
+### db_group_task_finish 整任务完成台账
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | INT | PK, AUTO_INCREMENT | |
+| group_id | INT | NOT NULL | 冗余小组 id，索引 `(group_id, account_id)` |
+| task_id | INT | NOT NULL, FK → db_study_group_message(id) ON DELETE CASCADE | 完成的任务消息 id |
+| account_id | INT | NOT NULL | 完成成员，软引用 db_account，不带外键 |
+| completed_at | DATETIME | NOT NULL | 整任务完成时间 |
+| points_awarded | INT | NOT NULL | 本次发放积分 |
+
+`(task_id, account_id)` 唯一，是结算幂等的最终依据。学习事件在事务提交后触发结算；只有成功插入台账的一方发放积分并写入组长通知，重复事件直接结束。
 
 ### db_resource_access_log 资源访问流水
 

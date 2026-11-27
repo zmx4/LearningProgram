@@ -111,7 +111,6 @@ export default {
     itemCoursePlaceholder: '选择课程',
     itemResourcePlaceholder: '选择资源',
     itemTitlePlaceholder: '任务项说明，例如：阅读完这份资料',
-    itemVisitDefault: '访问小组页面',
     addItem: '添加',
     noItems: '尚未绑定任务项，绑定后可追踪组员完成情况',
     itemNeedRef: '请先选择要绑定的课程或资源',

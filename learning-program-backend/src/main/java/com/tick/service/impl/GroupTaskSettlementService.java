@@ -60,7 +60,7 @@ public class GroupTaskSettlementService {
                     new LambdaQueryWrapper<StudyGroupMessage>()
                             .eq(StudyGroupMessage::getGroupId, membership.getGroupId())
                             .eq(StudyGroupMessage::getType, StudyGroupMessage.TYPE_TASK)
-                            .le(membership.getJoinedAt() != null, StudyGroupMessage::getCreatedAt,
+                            .ge(membership.getJoinedAt() != null, StudyGroupMessage::getCreatedAt,
                                     membership.getJoinedAt())
                             .orderByAsc(StudyGroupMessage::getId));
             if (tasks.isEmpty()) {

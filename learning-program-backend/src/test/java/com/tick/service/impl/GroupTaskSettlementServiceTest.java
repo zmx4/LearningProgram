@@ -1,5 +1,9 @@
 package com.tick.service.impl;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.tick.entity.dto.GroupTaskFinish;
 import com.tick.entity.dto.GroupTaskItem;
 import com.tick.entity.dto.StudyGroup;
@@ -12,13 +16,18 @@ import com.tick.service.AccountPointsService;
 import com.tick.service.NotificationService;
 import com.tick.service.impl.group.GroupTaskCompletionContext;
 import com.tick.service.impl.group.GroupTaskItemState;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -46,6 +55,12 @@ class GroupTaskSettlementServiceTest {
                 completionService, pointsService, notificationService);
     }
 
+    @BeforeAll
+    static void initTableMetadata() {
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, StudyGroupMessage.class);
+    }
+
     @BeforeEach
     void setUp() {
         membership.setGroupId(10);
@@ -67,6 +82,24 @@ class GroupTaskSettlementServiceTest {
         group.setOwnerId(1);
         group.setName("测试小组");
         when(groupMapper.selectById(10)).thenReturn(group);
+    }
+
+    @Test
+    void settlementOnlySelectsTasksPublishedAfterJoining() {
+        when(completionService.state(context, item, 2, task.getCreatedAt(), joinedAt))
+                .thenReturn(new GroupTaskItemState(false, null));
+
+        service().settleForAccount(2);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Wrapper<StudyGroupMessage>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(messageMapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("created_at >= "), sql);
+        assertFalse(sql.contains("created_at <= "), sql);
+        @SuppressWarnings("unchecked")
+        LambdaQueryWrapper<StudyGroupMessage> wrapper = (LambdaQueryWrapper<StudyGroupMessage>) captor.getValue();
+        assertTrue(wrapper.getParamNameValuePairs().containsValue(joinedAt));
     }
 
     @Test

@@ -51,7 +51,6 @@ function itemTypeLabel(type: TaskItemType) {
   switch (type) {
     case 'course': return t('groups.itemTypeCourse')
     case 'resource': return t('groups.itemTypeResource')
-    case 'member_visit': return t('groups.itemTypeVisit')
     case 'word_test': return t('groups.itemTypeWordTest')
     case 'question_set': return t('groups.itemTypeQuestionSet')
     default: return t('groups.itemTypeText')
@@ -94,7 +93,6 @@ function addTaskItem() {
     }]
   } else {
     const title = item.title.trim()
-      || (item.type === 'member_visit' ? t('groups.itemVisitDefault') : '')
     if (!title) {
       ElMessage.warning(t('groups.itemTitleRequired'))
       return
@@ -176,7 +174,6 @@ onUnmounted(() => {
         <select v-model="itemDraft.type" class="item-select">
           <option value="course">{{ t('groups.itemTypeCourse') }}</option>
           <option value="resource">{{ t('groups.itemTypeResource') }}</option>
-          <option value="member_visit">{{ t('groups.itemTypeVisit') }}</option>
           <option value="text">{{ t('groups.itemTypeText') }}</option>
           <option value="word_test">{{ t('groups.itemTypeWordTest') }}</option>
           <option value="question_set">{{ t('groups.itemTypeQuestionSet') }}</option>
@@ -225,8 +222,7 @@ onUnmounted(() => {
             type="text"
             maxlength="200"
             class="item-input grow"
-            :placeholder="itemDraft.type === 'member_visit'
-              ? t('groups.itemVisitDefault') : t('groups.itemTitlePlaceholder')"
+            :placeholder="t('groups.itemTitlePlaceholder')"
         >
         <template v-if="itemDraft.type === 'word_test' || itemDraft.type === 'question_set'">
           <label class="test-config">
@@ -379,11 +375,6 @@ onUnmounted(() => {
 .item-type.type-resource {
   color: var(--el-color-success);
   background: var(--el-color-success-light-9);
-}
-
-.item-type.type-member_visit {
-  color: var(--el-color-warning);
-  background: var(--el-color-warning-light-9);
 }
 
 .item-type.type-text {

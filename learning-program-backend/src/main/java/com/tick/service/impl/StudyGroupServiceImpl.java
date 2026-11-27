@@ -46,7 +46,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
     private static final int INVITE_CODE_LENGTH = 8;
     /** 去除易混淆字符的邀请码字母表 */
     private static final String INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private final SecureRandom random = new SecureRandom();
 
     private final StudyGroupMemberMapper memberMapper;
     private final StudyGroupMessageMapper messageMapper;
@@ -298,7 +298,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         for (int attempt = 0; attempt < 10; attempt++) {
             StringBuilder code = new StringBuilder(INVITE_CODE_LENGTH);
             for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
-                code.append(INVITE_CODE_ALPHABET.charAt(RANDOM.nextInt(INVITE_CODE_ALPHABET.length())));
+                code.append(INVITE_CODE_ALPHABET.charAt(random.nextInt(INVITE_CODE_ALPHABET.length())));
             }
             if (query().eq("invite_code", code.toString()).count() == 0) {
                 return code.toString();

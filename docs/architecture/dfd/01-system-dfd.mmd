@@ -4,7 +4,7 @@
 %% 证据：
 %% - 认证/验证码：AccountServiceImpl、EmailCodeService、TwoFactorServiceImpl、JwtUtils
 %% - 课程与积分：CourseProgressServiceImpl、CheckInServiceImpl、AccountPointsServiceImpl
-%% - 小组与任务：StudyGroupServiceImpl（course/resource/member_visit/text 四类任务项）
+%% - 小组与任务：GroupTaskServiceImpl、GroupTaskCompletionService、GroupTaskSettlementService（任务、测试项、事件结算与完成台账）
 %% - 讨论与通知：DiscussionServiceImpl、NotificationServiceImpl、AdminServiceImpl
 %% - 资源：LearningResourceServiceImpl、ResourceController（下载写访问流水）
 %% - 邮件：MailDispatcher、RabbitMailProducer/Consumer、application.yaml（upload-dir / rabbitmq）
@@ -63,9 +63,14 @@ flowchart LR
   P4 <-->|"签到记录 / 积分总账"| D1
 
   U -->|"建组 / 群聊 / 任务"| P5
-  P5 -->|"小组 / 任务进度"| U
-  P5 <-->|"小组 / 成员 / 消息"| D3
-  P5 -.->|"课程完成度"| D2
+  P5 -->|"小组概览 / 任务进度 / 组内榜"| U
+  P5 <-->|"小组 / 成员 / 消息 / 完成台账"| D3
+  P5 -.->|"课程 / 测试完成证据"| D2
+  P5 -->|"结算积分 / 小组通知"| D1
+  P2 -.->|"学习事件（提交后）"| P5
+  P3 -.->|"测试事件（提交后）"| P5
+  P4 -.->|"签到事件（提交后）"| P5
+  P9 -.->|"资源访问事件（提交后）"| P5
 
   U -->|"发帖 / 评论"| P6
   P6 -->|"帖子 / 通知"| U

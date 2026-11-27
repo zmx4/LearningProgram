@@ -116,6 +116,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
       if (disposed) return
       tasks.value = tasks.value.map(existing => existing.id === updated.id ? updated : existing)
       ElMessage.success(t('groups.marked'))
+      void loadTasks()
     })
   }
 

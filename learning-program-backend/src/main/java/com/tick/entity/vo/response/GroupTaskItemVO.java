@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class GroupTaskItemVO {
     private Integer id;
-    /** course / resource / member_visit / text */
+    /** course / resource / text / word_test / question_set；历史数据可为 member_visit */
     private String type;
     private Integer refId;
     /** 单词测试词表来源：cet4 / cet6 */
