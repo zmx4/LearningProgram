@@ -25,9 +25,11 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     static final int MAX_LIMIT = 100;
 
     private final LeaderboardMapper leaderboardMapper;
+    private final StudyGroupMemberQuery memberQuery;
 
-    public LeaderboardServiceImpl(LeaderboardMapper leaderboardMapper) {
+    public LeaderboardServiceImpl(LeaderboardMapper leaderboardMapper, StudyGroupMemberQuery memberQuery) {
         this.leaderboardMapper = leaderboardMapper;
+        this.memberQuery = memberQuery;
     }
 
     @Override
@@ -47,14 +49,31 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     public LeaderboardVO getLeaderboard(Integer accountId, String metricCode, Integer limit) {
         LeaderboardMetric metric = LeaderboardMetric.fromCode(metricCode);
         int safeLimit = normalizeLimit(limit);
-
-        // 一次查询同时拿到「前 safeLimit 名」和「当前用户那一行」（如果他有记录的话）
         List<LeaderboardEntryVO> rows = switch (metric) {
             case POINTS -> leaderboardMapper.selectPointsRanking(accountId, safeLimit);
             case STUDY -> leaderboardMapper.selectStudyRanking(accountId, safeLimit);
             case CHECK_IN -> leaderboardMapper.selectCheckInRanking(accountId, safeLimit);
         };
+        return toVO(metric, safeLimit, rows, accountId);
+    }
 
+    @Override
+    public LeaderboardVO getGroupLeaderboard(Integer accountId, Integer groupId, String metricCode, Integer limit) {
+        if (memberQuery.membership(groupId, accountId) == null) {
+            return null;
+        }
+        LeaderboardMetric metric = LeaderboardMetric.fromCode(metricCode);
+        int safeLimit = normalizeLimit(limit);
+        List<LeaderboardEntryVO> rows = switch (metric) {
+            case POINTS -> leaderboardMapper.selectGroupPointsRanking(accountId, groupId, safeLimit);
+            case STUDY -> leaderboardMapper.selectGroupStudyRanking(accountId, groupId, safeLimit);
+            case CHECK_IN -> leaderboardMapper.selectGroupCheckInRanking(accountId, groupId, safeLimit);
+        };
+        return toVO(metric, safeLimit, rows, accountId);
+    }
+
+    private LeaderboardVO toVO(LeaderboardMetric metric, int safeLimit,
+                               List<LeaderboardEntryVO> rows, Integer accountId) {
         List<LeaderboardEntryVO> entries = rows.stream()
                 .filter(row -> row.getRank() != null && row.getRank() <= safeLimit)
                 .toList();

@@ -1,21 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
-import { Plus, Key, User, UserFilled } from '@element-plus/icons-vue'
-import { get, post } from '@/net'
-
-interface GroupSummary {
-  id: number
-  name: string
-  ownerId: number
-  ownerName: string
-  inviteCode: string
-  memberCount: number
-  role: string
-  createdAt: string
-}
+import { User } from '@element-plus/icons-vue'
+import GroupActions from '@/components/group/GroupActions.vue'
+import GroupCard from '@/components/group/GroupCard.vue'
+import { get } from '@/net'
+import type { GroupSummary } from '@/types/group'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -23,67 +14,38 @@ const { t } = useI18n()
 const groups = ref<GroupSummary[]>([])
 const loading = ref(true)
 const loadFailed = ref(false)
-const creating = ref(false)
-const joining = ref(false)
-const createForm = ref({ name: '' })
-const joinForm = ref({ inviteCode: '' })
+let disposed = false
 
 function loadGroups() {
   loading.value = true
   loadFailed.value = false
   get<GroupSummary[]>('/api/groups', data => {
+    if (disposed) return
     groups.value = data
     loading.value = false
   }, () => {
+    if (disposed) return
     loading.value = false
     loadFailed.value = true
   })
 }
 
-function submitCreate() {
-  const name = createForm.value.name.trim()
-  if (!name) {
-    ElMessage.warning(t('groups.nameRequired'))
-    return
-  }
-  creating.value = true
-  post<GroupSummary>('/api/groups', { name }, group => {
-    creating.value = false
-    createForm.value.name = ''
-    groups.value = [group, ...groups.value]
-    ElMessage.success(t('groups.created'))
-  }, () => {
-    creating.value = false
-  })
+function onGroupChanged(group: GroupSummary) {
+  groups.value = [group, ...groups.value.filter(item => item.id !== group.id)]
 }
 
-function submitJoin() {
-  const inviteCode = joinForm.value.inviteCode.trim().toUpperCase()
-  if (!inviteCode) {
-    ElMessage.warning(t('groups.codeRequired'))
-    return
-  }
-  joining.value = true
-  post<GroupSummary>('/api/groups/join', { inviteCode }, group => {
-    joining.value = false
-    joinForm.value.inviteCode = ''
-    groups.value = [group, ...groups.value]
-    ElMessage.success(t('groups.joined'))
-  }, () => {
-    joining.value = false
-  })
+function openGroup(group: GroupSummary) {
+  void router.push({ name: 'group-detail', params: { id: group.id } })
 }
 
-function openGroup(item: GroupSummary) {
-  void router.push({ name: 'group-detail', params: { id: item.id } })
-}
-
-function formatDate(value: string) {
-  if (!value) return ''
-  return value.replace('T', ' ').slice(0, 16)
+function openLeaderboard(group: GroupSummary) {
+  void router.push({ name: 'leaderboard', query: { groupId: group.id } })
 }
 
 onMounted(loadGroups)
+onUnmounted(() => {
+  disposed = true
+})
 </script>
 
 <template>
@@ -94,47 +56,7 @@ onMounted(loadGroups)
       <p>{{ t('groups.description') }}</p>
     </section>
 
-    <section class="action-grid">
-      <div class="action-card">
-        <h3><el-icon><Plus /></el-icon>{{ t('groups.createTitle') }}</h3>
-        <p class="action-hint">{{ t('groups.createDescription') }}</p>
-        <label class="field">
-          <span>{{ t('groups.nameLabel') }}</span>
-          <input
-            v-model="createForm.name"
-            type="text"
-            maxlength="50"
-            :placeholder="t('groups.namePlaceholder')"
-            @keyup.enter="submitCreate"
-          >
-        </label>
-        <div class="action-actions">
-          <button class="primary-button" type="button" :disabled="creating" @click="submitCreate">
-            {{ creating ? t('groups.creating') : t('groups.create') }}
-          </button>
-        </div>
-      </div>
-
-      <div class="action-card">
-        <h3><el-icon><Key /></el-icon>{{ t('groups.joinTitle') }}</h3>
-        <p class="action-hint">{{ t('groups.joinDescription') }}</p>
-        <label class="field">
-          <span>{{ t('groups.codeLabel') }}</span>
-          <input
-            v-model="joinForm.inviteCode"
-            type="text"
-            maxlength="8"
-            :placeholder="t('groups.codePlaceholder')"
-            @keyup.enter="submitJoin"
-          >
-        </label>
-        <div class="action-actions">
-          <button class="primary-button" type="button" :disabled="joining" @click="submitJoin">
-            {{ joining ? t('groups.joining') : t('groups.join') }}
-          </button>
-        </div>
-      </div>
-    </section>
+    <GroupActions @changed="onGroupChanged" />
 
     <div class="list-heading">
       <h3>{{ t('groups.myGroups') }}</h3>
@@ -154,25 +76,13 @@ onMounted(loadGroups)
     </section>
 
     <section v-else-if="groups.length" class="group-list">
-      <article v-for="item in groups" :key="item.id" class="group-card" @click="openGroup(item)">
-        <div class="group-card-title">
-          <h4>{{ item.name }}</h4>
-          <span class="role-badge" :class="{ owner: item.role === 'owner' }">
-            {{ item.role === 'owner' ? t('groups.roleOwner') : t('groups.roleMember') }}
-          </span>
-        </div>
-        <div class="group-meta">
-          <span class="meta-item">
-            <el-icon><UserFilled /></el-icon>
-            {{ t('groups.ownerLabel', { name: item.ownerName || t('groups.unknownUser') }) }}
-          </span>
-          <span class="meta-item">
-            <el-icon><User /></el-icon>
-            {{ t('groups.memberCount', { count: item.memberCount }) }}
-          </span>
-          <span class="meta-item">{{ formatDate(item.createdAt) }}</span>
-        </div>
-      </article>
+      <GroupCard
+          v-for="group in groups"
+          :key="group.id"
+          :group="group"
+          @open="openGroup"
+          @leaderboard="openLeaderboard"
+      />
     </section>
 
     <section v-else class="empty-panel">
@@ -184,7 +94,7 @@ onMounted(loadGroups)
 
 <style scoped>
 .groups-page {
-  max-width: 860px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 42px 5% 60px;
 }
@@ -208,99 +118,11 @@ onMounted(loadGroups)
   font-size: 14px;
 }
 
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-  margin-bottom: 26px;
-}
-
-.action-card {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  padding: 20px 22px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-  box-shadow: var(--el-box-shadow-lighter);
-}
-
-.action-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  font-size: 16px;
-}
-
-.action-hint {
-  margin: -6px 0 0;
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field > span {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.field input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 9px;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color);
-  font: inherit;
-  font-size: 14px;
-}
-
-.field input:focus {
-  border-color: var(--el-color-primary);
-  outline: none;
-}
-
-.action-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.primary-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border: 0;
-  border-radius: 9px;
-  color: var(--el-color-white);
-  background: var(--el-color-primary);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary-button:hover {
-  background: var(--el-color-primary-light-3);
-}
-
-.primary-button:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
 .list-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin: 26px 0 14px;
 }
 
 .list-heading h3 {
@@ -314,65 +136,9 @@ onMounted(loadGroups)
 }
 
 .group-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.group-card {
-  padding: 18px 20px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-  box-shadow: var(--el-box-shadow-lighter);
-  cursor: pointer;
-  transition: border-color .2s, box-shadow .2s, transform .2s;
-}
-
-.group-card:hover {
-  border-color: var(--el-color-primary-light-5);
-  box-shadow: var(--el-box-shadow-light);
-  transform: translateY(-1px);
-}
-
-.group-card-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.group-card-title h4 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.role-badge {
-  padding: 2px 9px;
-  border-radius: 999px;
-  color: var(--el-color-info);
-  background: var(--el-color-info-light-9);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.role-badge.owner {
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-}
-
-.group-meta {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 14px;
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-}
-
-.meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .empty-panel {
@@ -415,7 +181,10 @@ onMounted(loadGroups)
 .skeleton-card {
   display: grid;
   gap: 10px;
-  cursor: default;
+  padding: 18px 20px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
 }
 
 .skeleton.line {
@@ -423,13 +192,8 @@ onMounted(loadGroups)
   border-radius: 7px;
 }
 
-.skeleton.line.short {
-  width: 30%;
-}
-
-.skeleton.line.long {
-  width: 85%;
-}
+.skeleton.line.short { width: 30%; }
+.skeleton.line.long { width: 85%; }
 
 .skeleton {
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color-lighter) 50%, var(--el-fill-color-light) 75%);

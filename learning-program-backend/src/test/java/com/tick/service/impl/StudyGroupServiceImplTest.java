@@ -1,12 +1,17 @@
 package com.tick.service.impl;
 
+import com.tick.entity.dto.StudyGroup;
 import com.tick.entity.dto.StudyGroupMember;
+import com.tick.entity.vo.request.StudyGroupJoinVO;
 import com.tick.exception.NotFoundException;
 import com.tick.mapper.GroupMemberVisitMapper;
+import com.tick.mapper.StudyGroupMapper;
 import com.tick.mapper.StudyGroupMemberMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
 import com.tick.service.AccountService;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,11 +27,15 @@ class StudyGroupServiceImplTest {
     private final StudyGroupMemberMapper memberMapper = mock(StudyGroupMemberMapper.class);
 
     private StudyGroupServiceImpl service() {
+        return service(new StudyGroupMemberQuery(memberMapper, mock(AccountService.class)));
+    }
+
+    private StudyGroupServiceImpl service(StudyGroupMemberQuery memberQuery) {
         return new StudyGroupServiceImpl(
                 memberMapper,
                 mock(StudyGroupMessageMapper.class),
                 mock(GroupMemberVisitMapper.class),
-                new StudyGroupMemberQuery(memberMapper, mock(AccountService.class)));
+                memberQuery);
     }
 
     private StudyGroupMember member(int id, int accountId, String role) {
@@ -77,6 +86,32 @@ class StudyGroupServiceImplTest {
                 .thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> service().removeMember(1, 10, 2));
+    }
+
+    @Test
+    void concurrentJoinConflictReturnsFriendlyMessage() {
+        StudyGroupMapper groupMapper = mock(StudyGroupMapper.class);
+        StudyGroupMemberQuery memberQuery = mock(StudyGroupMemberQuery.class);
+        StudyGroupServiceImpl service = service(memberQuery);
+        ReflectionTestUtils.setField(service, "baseMapper", groupMapper);
+
+        StudyGroup group = new StudyGroup();
+        group.setId(10);
+        group.setName("重构测试小组");
+        group.setOwnerId(7);
+        group.setInviteCode("ABCDEFGH");
+        when(groupMapper.selectOne(any())).thenReturn(group);
+        when(memberQuery.membership(10, 1)).thenReturn(null);
+        when(memberMapper.insert(any(StudyGroupMember.class)))
+                .thenThrow(new DuplicateKeyException("duplicate"));
+        StudyGroupJoinVO vo = new StudyGroupJoinVO();
+        vo.setInviteCode("abcdefgh");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.joinByCode(1, vo));
+
+        assertEquals("你已经在该小组中", exception.getMessage());
+        verify(memberMapper).insert(any(StudyGroupMember.class));
     }
 
     @Test

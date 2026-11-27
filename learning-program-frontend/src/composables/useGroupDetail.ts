@@ -18,27 +18,31 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
   const sending = ref(false)
   const draft = ref('')
   let pollTimer: ReturnType<typeof setInterval> | null = null
+  let disposed = false
 
   const isOwner = computed(() => detail.value?.group.role === 'owner')
   const inviteCode = computed(() => detail.value?.group.inviteCode ?? '')
 
   function loadDetail() {
     get<GroupDetail>(`/api/groups/${groupId}`, data => {
+      if (disposed) return
       detail.value = data
       loadFailed.value = false
     }, () => {
-      loadFailed.value = true
+      if (!disposed) loadFailed.value = true
     })
   }
 
   function loadTasks() {
     get<GroupTask[]>(`/api/groups/${groupId}/tasks`, data => {
+      if (disposed) return
       tasks.value = data
     }, () => undefined)
   }
 
   function loadMessages(scrollToBottomOnLoad = false) {
     get<GroupMessage[]>(`/api/groups/${groupId}/messages`, data => {
+      if (disposed) return
       const previous = messages.value
       const lastId = previous[previous.length - 1]?.id
       const newLastId = data[data.length - 1]?.id
@@ -59,7 +63,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
         void nextTick(scrollToBottom)
       }
     }, () => {
-      if (!messages.value.length) loadFailed.value = true
+      if (!disposed && !messages.value.length) loadFailed.value = true
     })
   }
 
@@ -77,12 +81,13 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
     }
     sending.value = true
     post<GroupMessage>(`/api/groups/${groupId}/messages`, { content }, message => {
+      if (disposed) return
       sending.value = false
       draft.value = ''
       messages.value = [...messages.value, message]
       void nextTick(scrollToBottom)
     }, () => {
-      sending.value = false
+      if (!disposed) sending.value = false
     })
   }
 
@@ -100,6 +105,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
 
   function completeItem(task: GroupTask, item: TaskItem) {
     post<GroupTask>(`/api/groups/${groupId}/tasks/${task.id}/items/${item.id}/complete`, {}, updated => {
+      if (disposed) return
       tasks.value = tasks.value.map(existing => existing.id === updated.id ? updated : existing)
       ElMessage.success(t('groups.marked'))
     })
@@ -128,6 +134,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
       return
     }
     post<null>(`/api/groups/${groupId}/leave`, {}, () => {
+      if (disposed) return
       ElMessage.success(t('groups.left'))
       void router.push({ name: 'groups' })
     })
@@ -144,6 +151,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
       return
     }
     del<null>(`/api/groups/${groupId}/members/${member.accountId}`, {}, () => {
+      if (disposed) return
       ElMessage.success(t('groups.removed'))
       loadDetail()
     })
@@ -163,6 +171,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
   })
 
   onUnmounted(() => {
+    disposed = true
     if (pollTimer) clearInterval(pollTimer)
     document.removeEventListener('visibilitychange', onVisibilityChange)
   })

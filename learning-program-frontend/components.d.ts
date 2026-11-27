@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AvatarCropDialog: typeof import('./src/components/AvatarCropDialog.vue')['default']
+    CheckInCard: typeof import('./src/components/CheckInCard.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
@@ -40,6 +41,8 @@ declare module 'vue' {
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
+    GroupActions: typeof import('./src/components/group/GroupActions.vue')['default']
+    GroupCard: typeof import('./src/components/group/GroupCard.vue')['default']
     GroupMemberPanel: typeof import('./src/components/group/GroupMemberPanel.vue')['default']
     GroupMessageComposer: typeof import('./src/components/group/GroupMessageComposer.vue')['default']
     GroupMessageList: typeof import('./src/components/group/GroupMessageList.vue')['default']

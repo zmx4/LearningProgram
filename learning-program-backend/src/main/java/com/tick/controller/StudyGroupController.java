@@ -10,9 +10,11 @@ import com.tick.entity.vo.response.GroupMemberDetailVO;
 import com.tick.entity.vo.response.GroupMessageVO;
 import com.tick.entity.vo.response.GroupTaskProgressVO;
 import com.tick.entity.vo.response.GroupTaskVO;
+import com.tick.entity.vo.response.LeaderboardVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
 import com.tick.service.GroupTaskService;
+import com.tick.service.LeaderboardService;
 import com.tick.service.StudyGroupService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,11 +37,14 @@ import java.util.List;
 public class StudyGroupController {
     private final StudyGroupService studyGroupService;
     private final GroupTaskService groupTaskService;
+    private final LeaderboardService leaderboardService;
 
     public StudyGroupController(StudyGroupService studyGroupService,
-                                GroupTaskService groupTaskService) {
+                                GroupTaskService groupTaskService,
+                                LeaderboardService leaderboardService) {
         this.studyGroupService = studyGroupService;
         this.groupTaskService = groupTaskService;
+        this.leaderboardService = leaderboardService;
     }
 
     @GetMapping
@@ -138,6 +144,17 @@ public class StudyGroupController {
         return detail == null
                 ? RestBean.failure(404, "成员不存在或你不是小组成员")
                 : RestBean.success(detail);
+    }
+
+    @GetMapping("/{id}/leaderboard")
+    public RestBean<LeaderboardVO> leaderboard(@PathVariable Integer id,
+                                              @RequestParam(required = false, defaultValue = "points") String metric,
+                                              @RequestParam(required = false) Integer limit,
+                                              @RequestAttribute("id") Integer accountId) {
+        LeaderboardVO board = leaderboardService.getGroupLeaderboard(accountId, id, metric, limit);
+        return board == null
+                ? RestBean.failure(404, "小组不存在或你不是小组成员")
+                : RestBean.success(board);
     }
 
     @PostMapping("/{id}/leave")

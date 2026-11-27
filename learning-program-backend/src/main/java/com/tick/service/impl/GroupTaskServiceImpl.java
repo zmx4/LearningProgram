@@ -135,7 +135,8 @@ public class GroupTaskServiceImpl implements GroupTaskService {
         GroupTaskItem item = taskItemMapper.selectById(itemId);
         StudyGroupMessage task = item == null ? null : messageMapper.selectById(taskId);
         if (item == null || task == null
-                || !groupId.equals(item.getGroupId()) || !taskId.equals(item.getMessageId())
+                || !groupId.equals(item.getGroupId()) || !groupId.equals(task.getGroupId())
+                || !taskId.equals(item.getMessageId())
                 || !StudyGroupMessage.TYPE_TASK.equals(task.getType())) {
             return null;
         }

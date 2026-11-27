@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { get, post } from '@/net'
@@ -15,16 +15,25 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const publishing = ref(false)
 const taskForm = ref({ title: '', content: '' })
-const taskItems = ref<TaskItemDraft[]>([])
+const taskItems = ref<(TaskItemDraft & { draftId: number })[]>([])
 const itemDraft = ref<TaskItemDraft>({ type: 'course', refId: null, title: '' })
 const courseOptions = ref<NamedOption[]>([])
 const resourceOptions = ref<NamedOption[]>([])
+let nextDraftId = 1
+let disposed = false
+
+watch(() => itemDraft.value.type, () => {
+  itemDraft.value.refId = null
+  itemDraft.value.title = ''
+})
 
 function loadBindOptions() {
   get<{ courses: { id: number; title: string }[] }>('/api/courses/progress', data => {
+    if (disposed) return
     courseOptions.value = (data.courses ?? []).map(course => ({ id: course.id, title: course.title }))
   }, () => undefined)
   get<{ id: number; title: string }[]>('/api/resources', data => {
+    if (disposed) return
     resourceOptions.value = data.map(resource => ({ id: resource.id, title: resource.title }))
   }, () => undefined)
 }
@@ -47,7 +56,12 @@ function addTaskItem() {
     }
     const options = item.type === 'course' ? courseOptions.value : resourceOptions.value
     const title = options.find(option => option.id === item.refId)?.title ?? ''
-    taskItems.value = [...taskItems.value, { type: item.type, refId: item.refId, title }]
+    taskItems.value = [...taskItems.value, {
+      type: item.type,
+      refId: item.refId,
+      title,
+      draftId: nextDraftId++,
+    }]
   } else {
     const title = item.title.trim()
       || (item.type === 'member_visit' ? t('groups.itemVisitDefault') : '')
@@ -55,13 +69,24 @@ function addTaskItem() {
       ElMessage.warning(t('groups.itemTitleRequired'))
       return
     }
-    taskItems.value = [...taskItems.value, { type: item.type, refId: null, title }]
+    taskItems.value = [...taskItems.value, {
+      type: item.type,
+      refId: null,
+      title,
+      draftId: nextDraftId++,
+    }]
   }
   itemDraft.value = { type: item.type, refId: null, title: '' }
 }
 
-function removeTaskItem(index: number) {
-  taskItems.value = taskItems.value.filter((_, i) => i !== index)
+function removeTaskItem(draftId: number) {
+  taskItems.value = taskItems.value.filter(item => item.draftId !== draftId)
+}
+
+function resetForm() {
+  taskForm.value = { title: '', content: '' }
+  taskItems.value = []
+  itemDraft.value = { type: 'course', refId: null, title: '' }
 }
 
 function publishTask() {
@@ -76,16 +101,21 @@ function publishTask() {
     return
   }
   publishing.value = true
-  const items = taskItems.value.map(item => ({ type: item.type, refId: item.refId, title: item.title }))
+  const items = taskItems.value.map(({ type, refId, title: itemTitle }) => ({ type, refId, title: itemTitle }))
   post<GroupMessage>(`/api/groups/${props.groupId}/tasks`, { title, content, items }, message => {
+    if (disposed) return
     publishing.value = false
+    resetForm()
     emit('published', message)
   }, () => {
-    publishing.value = false
+    if (!disposed) publishing.value = false
   })
 }
 
 onMounted(loadBindOptions)
+onUnmounted(() => {
+  disposed = true
+})
 </script>
 
 <template>
@@ -141,10 +171,10 @@ onMounted(loadBindOptions)
         <button class="ghost-button" type="button" @click="addTaskItem">{{ t('groups.addItem') }}</button>
       </div>
       <ul v-if="taskItems.length" class="item-draft-list">
-        <li v-for="(item, index) in taskItems" :key="index">
+        <li v-for="item in taskItems" :key="item.draftId">
           <span class="item-type" :class="`type-${item.type}`">{{ itemTypeLabel(item.type) }}</span>
           <span class="item-title">{{ item.title }}</span>
-          <button class="remove-inline" type="button" @click="removeTaskItem(index)">×</button>
+          <button class="remove-inline" type="button" @click="removeTaskItem(item.draftId)">×</button>
         </li>
       </ul>
       <small v-else class="no-items-hint">{{ t('groups.noItems') }}</small>

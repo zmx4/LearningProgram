@@ -21,4 +21,7 @@ public interface LeaderboardService {
      * @throws IllegalArgumentException 维度不支持时抛出，message 可直接展示
      */
     LeaderboardVO getLeaderboard(Integer accountId, String metricCode, Integer limit);
+
+    /** 查询小组内榜单；非成员返回 null。 */
+    LeaderboardVO getGroupLeaderboard(Integer accountId, Integer groupId, String metricCode, Integer limit);
 }

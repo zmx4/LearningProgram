@@ -3,7 +3,7 @@ import { nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, CopyDocument, Refresh } from '@element-plus/icons-vue'
+import { ArrowLeft, CopyDocument, Refresh, Trophy } from '@element-plus/icons-vue'
 import GroupMessageList from '@/components/group/GroupMessageList.vue'
 import GroupMessageComposer from '@/components/group/GroupMessageComposer.vue'
 import GroupTaskForm from '@/components/group/GroupTaskForm.vue'
@@ -55,6 +55,10 @@ function onTaskPublished(message: GroupMessage) {
 function openProgress(task: GroupTask) {
   progressTaskId.value = task.id
 }
+
+function openLeaderboard() {
+  void router.push({ name: 'leaderboard', query: { groupId } })
+}
 </script>
 
 <template>
@@ -72,6 +76,10 @@ function openProgress(task: GroupTask) {
         </button>
       </div>
       <div class="header-actions">
+        <button class="ghost-button" type="button" @click="openLeaderboard">
+          <el-icon><Trophy /></el-icon>
+          {{ t('groups.leaderboard') }}
+        </button>
         <button class="ghost-button" type="button" @click="loadMessages(true); loadTasks()">
           <el-icon><Refresh /></el-icon>
           {{ t('groups.refresh') }}
@@ -103,7 +111,8 @@ function openProgress(task: GroupTask) {
 
         <div class="composer-area">
           <GroupTaskForm
-              v-if="isOwner && taskFormVisible"
+              v-if="isOwner"
+              v-show="taskFormVisible"
               :group-id="groupId"
               @published="onTaskPublished"
               @close="taskFormVisible = false"

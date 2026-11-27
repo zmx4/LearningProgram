@@ -1,10 +1,13 @@
 package com.tick.service.impl;
 
+import com.tick.entity.dto.Account;
 import com.tick.entity.dto.GroupTaskItem;
 import com.tick.entity.dto.GroupTaskProgress;
 import com.tick.entity.dto.StudyGroupMember;
 import com.tick.entity.dto.StudyGroupMessage;
 import com.tick.entity.vo.request.GroupTaskCreateVO;
+import com.tick.entity.vo.request.GroupTaskItemCreateVO;
+import com.tick.entity.vo.response.GroupMessageVO;
 import com.tick.mapper.CourseMapper;
 import com.tick.mapper.GroupTaskItemMapper;
 import com.tick.mapper.GroupTaskProgressMapper;
@@ -15,6 +18,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,6 +73,32 @@ class GroupTaskServiceImplTest {
     }
 
     @Test
+    void ownerCanPublishTaskWithItems() {
+        when(memberQuery.membership(10, 1)).thenReturn(member(1, StudyGroupMember.ROLE_OWNER));
+        when(messageMapper.insert(any(StudyGroupMessage.class))).thenAnswer(invocation -> {
+            StudyGroupMessage message = invocation.getArgument(0);
+            message.setId(5);
+            return 1;
+        });
+        Account owner = new Account(1, "组长", null, null, "user", null);
+        when(accountService.getById(1)).thenReturn(owner);
+
+        GroupTaskItemCreateVO item = new GroupTaskItemCreateVO();
+        item.setType(GroupTaskItem.TYPE_TEXT);
+        item.setTitle("阅读一章");
+        GroupTaskCreateVO vo = new GroupTaskCreateVO();
+        vo.setTitle("本周学习任务");
+        vo.setContent("请完成阅读并标记");
+        vo.setItems(List.of(item));
+
+        GroupMessageVO result = service().postTask(1, 10, vo);
+
+        assertNotNull(result);
+        assertEquals("本周学习任务", result.getTitle());
+        verify(taskItemMapper).insert(any(GroupTaskItem.class));
+    }
+
+    @Test
     void autoJudgedItemCannotBeCompletedManually() {
         when(memberQuery.membership(10, 1)).thenReturn(member(1, StudyGroupMember.ROLE_MEMBER));
         GroupTaskItem item = new GroupTaskItem();
@@ -80,6 +111,24 @@ class GroupTaskServiceImplTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> service().completeTaskItem(1, 10, 5, 3));
+        verify(taskProgressMapper, never()).insert(any(GroupTaskProgress.class));
+    }
+
+    @Test
+    void itemFromAnotherGroupTaskIsRejected() {
+        when(memberQuery.membership(10, 1)).thenReturn(member(1, StudyGroupMember.ROLE_MEMBER));
+        GroupTaskItem item = new GroupTaskItem();
+        item.setId(3);
+        item.setGroupId(10);
+        item.setMessageId(5);
+        item.setItemType(GroupTaskItem.TYPE_TEXT);
+        when(taskItemMapper.selectById(3)).thenReturn(item);
+        StudyGroupMessage task = taskMessage(5);
+        task.setGroupId(20);
+        when(messageMapper.selectById(5)).thenReturn(task);
+
+        assertNull(service().completeTaskItem(1, 10, 5, 3));
+        verify(taskProgressMapper, never()).selectCount(any());
         verify(taskProgressMapper, never()).insert(any(GroupTaskProgress.class));
     }
 

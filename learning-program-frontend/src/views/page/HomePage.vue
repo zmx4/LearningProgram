@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { ArrowLeft, ArrowRight, Reading } from '@element-plus/icons-vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { get, post, publicGet, unauthorized } from '@/net'
-
-const { t } = useI18n()
-const router = useRouter()
-// 主界面允许游客浏览：游客看公开课程列表 + 登录引导，签到等用户功能隐藏
-const isLoggedIn = !unauthorized()
+import { ArrowRight, Reading, Trophy, User } from '@element-plus/icons-vue'
+import CheckInCard from '@/components/CheckInCard.vue'
+import GroupActions from '@/components/group/GroupActions.vue'
+import GroupCard from '@/components/group/GroupCard.vue'
+import { get, publicGet, unauthorized } from '@/net'
+import type { GroupSummary, GroupTask } from '@/types/group'
 
 interface GuestCourse {
   courseId: number
@@ -16,782 +15,654 @@ interface GuestCourse {
   description: string | null
   chapterCount: number
 }
-interface CheckInStatus {
-  dates: string[]
-  todayChecked: boolean
-  streak: number
-  points: number
-  checkInCount: number
-  monthPoints: number
-  records: Array<{ date: string; points: number; streak: number }>
+
+interface GroupMetrics {
+  ongoingTasks: number
+  completionRate: number | null
+  overdueTasks: number
 }
 
-interface ProgressSummary {
-  ongoingCount: number
-  completedCount: number
-  weeklySeconds: number
+interface TodoItem {
+  key: string
+  groupId: number
+  groupName: string
+  taskId: number
+  taskTitle: string
+  itemTitle: string
 }
 
-const now = new Date()
-const selectedYear = ref(now.getFullYear())
-const selectedMonth = ref(now.getMonth() + 1)
-const checkInStatus = ref<CheckInStatus>({
-  dates: [], todayChecked: false, streak: 0, points: 0, checkInCount: 0, monthPoints: 0, records: [],
-})
-const progressSummary = ref<ProgressSummary | null>(null)
+const router = useRouter()
+const { t } = useI18n()
+const isLoggedIn = !unauthorized()
+
+const groups = ref<GroupSummary[]>([])
+const tasksByGroup = ref<Record<number, GroupTask[]>>({})
 const guestCourses = ref<GuestCourse[]>([])
-const loading = ref(false)
-const heroRef = ref<HTMLElement | null>(null)
-const today = now.toISOString().slice(0, 10)
+const loadingGroups = ref(false)
+const tasksLoading = ref(false)
+const loadFailed = ref(false)
+let disposed = false
 
-const stats = computed(() => [
-  {
-    label: 'home.ongoingCourses',
-    value: progressSummary.value ? String(progressSummary.value.ongoingCount) : '—',
-    hint: 'home.ongoingHint',
-    tone: 'primary',
-  }, {
-    label: 'home.weeklyTime',
-    value: progressSummary.value ? formatDuration(progressSummary.value.weeklySeconds) : '—',
-    hint: 'home.weeklyHint',
-    tone: 'warning',
-  }, {
-    label: 'home.completedCourses',
-    value: progressSummary.value ? String(progressSummary.value.completedCount) : '—',
-    hint: 'home.completedHint',
-    tone: 'success',
-  },
-])
-
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return t('home.noStudyTime')
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0) return `${hours}${t('home.hours')}${minutes > 0 ? minutes + t('home.minutes') : ''}`
-  if (minutes > 0) return `${minutes}${t('home.minutes')}`
-  return t('home.lessThanMinute')
-}
-
-function loadProgressSummary() {
-  const apply = (data: { summary: ProgressSummary; courses?: GuestCourse[] }) => {
-    progressSummary.value = data.summary
+function loadGuestCourses() {
+  publicGet<{ courses?: GuestCourse[] }>('/api/courses/progress', data => {
+    if (disposed) return
     guestCourses.value = data.courses ?? []
-  }
-  if (isLoggedIn) {
-    get<{ summary: ProgressSummary }>('/api/courses/progress', apply)
-  } else {
-    publicGet<{ summary: ProgressSummary; courses?: GuestCourse[] }>('/api/courses/progress', apply)
-  }
+  }, () => undefined)
 }
 
-const monthTitle = computed(() => `${selectedYear.value}年${selectedMonth.value}月`)
-const calendarDays = computed(() => {
-  const firstDay = new Date(selectedYear.value, selectedMonth.value - 1, 1).getDay()
-  const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
-  return Array.from({ length: 42 }, (_, index) => {
-    const day = index - firstDay + 1
-    return day > 0 && day <= daysInMonth ? day : null
+function loadGroupTasks(groupId: number, onFinished?: () => void) {
+  get<GroupTask[]>(`/api/groups/${groupId}/tasks`, data => {
+    if (disposed) return
+    tasksByGroup.value = { ...tasksByGroup.value, [groupId]: data }
+    onFinished?.()
+  }, () => {
+    if (!disposed) onFinished?.()
   })
+}
+
+function loadGroups() {
+  loadingGroups.value = true
+  loadFailed.value = false
+  get<GroupSummary[]>('/api/groups', data => {
+    if (disposed) return
+    groups.value = data
+    loadingGroups.value = false
+    tasksLoading.value = data.length > 0
+    if (!data.length) return
+    let remaining = data.length
+    data.forEach(group => {
+      loadGroupTasks(group.id, () => {
+        remaining -= 1
+        if (remaining === 0) tasksLoading.value = false
+      })
+    })
+  }, () => {
+    if (disposed) return
+    loadingGroups.value = false
+    loadFailed.value = true
+  })
+}
+
+function onGroupChanged(group: GroupSummary) {
+  groups.value = [group, ...groups.value.filter(item => item.id !== group.id)]
+  tasksLoading.value = true
+  loadGroupTasks(group.id, () => {
+    tasksLoading.value = false
+  })
+}
+
+const metricsByGroup = computed<Record<number, GroupMetrics>>(() => {
+  const result: Record<number, GroupMetrics> = {}
+  const now = Date.now()
+  for (const group of groups.value) {
+    const tasks = tasksByGroup.value[group.id] ?? []
+    let ongoingTasks = 0
+    let completedItems = 0
+    let totalItems = 0
+    let overdueTasks = 0
+    for (const task of tasks) {
+      if (task.totalItems > 0 && task.myCompleted < task.totalItems) ongoingTasks += 1
+      completedItems += task.myCompleted
+      totalItems += task.totalItems
+      if (task.dueAt && new Date(task.dueAt).getTime() < now && task.myCompleted < task.totalItems) {
+        overdueTasks += 1
+      }
+    }
+    result[group.id] = {
+      ongoingTasks,
+      completionRate: totalItems > 0 ? Math.round(completedItems * 100 / totalItems) : null,
+      overdueTasks,
+    }
+  }
+  return result
 })
 
-function dateKey(day: number): string {
-  return `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+const todos = computed<TodoItem[]>(() => {
+  const items: TodoItem[] = []
+  for (const group of groups.value) {
+    for (const task of tasksByGroup.value[group.id] ?? []) {
+      for (const item of task.items) {
+        if (item.myCompleted) continue
+        items.push({
+          key: `${group.id}-${task.id}-${item.id}`,
+          groupId: group.id,
+          groupName: group.name,
+          taskId: task.id,
+          taskTitle: task.title,
+          itemTitle: item.title,
+        })
+      }
+    }
+  }
+  return items.slice(0, 6)
+})
+
+const totalOngoing = computed(() => Object.values(metricsByGroup.value)
+    .reduce((sum, metrics) => sum + metrics.ongoingTasks, 0))
+
+function openGroup(group: GroupSummary) {
+  void router.push({ name: 'group-detail', params: { id: group.id } })
 }
 
-function loadCheckInStatus() {
-  loading.value = true
-  get<CheckInStatus>(
-    `/api/check-in?year=${selectedYear.value}&month=${selectedMonth.value}`,
-    (data) => {
-      checkInStatus.value = data
-      loading.value = false
-    },
-    () => { loading.value = false },
-  )
+function openLeaderboard(group: GroupSummary) {
+  void router.push({ name: 'leaderboard', query: { groupId: group.id } })
 }
 
-function changeMonth(offset: number) {
-  const date = new Date(selectedYear.value, selectedMonth.value - 1 + offset, 1)
-  selectedYear.value = date.getFullYear()
-  selectedMonth.value = date.getMonth() + 1
-  loadCheckInStatus()
+function openTodo(todo: TodoItem) {
+  void router.push({ name: 'group-detail', params: { id: todo.groupId } })
 }
 
-function checkIn() {
-  post('/api/check-in', null, () => {
-    loadCheckInStatus()
-  })
+function goGroups() {
+  void router.push({ name: 'groups' })
 }
 
-function updateHeroLight(event: PointerEvent) {
-  if (!heroRef.value || event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  const bounds = heroRef.value.getBoundingClientRect()
-  const x = ((event.clientX - bounds.left) / bounds.width) * 100
-  const y = ((event.clientY - bounds.top) / bounds.height) * 100
-  heroRef.value.style.setProperty('--hero-light-x', `${Math.max(0, Math.min(100, x))}%`)
-  heroRef.value.style.setProperty('--hero-light-y', `${Math.max(0, Math.min(100, y))}%`)
-  heroRef.value.style.setProperty('--hero-orbit-x', `${(x - 50) * 0.12}px`)
-  heroRef.value.style.setProperty('--hero-orbit-y', `${(y - 50) * 0.12}px`)
-}
-
-function resetHeroLight() {
-  heroRef.value?.style.setProperty('--hero-orbit-x', '0px')
-  heroRef.value?.style.setProperty('--hero-orbit-y', '0px')
+function goCourses() {
+  void router.push({ name: 'courses' })
 }
 
 onMounted(() => {
   if (isLoggedIn) {
-    loadCheckInStatus()
+    loadGroups()
+  } else {
+    loadGuestCourses()
   }
-  loadProgressSummary()
 })
 
+onUnmounted(() => {
+  disposed = true
+})
 </script>
 
 <template>
-  <main class="content">
-        <div ref="heroRef" class="hero-card" @pointermove="updateHeroLight" @pointerleave="resetHeroLight">
-          <div>
-            <p class="card-label">{{ t('home.plan') }}</p>
-            <h2>{{ t('home.focus') }}</h2>
-            <p class="hero-copy">{{ t('home.planDescription') }}</p>
-            <button class="primary-button" type="button" @click="router.push({ name: 'courses' })">{{ t('home.start') }}</button>
-          </div>
-          <div class="hero-decoration" aria-hidden="true">
-            <div class="decoration-circle circle-large"></div>
-            <div class="decoration-circle circle-small"></div>
-            <span>✦</span>
-          </div>
-        </div>
-
-        <div class="section-heading">
-          <div>
-            <p class="card-label">{{ t('home.overview') }}</p>
-            <h2>{{ t('home.summary') }}</h2>
-          </div>
-          <button class="placeholder-chip chip-link" type="button" @click="router.push({ name: 'courses' })">
-            {{ t('courses.title') }}
+  <main class="home-page">
+    <section class="hero-card">
+      <div class="hero-copy">
+        <p class="eyebrow">MY STUDY GROUPS</p>
+        <h1>{{ isLoggedIn ? t('home.groupHeroTitle') : t('home.guestHeroTitle') }}</h1>
+        <p>{{ isLoggedIn ? t('home.groupHeroDescription') : t('home.guestHeroDescription') }}</p>
+        <div class="hero-actions">
+          <button v-if="isLoggedIn" class="primary-button" type="button" @click="goGroups">
+            {{ t('home.manageGroups') }}
+            <el-icon><ArrowRight /></el-icon>
           </button>
-        </div>
-
-        <div class="stats-grid">
-          <article v-for="stat in stats" :key="stat.label" class="stat-card" :class="`stat-card--${stat.tone}`">
-            <p>{{ t(stat.label) }}</p>
-            <strong>{{ stat.value }}</strong>
-            <span>{{ t(stat.hint) }}</span>
-          </article>
-        </div>
-
-        <template v-if="!isLoggedIn">
-          <div class="section-heading">
-            <div>
-              <p class="card-label">{{ t('home.explore') }}</p>
-              <h2>{{ t('home.exploreTitle') }}</h2>
-            </div>
-          </div>
-          <div class="guest-course-grid">
-            <article v-for="course in guestCourses" :key="course.courseId" class="guest-course-card">
-              <div class="guest-course-head">
-                <strong>{{ course.title }}</strong>
-                <span class="guest-course-tag">{{ t('courses.notStartedTag') }}</span>
-              </div>
-              <p class="guest-course-desc">{{ course.description || t('courses.noDescription') }}</p>
-              <span class="guest-course-meta">{{ t('courses.chapterCount', { count: course.chapterCount }) }}</span>
-            </article>
-          </div>
-        </template>
-
-        <section v-if="isLoggedIn" class="check-in-card">
-          <div class="check-in-header">
-            <div>
-              <p class="card-label">{{ t('home.checkIn') }}</p>
-              <h2>{{ t('home.checkInTitle') }}</h2>
-            </div>
-            <button class="check-in-button" type="button" :disabled="checkInStatus.todayChecked || loading" @click="checkIn">
-              {{ checkInStatus.todayChecked ? t('home.checkedIn') : t('home.checkInNow') }}
-            </button>
-          </div>
-          <div class="check-in-summary">
-            <span class="check-in-metric check-in-metric--points">{{ t('home.points') }} <strong>{{ checkInStatus.points }}</strong></span>
-            <span class="check-in-metric check-in-metric--streak">{{ t('home.streak') }} <strong>{{ checkInStatus.streak }}</strong>{{ t('home.days') }}</span>
-          </div>
-          <div class="calendar-heading">
-            <button type="button" :aria-label="t('home.previousMonth')" @click="changeMonth(-1)"><el-icon><ArrowLeft /></el-icon></button>
-            <strong>{{ monthTitle }}</strong>
-            <button type="button" :aria-label="t('home.nextMonth')" @click="changeMonth(1)"><el-icon><ArrowRight /></el-icon></button>
-          </div>
-          <div class="calendar-weekdays">
-            <span v-for="weekday in t('home.weekdays').split(',')" :key="weekday">{{ weekday }}</span>
-          </div>
-          <div class="calendar-grid">
-            <span
-              v-for="(day, index) in calendarDays"
-              :key="index"
-              class="calendar-day"
-              :class="{ checked: day !== null && checkInStatus.dates.includes(dateKey(day)), today: day !== null && dateKey(day) === today }"
-            >{{ day }}</span>
-          </div>
-          <div class="points-summary">
-            <div class="points-summary-heading">
-              <strong>{{ t('home.pointsSummary') }}</strong>
-              <span>{{ t('home.monthPoints') }} {{ checkInStatus.monthPoints }}</span>
-            </div>
-            <div v-if="checkInStatus.records.length" class="points-table-wrapper">
-              <table class="points-table">
-                <thead>
-                  <tr>
-                    <th>{{ t('home.checkInDate') }}</th>
-                    <th>{{ t('home.dailyPoints') }}</th>
-                    <th>{{ t('home.continuousDays') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="record in checkInStatus.records" :key="record.date">
-                    <td>{{ record.date }}</td>
-                    <td>+{{ record.points }}</td>
-                    <td>{{ record.streak }}{{ t('home.days') }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p v-else class="points-empty">{{ t('home.noPointsRecord') }}</p>
-          </div>
-        </section>
-
-        <section v-else class="login-guide-card">
-          <div class="login-guide-body">
-            <p class="card-label">{{ t('home.guestLabel') }}</p>
-            <h2>{{ t('home.guestTitle') }}</h2>
-            <p class="login-guide-copy">{{ t('home.guestDescription') }}</p>
-          </div>
-          <button class="check-in-button" type="button" @click="router.push({ name: 'welcome-login' })">
+          <button v-else class="primary-button" type="button" @click="router.push({ name: 'welcome-login' })">
             {{ t('home.guestLoginButton') }}
           </button>
+          <button class="ghost-button" type="button" @click="goCourses">{{ t('home.start') }}</button>
+        </div>
+      </div>
+      <div v-if="isLoggedIn" class="hero-summary">
+        <div>
+          <span>{{ t('home.groupCount') }}</span>
+          <strong>{{ groups.length }}</strong>
+        </div>
+        <div>
+          <span>{{ t('home.ongoingTaskCount') }}</span>
+          <strong>{{ totalOngoing }}</strong>
+        </div>
+        <div>
+          <span>{{ t('home.todoCount') }}</span>
+          <strong>{{ todos.length }}</strong>
+        </div>
+      </div>
+      <div v-else class="hero-decoration" aria-hidden="true">
+        <span class="hero-orbit hero-orbit-one"></span>
+        <span class="hero-orbit hero-orbit-two"></span>
+        <el-icon><User /></el-icon>
+      </div>
+    </section>
+
+    <template v-if="isLoggedIn">
+      <section class="home-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">{{ t('home.myGroups') }}</p>
+            <h2>{{ t('groups.myGroups') }}</h2>
+          </div>
+          <button class="text-button" type="button" @click="goGroups">{{ t('home.viewAllGroups') }}</button>
+        </div>
+
+        <section v-if="loadingGroups" class="group-grid" aria-busy="true">
+          <div v-for="index in 3" :key="index" class="group-card skeleton-card">
+            <div class="skeleton line short"></div>
+            <div class="skeleton line long"></div>
+          </div>
         </section>
 
-        <div class="empty-panel">
-          <div class="empty-icon"><el-icon>
-              <Reading />
-            </el-icon></div>
-          <h3>{{ t('home.ready') }}</h3>
-          <p>{{ t('home.readyDescription') }}</p>
+        <section v-else-if="loadFailed" class="empty-panel">
+          <h3>{{ t('groups.loadFailed') }}</h3>
+          <button class="ghost-button" type="button" @click="loadGroups">{{ t('groups.retry') }}</button>
+        </section>
+
+        <section v-else-if="groups.length" class="group-grid">
+          <GroupCard
+              v-for="group in groups"
+              :key="group.id"
+              :group="group"
+              :metrics="metricsByGroup[group.id]"
+              @open="openGroup"
+              @leaderboard="openLeaderboard"
+          />
+        </section>
+
+        <section v-else class="empty-panel group-empty">
+          <span class="empty-icon"><el-icon><User /></el-icon></span>
+          <h3>{{ t('home.noGroupsTitle') }}</h3>
+          <p>{{ t('home.noGroupsDescription') }}</p>
+          <GroupActions @changed="onGroupChanged" />
+        </section>
+      </section>
+
+      <section class="home-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">{{ t('home.today') }}</p>
+            <h2>{{ t('home.todayTodos') }}</h2>
+          </div>
+          <span class="section-count">{{ t('home.todoCountValue', { count: todos.length }) }}</span>
         </div>
+
+        <section v-if="tasksLoading" class="todo-list" aria-busy="true">
+          <div v-for="index in 3" :key="index" class="todo-card skeleton-card">
+            <div class="skeleton line short"></div>
+            <div class="skeleton line long"></div>
+          </div>
+        </section>
+
+        <section v-else-if="todos.length" class="todo-list">
+          <button v-for="todo in todos" :key="todo.key" class="todo-card" type="button" @click="openTodo(todo)">
+            <span class="todo-icon"><el-icon><Reading /></el-icon></span>
+            <span class="todo-body">
+              <strong>{{ todo.itemTitle }}</strong>
+              <small>{{ todo.groupName }} · {{ todo.taskTitle }}</small>
+            </span>
+            <el-icon class="todo-arrow"><ArrowRight /></el-icon>
+          </button>
+        </section>
+
+        <section v-else class="empty-panel compact-empty">
+          <h3>{{ t('home.noTodosTitle') }}</h3>
+          <p>{{ t('home.noTodosDescription') }}</p>
+        </section>
+      </section>
+
+      <CheckInCard />
+    </template>
+
+    <template v-else>
+      <section class="home-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">{{ t('home.howItWorks') }}</p>
+            <h2>{{ t('home.howItWorksTitle') }}</h2>
+          </div>
+        </div>
+        <div class="step-grid">
+          <article v-for="(step, index) in [t('home.stepOne'), t('home.stepTwo'), t('home.stepThree')]" :key="step" class="step-card">
+            <span>{{ String(index + 1).padStart(2, '0') }}</span>
+            <h3>{{ step }}</h3>
+            <p>{{ t(`home.stepDescription${index + 1}`) }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">{{ t('home.explore') }}</p>
+            <h2>{{ t('home.exploreTitle') }}</h2>
+          </div>
+        </div>
+        <div v-if="guestCourses.length" class="guest-course-grid">
+          <article v-for="course in guestCourses" :key="course.courseId" class="guest-course-card">
+            <div class="guest-course-head">
+              <strong>{{ course.title }}</strong>
+              <span class="guest-course-tag">{{ t('courses.notStartedTag') }}</span>
+            </div>
+            <p class="guest-course-desc">{{ course.description || t('courses.noDescription') }}</p>
+            <span class="guest-course-meta">{{ t('courses.chapterCount', { count: course.chapterCount }) }}</span>
+          </article>
+        </div>
+        <section v-else class="empty-panel compact-empty">
+          <h3>{{ t('home.noPublicCourses') }}</h3>
+        </section>
+      </section>
+
+      <section class="login-guide-card">
+        <div>
+          <p class="eyebrow">{{ t('home.guestLabel') }}</p>
+          <h2>{{ t('home.guestTitle') }}</h2>
+          <p>{{ t('home.guestDescription') }}</p>
+        </div>
+        <button class="primary-button" type="button" @click="router.push({ name: 'welcome-login' })">
+          {{ t('home.guestLoginButton') }}
+        </button>
+      </section>
+    </template>
   </main>
 </template>
 
 <style scoped>
-.app-shell {
-  display: flex;
-  min-height: 100vh;
-  background: var(--el-bg-color-page);
-}
-
-.sidebar {
-  width: 248px;
-  flex: 0 0 248px;
-  display: flex;
-  flex-direction: column;
-  padding: 28px 16px 20px;
-  background: var(--el-bg-color);
-  border-right: 1px solid var(--el-border-color-light);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 13px;
-  color: var(--el-text-color-primary);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.brand-mark {
+.home-page {
   display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 10px;
-  color: var(--el-color-white);
-  background: var(--el-color-primary);
-  box-shadow: var(--el-box-shadow-light);
-}
-
-.sidebar-placeholder {
-  display: grid;
-  gap: 9px;
-  margin: 42px 13px 24px;
-}
-
-.sidebar-placeholder span {
-  width: 100%;
-  height: 9px;
-  border-radius: 5px;
-  background: var(--el-fill-color-light);
-}
-
-.sidebar-placeholder span:nth-child(2) {
-  width: 72%;
-}
-
-.sidebar-placeholder span:nth-child(3) {
-  width: 86%;
-}
-
-.side-nav {
-  display: grid;
-  gap: 7px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 12px 14px;
-  border: 0;
-  border-radius: 10px;
-  color: var(--el-text-color-secondary);
-  background: transparent;
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition: .2s;
-}
-
-.nav-item:hover {
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-}
-
-.nav-item.active {
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  font-weight: 600;
-}
-
-.nav-item .el-icon {
-  font-size: 18px;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding-top: 20px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.page {
-  min-width: 0;
-  flex: 1;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 100px;
-  padding: 22px 5%;
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.eyebrow,
-.card-label {
-  margin: 0 0 7px;
-  color: var(--el-text-color-placeholder);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .13em;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 0;
-  font-size: 24px;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-
-.icon-button,
-.logout-button {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.icon-button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  color: var(--el-text-color-secondary);
-  font-size: 20px;
-}
-
-.notification-dot {
-  position: absolute;
-  top: -1px;
-  right: -2px;
-  width: 6px;
-  height: 6px;
-  border: 1px solid var(--el-color-white);
-  border-radius: 50%;
-  background: var(--el-color-danger);
-}
-
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.avatar {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--el-color-white);
-  background: var(--el-color-info);
-  font-size: 18px;
-}
-
-.profile-name {
-  color: var(--el-text-color-regular);
-  font-size: 14px;
-}
-
-.logout-button {
-  padding: 9px 14px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  color: var(--el-text-color-regular);
-  font-size: 13px;
-}
-
-.logout-button:hover {
-  color: var(--el-color-primary);
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-color-primary-light-9);
-}
-
-.content {
+  gap: 42px;
   max-width: 1180px;
   margin: 0 auto;
   padding: 42px 5% 60px;
 }
 
 .hero-card {
-  --hero-light-x: 50%;
-  --hero-light-y: 50%;
-  --hero-orbit-x: 0px;
-  --hero-orbit-y: 0px;
   position: relative;
   display: flex;
-  min-height: 260px;
   align-items: center;
   justify-content: space-between;
+  gap: 32px;
   overflow: hidden;
-  padding: 42px 48px;
+  padding: 34px;
+  border: 1px solid var(--el-color-primary-light-7);
   border-radius: 18px;
-  color: var(--el-color-white);
-  background:
-    radial-gradient(circle at var(--hero-light-x) var(--hero-light-y), color-mix(in srgb, var(--el-color-white) 18%, transparent), transparent 28%),
-    linear-gradient(120deg, var(--el-color-primary-dark-2), var(--el-color-primary) 52%, var(--el-color-primary-light-3));
-  box-shadow: 0 20px 46px color-mix(in srgb, var(--el-color-primary-dark-2) 28%, transparent);
-  isolation: isolate;
-  transition: background .35s ease, box-shadow .35s ease;
-}
-
-.hero-card::before,
-.hero-card::after {
-  position: absolute;
-  pointer-events: none;
-  content: '';
-}
-
-.hero-card::before {
-  inset: 12px;
-  border: 1px solid color-mix(in srgb, var(--el-color-white) 18%, transparent);
-  border-radius: 12px;
-  opacity: .7;
-}
-
-.hero-card::after {
-  width: 280px;
-  height: 280px;
-  top: -150px;
-  right: 12%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--el-color-white) 10%, transparent);
-  filter: blur(1px);
-  transform: translate3d(var(--hero-orbit-x), var(--hero-orbit-y), 0);
-  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
-}
-
-.hero-card h2 {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 12px;
-  max-width: 10ch;
-  font-size: clamp(34px, 4vw, 48px);
-  line-height: 1.08;
-  letter-spacing: -.04em;
+  background: linear-gradient(120deg, var(--el-color-primary-light-9), var(--el-bg-color));
+  box-shadow: var(--el-box-shadow-light);
 }
 
 .hero-copy {
   position: relative;
   z-index: 1;
-  max-width: 470px;
-  margin-bottom: 24px;
-  color: var(--el-color-primary-light-9);
+  max-width: 680px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+.hero-copy h1 {
+  margin: 0 0 10px;
+  color: var(--el-text-color-primary);
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.hero-copy > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--el-text-color-secondary);
   font-size: 14px;
   line-height: 1.7;
 }
 
-.primary-button {
-  position: relative;
-  z-index: 1;
-  padding: 12px 22px;
-  border: 0;
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.primary-button,
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
   border-radius: 8px;
-  color: var(--el-color-primary);
-  background: var(--el-color-white);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--el-color-primary-dark-2) 24%, transparent);
-  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.primary-button {
+  border: 1px solid var(--el-color-primary);
+  color: var(--el-color-white);
+  background: var(--el-color-primary);
 }
 
 .primary-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 9px 20px color-mix(in srgb, var(--el-color-primary-dark-2) 30%, transparent);
+  border-color: var(--el-color-primary-light-3);
+  background: var(--el-color-primary-light-3);
 }
 
-.primary-button:focus-visible {
-  outline: 2px solid var(--el-color-white);
-  outline-offset: 3px;
+.ghost-button {
+  border: 1px solid var(--el-border-color);
+  color: var(--el-text-color-regular);
+  background: var(--el-bg-color);
+}
+
+.ghost-button:hover {
+  border-color: var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
+}
+
+.hero-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(84px, 1fr));
+  gap: 10px;
+  min-width: 300px;
+}
+
+.hero-summary > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--el-bg-color) 82%, transparent);
+  text-align: center;
+}
+
+.hero-summary span {
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+}
+
+.hero-summary strong {
+  color: var(--el-color-primary);
+  font-size: 24px;
+  line-height: 1.2;
 }
 
 .hero-decoration {
-  z-index: 1;
   position: relative;
-  width: 190px;
-  height: 160px;
-  margin-right: 5%;
-  opacity: .95;
-  transform: translate3d(var(--hero-orbit-x), var(--hero-orbit-y), 0) scale(1.08);
-  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
+  display: grid;
+  width: 170px;
+  height: 170px;
+  flex: 0 0 170px;
+  place-items: center;
+  color: var(--el-color-primary);
+  font-size: 54px;
 }
 
-.decoration-circle {
+.hero-orbit {
   position: absolute;
-  border: 1px solid color-mix(in srgb, var(--el-color-white) 30%, transparent);
+  border: 1px solid var(--el-color-primary-light-5);
   border-radius: 50%;
 }
 
-.circle-large {
-  inset: -20px -15px 0 15px;
-}
+.hero-orbit-one { inset: 8px; }
+.hero-orbit-two { inset: 34px; background: var(--el-color-primary-light-9); }
 
-.circle-small {
-  inset: 25px 30px 35px 55px;
-}
-
-.hero-decoration span {
-  position: absolute;
-  top: 55px;
-  left: 96px;
-  font-size: 35px;
+.home-section {
+  display: grid;
+  gap: 16px;
 }
 
 .section-heading {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  margin: 42px 0 18px;
-}
-
-.section-heading h2 {
-  margin-bottom: 0;
-  font-size: 20px;
-}
-
-.placeholder-chip {
-  padding: 7px 11px;
-  border: 0;
-  border-radius: 20px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color-light);
-  font: inherit;
-  font-size: 12px;
-}
-
-.chip-link {
-  cursor: pointer;
-}
-
-.chip-link:hover {
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.check-in-card {
-  margin-top: 18px;
-  padding: 24px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-}
-
-.check-in-header, .calendar-heading, .check-in-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 16px;
 }
 
-.check-in-header h2 { margin: 0; font-size: 20px; }
-.check-in-button {
-  padding: 10px 16px;
+.section-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.text-button {
+  padding: 4px 0;
   border: 0;
-  border-radius: 8px;
-  color: var(--el-color-white);
-  background: var(--el-color-primary);
-  cursor: pointer;
-}
-.check-in-button:disabled { opacity: .55; cursor: not-allowed; }
-.check-in-summary {
-  justify-content: flex-start;
-  margin: 18px 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-.check-in-metric {
-  display: inline-flex;
-  min-height: 36px;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 9px;
-  background: var(--el-fill-color-lighter);
-}
-.check-in-metric strong { font-size: 20px; }
-.check-in-metric--points {
-  color: var(--el-color-warning);
-  background: color-mix(in srgb, var(--el-color-warning-light-9) 72%, var(--el-bg-color));
-}
-.check-in-metric--points strong { color: var(--el-color-warning-dark-2); }
-.check-in-metric--streak {
-  color: var(--el-color-success);
-  background: color-mix(in srgb, var(--el-color-success-light-9) 72%, var(--el-bg-color));
-}
-.check-in-metric--streak strong { color: var(--el-color-success-dark-2); }
-.calendar-heading { margin: 12px 0; }
-.calendar-heading button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 0;
-  border-radius: 7px;
-  color: var(--el-text-color-secondary);
+  color: var(--el-color-primary);
   background: transparent;
+  font: inherit;
+  font-size: 13px;
   cursor: pointer;
 }
-.calendar-heading button:hover { color: var(--el-color-primary); background: var(--el-color-primary-light-9); }
-.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
-.calendar-weekdays { color: var(--el-text-color-placeholder); font-size: 12px; }
-.calendar-grid { margin-top: 8px; }
-.calendar-day { display: grid; width: 34px; height: 34px; place-self: center; place-items: center; border-radius: 50%; color: var(--el-text-color-regular); font-size: 13px; }
-.calendar-day.checked { color: var(--el-color-white); background: var(--el-color-primary); }
-.calendar-day.today { box-shadow: inset 0 0 0 1px var(--el-color-primary); }
-.calendar-day.checked.today { box-shadow: inset 0 0 0 2px var(--el-color-primary-light-3); }
-.points-summary { margin-top: 24px; border-top: 1px solid var(--el-border-color-lighter); padding-top: 18px; }
-.points-summary-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; }
-.points-summary-heading span { color: var(--el-color-primary); }
-.points-table-wrapper { overflow-x: auto; }
-.points-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.points-table th, .points-table td { padding: 9px 8px; border-bottom: 1px solid var(--el-border-color-lighter); text-align: left; white-space: nowrap; }
-.points-table th { color: var(--el-text-color-placeholder); font-weight: 600; }
-.points-table td:nth-child(n+2) { color: var(--el-color-primary); }
-.points-empty { margin: 0; color: var(--el-text-color-placeholder); font-size: 12px; }
 
-.stat-card {
-  position: relative;
-  overflow: hidden;
-  padding: 22px 24px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
+.text-button:hover {
+  color: var(--el-color-primary-dark-2);
 }
 
-.stat-card::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  content: '';
-  background: var(--el-color-primary);
-}
-
-.stat-card--warning::before { background: var(--el-color-warning); }
-.stat-card--success::before { background: var(--el-color-success); }
-
-.guest-course-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.guest-course-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 22px 24px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-}
-
-.guest-course-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.guest-course-head strong {
-  color: var(--el-text-color-primary);
-  font-size: 15px;
-}
-
-.guest-course-tag {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border-radius: 12px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color-light);
+.section-count {
+  color: var(--el-text-color-placeholder);
   font-size: 12px;
 }
 
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.group-empty {
+  justify-items: stretch;
+  text-align: left;
+}
+
+.group-empty > h3,
+.group-empty > p {
+  text-align: center;
+}
+
+.group-empty .group-actions {
+  margin-top: 8px;
+}
+
+.todo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.todo-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  color: inherit;
+  background: var(--el-bg-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.todo-card:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.todo-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  font-size: 18px;
+}
+
+.todo-body {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.todo-body strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-body small {
+  overflow: hidden;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-arrow {
+  color: var(--el-text-color-placeholder);
+}
+
+.empty-panel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 42px 20px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: 14px;
+  background: var(--el-fill-color-lighter);
+  text-align: center;
+}
+
+.empty-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.empty-panel p {
+  margin: 0;
+  color: var(--el-text-color-placeholder);
+  font-size: 13px;
+}
+
+.compact-empty {
+  padding: 28px 20px;
+}
+
+.empty-icon {
+  color: var(--el-text-color-placeholder);
+  font-size: 40px;
+}
+
+.step-grid,
+.guest-course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.step-card,
+.guest-course-card {
+  padding: 20px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+}
+
+.step-card > span {
+  color: var(--el-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.step-card h3 {
+  margin: 10px 0 6px;
+  font-size: 16px;
+}
+
+.step-card p,
 .guest-course-desc {
   margin: 0;
   color: var(--el-text-color-secondary);
@@ -799,8 +670,26 @@ h1 {
   line-height: 1.6;
 }
 
+.guest-course-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.guest-course-tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  font-size: 11px;
+}
+
 .guest-course-meta {
-  margin-top: auto;
+  display: inline-block;
+  margin-top: 14px;
   color: var(--el-text-color-placeholder);
   font-size: 12px;
 }
@@ -810,160 +699,90 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 18px;
-  padding: 28px 32px;
+  padding: 26px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 16px;
+  background: var(--el-color-primary-light-9);
+}
+
+.login-guide-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.login-guide-card p:not(.eyebrow) {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.skeleton-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
   border: 1px solid var(--el-border-color-light);
   border-radius: 14px;
   background: var(--el-bg-color);
 }
 
-.login-guide-card h2 {
-  margin-bottom: 8px;
-  font-size: 20px;
+.skeleton.line {
+  height: 14px;
+  border-radius: 7px;
 }
 
-.login-guide-copy {
-  margin-bottom: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.7;
+.skeleton.line.short { width: 30%; }
+.skeleton.line.long { width: 85%; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color-lighter) 50%, var(--el-fill-color-light) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.4s ease infinite;
 }
 
-.login-guide-card .check-in-button {
-  flex-shrink: 0;
+@keyframes skeleton-wave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-.stat-card p {
-  margin-bottom: 18px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.stat-card strong {
-  display: block;
-  margin-bottom: 9px;
-  color: var(--el-text-color-primary);
-  font-size: 30px;
-}
-
-.stat-card--primary strong { color: var(--el-color-primary); }
-.stat-card--warning strong { color: var(--el-color-warning-dark-2); }
-.stat-card--success strong { color: var(--el-color-success-dark-2); }
-
-.stat-card span {
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-}
-
-.empty-panel {
-  display: grid;
-  justify-items: center;
-  margin-top: 18px;
-  padding: 48px 20px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 14px;
-  background: var(--el-fill-color-lighter);
-  text-align: center;
-}
-
-.empty-icon {
-  display: grid;
-  width: 50px;
-  height: 50px;
-  place-items: center;
-  margin-bottom: 16px;
-  border-radius: 14px;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  font-size: 24px;
-}
-
-.empty-panel h3 {
-  margin-bottom: 8px;
-  font-size: 16px;
-}
-
-.empty-panel p {
-  margin-bottom: 0;
-  color: var(--el-text-color-placeholder);
-  font-size: 13px;
-}
-
-@media (max-width: 760px) {
-  .sidebar {
-    width: 70px;
-    flex-basis: 70px;
-    padding: 22px 10px;
-  }
-
-  .brand {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .brand span,
-  .nav-item span,
-  .sidebar-placeholder {
-    display: none;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: 13px 0;
-  }
-
-  .topbar {
+@media (max-width: 900px) {
+  .hero-card {
     align-items: flex-start;
-    gap: 16px;
+    flex-direction: column;
   }
 
-  .profile-name {
-    display: none;
+  .hero-summary {
+    width: 100%;
+    min-width: 0;
   }
 
-  .topbar-actions {
-    gap: 12px;
+  .todo-list,
+  .step-grid,
+  .guest-course-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-page {
+    gap: 30px;
+    padding: 28px 4% 48px;
   }
 
   .hero-card {
-    min-height: 240px;
-    padding: 32px 28px;
+    padding: 24px;
   }
 
-  .hero-card h2 {
-    font-size: 30px;
+  .hero-copy h1 {
+    font-size: 24px;
   }
 
   .hero-decoration {
     display: none;
-  }
-
-  .check-in-header { align-items: flex-start; flex-direction: column; }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .guest-course-grid {
-    grid-template-columns: 1fr;
   }
 
   .login-guide-card {
     align-items: flex-start;
     flex-direction: column;
-  }}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-card,
-  .hero-card::after,
-  .hero-decoration,
-  .primary-button {
-    transition: none;
-  }
-
-  .hero-card::after,
-  .hero-decoration {
-    transform: none;
   }
 }
 </style>

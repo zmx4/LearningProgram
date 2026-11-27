@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { get } from '@/net'
 import type { TaskItemType, TaskProgressMatrix } from '@/types/group'
@@ -13,12 +13,15 @@ const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const progressMatrix = ref<TaskProgressMatrix | null>(null)
 const progressLoading = ref(true)
+let disposed = false
 
 function loadProgress() {
   get<TaskProgressMatrix>(`/api/groups/${props.groupId}/tasks/${props.taskId}/progress`, data => {
+    if (disposed) return
     progressMatrix.value = data
     progressLoading.value = false
   }, () => {
+    if (disposed) return
     progressLoading.value = false
     emit('close')
   })
@@ -39,6 +42,9 @@ function itemTypeLabel(type: TaskItemType) {
 }
 
 onMounted(loadProgress)
+onUnmounted(() => {
+  disposed = true
+})
 </script>
 
 <template>

@@ -124,7 +124,11 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         member.setAccountId(accountId);
         member.setRole(StudyGroupMember.ROLE_MEMBER);
         member.setJoinedAt(LocalDateTime.now());
-        memberMapper.insert(member);
+        try {
+            memberMapper.insert(member);
+        } catch (DuplicateKeyException exception) {
+            throw new IllegalArgumentException("你已经在该小组中");
+        }
 
         return toVO(group, StudyGroupMember.ROLE_MEMBER,
                 memberQuery.usernames(List.of(group.getOwnerId())).get(group.getOwnerId()),
@@ -279,7 +283,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         for (int attempt = 0; attempt < 10; attempt++) {
             StringBuilder code = new StringBuilder(INVITE_CODE_LENGTH);
             for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
-                code.append(INVITE_CODE_ALPHABET.charAt(RANDOM.nextInt(INVITE_CODE_LENGTH)));
+                code.append(INVITE_CODE_ALPHABET.charAt(RANDOM.nextInt(INVITE_CODE_ALPHABET.length())));
             }
             if (query().eq("invite_code", code.toString()).count() == 0) {
                 return code.toString();

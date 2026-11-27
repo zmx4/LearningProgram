@@ -29,7 +29,8 @@ const routes: RouteRecordRaw[] = [
             {
                 path: '',
                 name: 'index',
-                component: () => import('@/views/page/HomePage.vue')
+                component: () => import('@/views/page/HomePage.vue'),
+                meta: { title: '我的小组' }
             }
         ]
     },{
@@ -127,15 +128,6 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '排行榜' }
         }]
     },{
-        path: '/progress',
-        component: () => import('@/views/MainView.vue'),
-        children: [{
-            path: '',
-            name: 'progress',
-            component: () => import('@/views/page/FeaturePage.vue'),
-            meta: { title: '学习进度' }
-        }]
-    },{
         path: '/profile',
         component: () => import('@/views/MainView.vue'),
         children: [{
@@ -229,7 +221,7 @@ function createAppRouter() {
         // /index 主界面允许游客浏览（首页有专门的未登录展示），其余页面仍要求登录
         if ((to.path.startsWith('/notifications')
             || to.path.startsWith('/courses') || to.path.startsWith('/resources')
-            || to.path.startsWith('/progress') || to.path.startsWith('/profile')
+            || to.path.startsWith('/profile')
             || to.path.startsWith('/settings') || to.path.startsWith('/tests')
             || to.path.startsWith('/discussions') || to.path.startsWith('/leaderboard')
             || to.path.startsWith('/groups')

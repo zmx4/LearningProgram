@@ -51,4 +51,31 @@ public interface LeaderboardMapper {
 
     @Select(RANKED_PREFIX + "SELECT account_id, COUNT(*) AS metricValue FROM db_check_in GROUP BY account_id" + RANKED_SUFFIX)
     List<LeaderboardEntryVO> selectCheckInRanking(@Param("accountId") Integer accountId, @Param("limit") int limit);
+
+    @Select(RANKED_PREFIX
+            + "SELECT p.account_id, p.total_points AS metricValue FROM db_account_points p "
+            + "JOIN db_study_group_member m ON m.account_id = p.account_id "
+            + "WHERE m.group_id = #{groupId}"
+            + RANKED_SUFFIX)
+    List<LeaderboardEntryVO> selectGroupPointsRanking(@Param("accountId") Integer accountId,
+                                                     @Param("groupId") Integer groupId,
+                                                     @Param("limit") int limit);
+
+    @Select(RANKED_PREFIX
+            + "SELECT l.account_id, SUM(l.duration_seconds) AS metricValue FROM db_course_study_log l "
+            + "JOIN db_study_group_member m ON m.account_id = l.account_id "
+            + "WHERE m.group_id = #{groupId} GROUP BY l.account_id"
+            + RANKED_SUFFIX)
+    List<LeaderboardEntryVO> selectGroupStudyRanking(@Param("accountId") Integer accountId,
+                                                    @Param("groupId") Integer groupId,
+                                                    @Param("limit") int limit);
+
+    @Select(RANKED_PREFIX
+            + "SELECT c.account_id, COUNT(*) AS metricValue FROM db_check_in c "
+            + "JOIN db_study_group_member m ON m.account_id = c.account_id "
+            + "WHERE m.group_id = #{groupId} GROUP BY c.account_id"
+            + RANKED_SUFFIX)
+    List<LeaderboardEntryVO> selectGroupCheckInRanking(@Param("accountId") Integer accountId,
+                                                      @Param("groupId") Integer groupId,
+                                                      @Param("limit") int limit);
 }

@@ -1302,6 +1302,22 @@ Authorization: Bearer <token>
 - 当前用户在该维度还没有任何记录时 `me` 为 `null`；`rankedUsers` 是参与该维度排名的总人数
 - `study` 维度的 `value` 是秒，由前端格式化成「x 分钟 / x 小时 y 分钟」
 
+### 查询小组排行榜
+
+```http
+GET /api/groups/{groupId}/leaderboard?metric=points&limit=20
+Authorization: Bearer <token>
+```
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `groupId` | 是 | 小组 ID |
+| `metric` | 否 | 维度，缺省 `points`；支持 `points`、`study`、`check-in` |
+| `limit` | 否 | 榜单条数，缺省 `20`，上限 `100` |
+
+返回结构与全站排行榜一致，但 `entries`、`rankedUsers` 和 `me` 只统计该小组成员。
+小组不存在或当前用户不是成员返回 `404`。
+
 ## 管理员接口
 
 以下接口要求当前用户具有 `admin` 角色，否则返回 `403`。

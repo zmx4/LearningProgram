@@ -1,5 +1,6 @@
 package com.tick.service.impl;
 
+import com.tick.entity.dto.StudyGroupMember;
 import com.tick.entity.vo.response.LeaderboardEntryVO;
 import com.tick.entity.vo.response.LeaderboardVO;
 import com.tick.mapper.LeaderboardMapper;
@@ -22,7 +23,8 @@ class LeaderboardServiceImplTest {
     private static final int ME = 42;
 
     private final LeaderboardMapper mapper = mock(LeaderboardMapper.class);
-    private final LeaderboardServiceImpl service = new LeaderboardServiceImpl(mapper);
+    private final StudyGroupMemberQuery memberQuery = mock(StudyGroupMemberQuery.class);
+    private final LeaderboardServiceImpl service = new LeaderboardServiceImpl(mapper, memberQuery);
 
     private static LeaderboardEntryVO row(int rank, int accountId, String username, long value, int rankedUsers) {
         return new LeaderboardEntryVO(rank, accountId, username, value, rankedUsers);
@@ -121,5 +123,31 @@ class LeaderboardServiceImplTest {
     @Test
     void nullMetricIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> service.getLeaderboard(ME, null, 20));
+    }
+
+    @Test
+    void groupLeaderboardUsesGroupScopedQuery() {
+        StudyGroupMember member = new StudyGroupMember();
+        member.setGroupId(10);
+        member.setAccountId(ME);
+        when(memberQuery.membership(10, ME)).thenReturn(member);
+        when(mapper.selectGroupPointsRanking(ME, 10, 20)).thenReturn(List.of(
+                row(1, 7, "alice", 120, 2),
+                row(2, ME, "me", 10, 2)));
+
+        LeaderboardVO board = service.getGroupLeaderboard(ME, 10, "points", null);
+
+        assertEquals(2, board.getEntries().size());
+        assertEquals(2, board.getRankedUsers());
+        assertEquals(ME, board.getMe().getAccountId());
+        verify(mapper).selectGroupPointsRanking(ME, 10, 20);
+    }
+
+    @Test
+    void nonMemberCannotReadGroupLeaderboard() {
+        when(memberQuery.membership(10, ME)).thenReturn(null);
+
+        assertNull(service.getGroupLeaderboard(ME, 10, "points", 20));
+        verifyNoInteractions(mapper);
     }
 }

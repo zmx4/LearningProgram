@@ -51,6 +51,7 @@ export interface GroupTask {
   accountId: number
   username: string
   createdAt: string
+  dueAt?: string | null
   items: TaskItem[]
   memberCount: number
   myCompleted: number

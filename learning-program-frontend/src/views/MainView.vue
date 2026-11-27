@@ -6,12 +6,10 @@ import {
   Avatar,
   Collection,
   ChatDotRound,
-  HomeFilled,
   Reading,
   Setting,
   Notebook,
   EditPen,
-  Trophy,
   User,
   UserFilled,
   Menu,
@@ -63,13 +61,11 @@ const dailyWord = ref<DailyWord | null>(null)
 const dailyWordLoading = ref(false)
 
 const navigationItems = [
-  {name: 'index', label: 'navigation.home', icon: HomeFilled},
+  {name: 'index', label: 'navigation.myGroups', icon: User},
   {name: 'courses', label: 'navigation.courses', icon: Reading},
   {name: 'resources', label: 'navigation.resources', icon: Collection},
   {name: 'tests', label: 'navigation.tests', icon: EditPen},
   {name: 'discussions', label: 'navigation.discussions', icon: ChatDotRound},
-  {name: 'groups', label: 'navigation.groups', icon: User},
-  {name: 'leaderboard', label: 'navigation.leaderboard', icon: Trophy},
 ]
 
 // Sub-pages (for example /tests/words) keep their parent entry highlighted.
@@ -77,11 +73,10 @@ const navigationSections: Record<string, string> = {
   '/index': 'index',
   '/courses': 'courses',
   '/resources': 'resources',
-  '/progress': 'progress',
   '/tests': 'tests',
   '/discussions': 'discussions',
-  '/groups': 'groups',
-  '/leaderboard': 'leaderboard',
+  '/groups': 'index',
+  '/leaderboard': 'index',
   '/admin': 'admin',
 }
 
