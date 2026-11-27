@@ -4,7 +4,7 @@
  * - 每个分域输出一份 Mermaid erDiagram（可维护的规范源）
  * - 汇总输出一份多页 .drawio（可编辑交付件）
  *
- * 模型事实来源：scripts/learning.sql（28 张表 DDL）
+ * 模型事实来源：scripts/learning.sql（29 张表 DDL）
  * 运行：node scripts/generate-er-diagram.mjs
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -235,7 +235,9 @@ const TABLES = {
       ['', 'group_id', 'int(11)', '冗余列，无 FK'],
       ['FK', 'message_id', 'int(11)', '→ 群消息，级联删除'],
       ['', 'item_type', 'varchar(20)', 'course/resource/…'],
-      ['', 'ref_id', 'int(11)', '多态引用，可空'],
+      ['', 'ref_id', 'int(11)', '课程/资源/题集，可空'],
+      ['', 'source', 'varchar(16)', 'cet4/cet6，可空'],
+      ['', 'pass_score', 'int(11)', '0–100，可空'],
       ['', 'title', 'varchar(200)', ''],
       ['', 'sort_order', 'int(11)', '默认 0'],
     ],
@@ -249,6 +251,19 @@ const TABLES = {
       ['FK', 'item_id', 'int(11)', '→ 任务项，联合唯一'],
       ['', 'account_id', 'int(11)', '软引用，联合唯一'],
       ['', 'completed_at', 'datetime', ''],
+    ],
+  },
+  db_group_task_finish: {
+    title: 'db_group_task_finish 任务结算台账',
+    source: 'scripts/learning.sql:208-219',
+    entity: 'GroupTaskFinish.java',
+    fields: [
+      ['PK', 'id', 'int(11)', '自增'],
+      ['', 'group_id', 'int(11)', '冗余列，无 FK'],
+      ['FK', 'task_id', 'int(11)', '→ 任务消息，联合唯一'],
+      ['', 'account_id', 'int(11)', '软引用，联合唯一'],
+      ['', 'completed_at', 'datetime', ''],
+      ['', 'points_awarded', 'int(11)', '本次发放积分'],
     ],
   },
   db_learning_resource: {
@@ -354,6 +369,7 @@ const TABLES = {
       ['', 'type', 'varchar(10)', 'text/task'],
       ['', 'title', 'varchar(100)', '可空'],
       ['', 'content', 'varchar(2000)', ''],
+      ['', 'due_at', 'datetime', '可空'],
       ['', 'created_at', 'datetime', ''],
     ],
   },
@@ -439,6 +455,7 @@ const RELATIONS = [
   { id: 'r_group_visit', from: 'db_study_group', to: 'db_group_member_visit', card: 'one-zeroMany', kind: 'fk', label: '成员访问' },
   { id: 'r_msg_taskitem', from: 'db_study_group_message', to: 'db_group_task_item', card: 'one-zeroMany', kind: 'fk', label: '任务项' },
   { id: 'r_taskitem_progress', from: 'db_group_task_item', to: 'db_group_task_progress', card: 'one-zeroMany', kind: 'fk', label: '任务完成' },
+  { id: 'r_msg_taskfinish', from: 'db_study_group_message', to: 'db_group_task_finish', card: 'one-zeroMany', kind: 'fk', label: '任务结算' },
 
   { id: 's_acc_progress', from: 'db_account', to: 'db_course_progress', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
   { id: 's_acc_studylog', from: 'db_account', to: 'db_course_study_log', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
@@ -449,6 +466,7 @@ const RELATIONS = [
   { id: 's_acc_member', from: 'db_account', to: 'db_study_group_member', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
   { id: 's_acc_message', from: 'db_account', to: 'db_study_group_message', card: 'one-zeroMany', kind: 'soft', label: '软引用发送者' },
   { id: 's_acc_taskprogress', from: 'db_account', to: 'db_group_task_progress', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
+  { id: 's_acc_taskfinish', from: 'db_account', to: 'db_group_task_finish', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
   { id: 's_acc_visit', from: 'db_account', to: 'db_group_member_visit', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
   { id: 's_acc_resource', from: 'db_account', to: 'db_learning_resource', card: 'one-zeroMany', kind: 'soft', label: '上传者（可空）' },
   { id: 's_acc_accesslog', from: 'db_account', to: 'db_resource_access_log', card: 'one-zeroMany', kind: 'soft', label: '软引用 account_id' },
@@ -460,6 +478,7 @@ const RELATIONS = [
 
   { id: 'p_taskitem_course', from: 'db_group_task_item', to: 'db_course', card: 'one-zeroMany', kind: 'poly', label: 'ref_id → 课程' },
   { id: 'p_taskitem_resource', from: 'db_group_task_item', to: 'db_learning_resource', card: 'one-zeroMany', kind: 'poly', label: 'ref_id → 资源' },
+  { id: 'p_taskitem_qset', from: 'db_group_task_item', to: 'db_question_set', card: 'one-zeroMany', kind: 'poly', label: 'ref_id → 题集' },
 ]
 
 const FK_IDS = RELATIONS.filter(rel => rel.kind === 'fk').map(rel => rel.id)
@@ -492,14 +511,14 @@ const PAGES = [
       { from: 'lg_qset', to: 'db_course_question_set', card: 'one-zeroMany', kind: 'fk', label: '1 : 0..N' },
     ],
     evidence: [
-      'scripts/learning.sql:8-338（28 张表 DDL；图例中的 db_xxx 为示例，不是真实表）',
+      'scripts/learning.sql:8-350（29 张表 DDL；图例中的 db_xxx 为示例，不是真实表）',
       '字段前缀来自各表 PRIMARY KEY / UNIQUE KEY / CONSTRAINT FOREIGN KEY 子句',
     ],
   },
   {
     id: '01-overview',
     name: '01 实体总览',
-    title: '实体总览：28 张表与数据库外键关系',
+    title: '实体总览：29 张表与数据库外键关系',
     overview: true,
     nodes: [
       { bg: true, id: 'c1', label: '账号与积分', x: 40, y: 80, w: 520, h: 300 },
@@ -523,13 +542,14 @@ const PAGES = [
       { compact: 'db_question_set_item', x: 1520, y: 250 },
       { compact: 'db_course_question_set', x: 1520, y: 350 },
 
-      { bg: true, id: 'c4', label: '学习小组', x: 40, y: 520, w: 560, h: 460 },
+      { bg: true, id: 'c4', label: '学习小组', x: 40, y: 520, w: 560, h: 550 },
       { compact: 'db_study_group', x: 70, y: 590 },
       { compact: 'db_study_group_member', x: 320, y: 590 },
       { compact: 'db_study_group_message', x: 320, y: 690 },
       { compact: 'db_group_member_visit', x: 70, y: 690 },
       { compact: 'db_group_task_item', x: 320, y: 790 },
       { compact: 'db_group_task_progress', x: 70, y: 790 },
+      { compact: 'db_group_task_finish', x: 320, y: 890 },
 
       { bg: true, id: 'c5', label: '讨论与资源', x: 640, y: 520, w: 560, h: 300 },
       { compact: 'db_discussion_post', x: 670, y: 590 },
@@ -553,8 +573,8 @@ const PAGES = [
     ],
     relations: FK_IDS,
     evidence: [
-      'scripts/learning.sql:8-338（28 张表 DDL）',
-      '21 条 CONSTRAINT ... FOREIGN KEY 子句；连接表：db_course_question_set、db_question_set_item、db_study_group_member',
+      'scripts/learning.sql:8-350（29 张表 DDL）',
+      '22 条 CONSTRAINT ... FOREIGN KEY 子句；连接表：db_course_question_set、db_question_set_item、db_study_group_member',
       '软引用、冗余列、多态引用在 02 - 06 分域页用虚线标注',
     ],
   },
@@ -703,9 +723,11 @@ const PAGES = [
       { table: 'db_group_member_visit', x: 860, y: 120 },
       { table: 'db_group_task_item', x: 860, y: 320 },
       { table: 'db_group_task_progress', x: 860, y: 560 },
+      { table: 'db_group_task_finish', x: 470, y: 580 },
       { table: 'db_account', rows: ['id'], ref: true, x: 80, y: 340 },
       { ghost: 'db_course', label: 'db_course\n（item_type = course）', x: 1200, y: 320 },
       { ghost: 'db_learning_resource', label: 'db_learning_resource\n（item_type = resource）', x: 1200, y: 440 },
+      { ghost: 'db_question_set', label: 'db_question_set\n（item_type = question_set）', x: 1200, y: 220 },
       {
         id: 'n1',
         note: '账号侧全部是软引用：\nowner_id、成员的 account_id、\n消息发送者、任务完成人、访问记录\n均无 FK，详见 learning.sql。',
@@ -716,7 +738,7 @@ const PAGES = [
       },
       {
         id: 'n2',
-        note: '多态 ref_id：\n\nitem_type = course → db_course\nitem_type = resource → db_learning_resource\nitem_type = text / member_visit → ref_id 为空\n无法用单个 FK 表达。',
+        note: '多态 ref_id：\n\nitem_type = course → db_course\nitem_type = resource → db_learning_resource\nitem_type = question_set → db_question_set\nitem_type = word_test → source = cet4 / cet6\nitem_type = text / member_visit → ref_id 为空\n无法用单个 FK 表达。',
         x: 1200,
         y: 560,
         w: 340,
@@ -729,19 +751,22 @@ const PAGES = [
       'r_group_visit',
       'r_msg_taskitem',
       'r_taskitem_progress',
+      'r_msg_taskfinish',
       's_acc_group',
       's_acc_member',
       's_acc_message',
       's_acc_visit',
       's_acc_taskprogress',
+      's_acc_taskfinish',
       'd_group_taskitem',
       'p_taskitem_course',
       'p_taskitem_resource',
+      'p_taskitem_qset',
     ],
     evidence: [
-      'scripts/learning.sql:261-294（小组、成员连接表、群消息）',
-      'scripts/learning.sql:169-201（访问记录、任务项、任务完成）',
-      'scripts/learning.sql:179-191（ref_id 多态引用，无 FK）',
+      'scripts/learning.sql:261-314（小组、成员连接表、群消息）',
+      'scripts/learning.sql:169-219（访问记录、任务项、任务完成与结算台账）',
+      'scripts/learning.sql:182-196（测试类型、source 与 ref_id 多态引用，无 FK）',
       'docs/DATABASE.md:290-367（账号侧软引用说明）',
     ],
   },

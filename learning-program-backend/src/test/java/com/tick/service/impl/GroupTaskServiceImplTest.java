@@ -12,9 +12,12 @@ import com.tick.mapper.CourseMapper;
 import com.tick.mapper.GroupTaskItemMapper;
 import com.tick.mapper.GroupTaskProgressMapper;
 import com.tick.mapper.LearningResourceMapper;
+import com.tick.mapper.QuestionSetMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
 import com.tick.service.AccountService;
+import com.tick.service.NotificationService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
@@ -36,11 +39,15 @@ class GroupTaskServiceImplTest {
     private final CourseMapper courseMapper = mock(CourseMapper.class);
     private final LearningResourceMapper resourceMapper = mock(LearningResourceMapper.class);
     private final AccountService accountService = mock(AccountService.class);
+    private final QuestionSetMapper questionSetMapper = mock(QuestionSetMapper.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    private final NotificationService notificationService = mock(NotificationService.class);
     private final GroupTaskCompletionService completionService = mock(GroupTaskCompletionService.class);
 
     private GroupTaskServiceImpl service() {
         return new GroupTaskServiceImpl(memberQuery, messageMapper, taskItemMapper, taskProgressMapper,
-                courseMapper, resourceMapper, accountService, completionService);
+                courseMapper, resourceMapper, questionSetMapper, accountService, completionService,
+                eventPublisher, notificationService);
     }
 
     private StudyGroupMember member(int accountId, String role) {

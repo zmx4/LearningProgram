@@ -34,6 +34,11 @@ public class StudyGroupMemberQuery {
                 .eq(StudyGroupMember::getAccountId, accountId));
     }
 
+    public List<StudyGroupMember> membershipsOf(Integer accountId) {
+        return memberMapper.selectList(new LambdaQueryWrapper<StudyGroupMember>()
+                .eq(StudyGroupMember::getAccountId, accountId));
+    }
+
     public List<StudyGroupMember> membersOf(Integer groupId) {
         return memberMapper.selectList(new LambdaQueryWrapper<StudyGroupMember>()
                 .eq(StudyGroupMember::getGroupId, groupId)

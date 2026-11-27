@@ -55,6 +55,9 @@ const loadFailed = ref(false)
 let disposed = false
 
 const selectedGroup = computed(() => groups.value.find(group => group.id === activeGroupId.value) ?? null)
+const availableMetrics = computed<MetricOption[]>(() => scope.value === 'group'
+    ? [...metrics.value, { code: 'tasks', label: t('groups.metricTasks'), unit: '个' }]
+    : metrics.value.filter(metric => metric.code !== 'tasks'))
 const pageTitle = computed(() => scope.value === 'group' && selectedGroup.value
     ? t('leaderboard.groupTitle', { name: selectedGroup.value.name })
     : t('leaderboard.title'))
@@ -114,6 +117,9 @@ function updateRouteQuery() {
 function selectScope(next: Scope) {
   if (scope.value === next) return
   scope.value = next
+  if (next === 'global' && activeMetric.value === 'tasks') {
+    activeMetric.value = 'points'
+  }
   if (next === 'group' && activeGroupId.value == null) {
     activeGroupId.value = groups.value[0]?.id ?? null
   }
@@ -164,6 +170,7 @@ watch(() => route.query.groupId, value => {
   if (groupId == null) {
     if (scope.value !== 'global') {
       scope.value = 'global'
+      if (activeMetric.value === 'tasks') activeMetric.value = 'points'
       loadBoard(activeMetric.value)
     }
     return
@@ -229,7 +236,7 @@ onUnmounted(() => {
 
     <div class="metric-tabs" role="tablist" :aria-label="t('leaderboard.metricLabel')">
       <button
-          v-for="option in metrics"
+          v-for="option in availableMetrics"
           :key="option.code"
           class="metric-tab"
           :class="{ active: option.code === activeMetric }"

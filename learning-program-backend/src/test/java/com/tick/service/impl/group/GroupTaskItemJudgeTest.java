@@ -4,6 +4,7 @@ import com.tick.entity.dto.GroupTaskItem;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,7 +26,8 @@ class GroupTaskItemJudgeTest {
                                                Map<String, GroupTaskCompletionContext.CourseStudy> studies,
                                                Map<String, LocalDateTime> accesses,
                                                Map<Integer, LocalDateTime> visits) {
-        return new GroupTaskCompletionContext(Map.of(), manual, chapters, studies, accesses, visits);
+        return new GroupTaskCompletionContext(Map.of(), manual, chapters, studies, accesses, visits,
+                Map.of(), Map.of(), Map.of());
     }
 
     @Test
@@ -81,5 +83,37 @@ class GroupTaskItemJudgeTest {
         assertTrue(judge.judge(context(Map.of(), Map.of(), Map.of(), Map.of(),
                         Map.of(2, PUBLISHED_AT.plusMinutes(1))),
                 visit, 2, PUBLISHED_AT).completed());
+    }
+
+    @Test
+    void wordTestOnlyCountsPassingScoreAfterPublish() {
+        WordTestGroupTaskItemJudge judge = new WordTestGroupTaskItemJudge();
+        GroupTaskItem word = item(GroupTaskItem.TYPE_WORD_TEST, null);
+        word.setSource("cet4");
+        word.setPassScore(80);
+        GroupTaskCompletionContext context = new GroupTaskCompletionContext(Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of("2_cet4", List.of(
+                        new GroupTaskCompletionContext.TestScore(90, PUBLISHED_AT.minusMinutes(1)),
+                        new GroupTaskCompletionContext.TestScore(60, PUBLISHED_AT.plusMinutes(1)),
+                        new GroupTaskCompletionContext.TestScore(85, PUBLISHED_AT.plusMinutes(2)))), Map.of());
+
+        GroupTaskItemState state = judge.judge(context, word, 2, PUBLISHED_AT);
+
+        assertTrue(state.completed());
+        assertTrue(state.completedAt().isEqual(PUBLISHED_AT.plusMinutes(2)));
+    }
+
+    @Test
+    void questionSetTestNeedsPassingScoreForSelectedSet() {
+        QuestionSetGroupTaskItemJudge judge = new QuestionSetGroupTaskItemJudge();
+        GroupTaskItem questionSet = item(GroupTaskItem.TYPE_QUESTION_SET, 9);
+        questionSet.setPassScore(60);
+        GroupTaskCompletionContext context = new GroupTaskCompletionContext(Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of("2_9", List.of(new GroupTaskCompletionContext.TestScore(70, PUBLISHED_AT))));
+
+        assertTrue(judge.judge(context, questionSet, 2, PUBLISHED_AT).completed());
+        assertFalse(judge.judge(context, item(GroupTaskItem.TYPE_QUESTION_SET, 10), 2, PUBLISHED_AT).completed());
     }
 }

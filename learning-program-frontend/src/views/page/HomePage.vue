@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Reading, Trophy, User } from '@element-plus/icons-vue'
@@ -7,19 +7,13 @@ import CheckInCard from '@/components/CheckInCard.vue'
 import GroupActions from '@/components/group/GroupActions.vue'
 import GroupCard from '@/components/group/GroupCard.vue'
 import { get, publicGet, unauthorized } from '@/net'
-import type { GroupSummary, GroupTask } from '@/types/group'
+import type { GroupSummary } from '@/types/group'
 
 interface GuestCourse {
   courseId: number
   title: string
   description: string | null
   chapterCount: number
-}
-
-interface GroupMetrics {
-  ongoingTasks: number
-  completionRate: number | null
-  overdueTasks: number
 }
 
 interface TodoItem {
@@ -29,6 +23,15 @@ interface TodoItem {
   taskId: number
   taskTitle: string
   itemTitle: string
+  dueAt: string | null
+}
+
+interface GroupOverview {
+  groups: GroupSummary[]
+  todos: TodoItem[]
+  totalOngoing: number
+  totalOverdue: number
+  totalCompleted: number
 }
 
 const router = useRouter()
@@ -36,10 +39,12 @@ const { t } = useI18n()
 const isLoggedIn = !unauthorized()
 
 const groups = ref<GroupSummary[]>([])
-const tasksByGroup = ref<Record<number, GroupTask[]>>({})
+const todos = ref<TodoItem[]>([])
+const totalOngoing = ref(0)
+const totalOverdue = ref(0)
+const totalCompleted = ref(0)
 const guestCourses = ref<GuestCourse[]>([])
 const loadingGroups = ref(false)
-const tasksLoading = ref(false)
 const loadFailed = ref(false)
 let disposed = false
 
@@ -50,32 +55,21 @@ function loadGuestCourses() {
   }, () => undefined)
 }
 
-function loadGroupTasks(groupId: number, onFinished?: () => void) {
-  get<GroupTask[]>(`/api/groups/${groupId}/tasks`, data => {
-    if (disposed) return
-    tasksByGroup.value = { ...tasksByGroup.value, [groupId]: data }
-    onFinished?.()
-  }, () => {
-    if (!disposed) onFinished?.()
-  })
+function applyOverview(data: GroupOverview) {
+  groups.value = data.groups
+  todos.value = data.todos.slice(0, 6)
+  totalOngoing.value = data.totalOngoing
+  totalOverdue.value = data.totalOverdue
+  totalCompleted.value = data.totalCompleted
 }
 
 function loadGroups() {
   loadingGroups.value = true
   loadFailed.value = false
-  get<GroupSummary[]>('/api/groups', data => {
+  get<GroupOverview>('/api/groups/overview', data => {
     if (disposed) return
-    groups.value = data
+    applyOverview(data)
     loadingGroups.value = false
-    tasksLoading.value = data.length > 0
-    if (!data.length) return
-    let remaining = data.length
-    data.forEach(group => {
-      loadGroupTasks(group.id, () => {
-        remaining -= 1
-        if (remaining === 0) tasksLoading.value = false
-      })
-    })
   }, () => {
     if (disposed) return
     loadingGroups.value = false
@@ -85,60 +79,8 @@ function loadGroups() {
 
 function onGroupChanged(group: GroupSummary) {
   groups.value = [group, ...groups.value.filter(item => item.id !== group.id)]
-  tasksLoading.value = true
-  loadGroupTasks(group.id, () => {
-    tasksLoading.value = false
-  })
+  loadGroups()
 }
-
-const metricsByGroup = computed<Record<number, GroupMetrics>>(() => {
-  const result: Record<number, GroupMetrics> = {}
-  const now = Date.now()
-  for (const group of groups.value) {
-    const tasks = tasksByGroup.value[group.id] ?? []
-    let ongoingTasks = 0
-    let completedItems = 0
-    let totalItems = 0
-    let overdueTasks = 0
-    for (const task of tasks) {
-      if (task.totalItems > 0 && task.myCompleted < task.totalItems) ongoingTasks += 1
-      completedItems += task.myCompleted
-      totalItems += task.totalItems
-      if (task.dueAt && new Date(task.dueAt).getTime() < now && task.myCompleted < task.totalItems) {
-        overdueTasks += 1
-      }
-    }
-    result[group.id] = {
-      ongoingTasks,
-      completionRate: totalItems > 0 ? Math.round(completedItems * 100 / totalItems) : null,
-      overdueTasks,
-    }
-  }
-  return result
-})
-
-const todos = computed<TodoItem[]>(() => {
-  const items: TodoItem[] = []
-  for (const group of groups.value) {
-    for (const task of tasksByGroup.value[group.id] ?? []) {
-      for (const item of task.items) {
-        if (item.myCompleted) continue
-        items.push({
-          key: `${group.id}-${task.id}-${item.id}`,
-          groupId: group.id,
-          groupName: group.name,
-          taskId: task.id,
-          taskTitle: task.title,
-          itemTitle: item.title,
-        })
-      }
-    }
-  }
-  return items.slice(0, 6)
-})
-
-const totalOngoing = computed(() => Object.values(metricsByGroup.value)
-    .reduce((sum, metrics) => sum + metrics.ongoingTasks, 0))
 
 function openGroup(group: GroupSummary) {
   void router.push({ name: 'group-detail', params: { id: group.id } })
@@ -204,6 +146,14 @@ onUnmounted(() => {
           <span>{{ t('home.todoCount') }}</span>
           <strong>{{ todos.length }}</strong>
         </div>
+        <div>
+          <span>{{ t('home.completedTaskCount') }}</span>
+          <strong>{{ totalCompleted }}</strong>
+        </div>
+        <div v-if="totalOverdue" class="overdue-summary">
+          <span>{{ t('home.overdueTaskCount') }}</span>
+          <strong>{{ totalOverdue }}</strong>
+        </div>
       </div>
       <div v-else class="hero-decoration" aria-hidden="true">
         <span class="hero-orbit hero-orbit-one"></span>
@@ -239,7 +189,11 @@ onUnmounted(() => {
               v-for="group in groups"
               :key="group.id"
               :group="group"
-              :metrics="metricsByGroup[group.id]"
+              :metrics="{
+                ongoingTasks: group.ongoingTasks ?? 0,
+                overdueTasks: group.overdueTasks ?? 0,
+                completedTasks: group.completedTasks ?? 0,
+              }"
               @open="openGroup"
               @leaderboard="openLeaderboard"
           />
@@ -262,19 +216,15 @@ onUnmounted(() => {
           <span class="section-count">{{ t('home.todoCountValue', { count: todos.length }) }}</span>
         </div>
 
-        <section v-if="tasksLoading" class="todo-list" aria-busy="true">
-          <div v-for="index in 3" :key="index" class="todo-card skeleton-card">
-            <div class="skeleton line short"></div>
-            <div class="skeleton line long"></div>
-          </div>
-        </section>
-
-        <section v-else-if="todos.length" class="todo-list">
+        <section v-if="todos.length" class="todo-list">
           <button v-for="todo in todos" :key="todo.key" class="todo-card" type="button" @click="openTodo(todo)">
             <span class="todo-icon"><el-icon><Reading /></el-icon></span>
             <span class="todo-body">
               <strong>{{ todo.itemTitle }}</strong>
               <small>{{ todo.groupName }} · {{ todo.taskTitle }}</small>
+              <small v-if="todo.dueAt" class="todo-due" :class="{ overdue: new Date(todo.dueAt).getTime() < Date.now() }">
+                {{ t('groups.dueAtLabel') }}: {{ todo.dueAt.replace('T', ' ').slice(5, 16) }}
+              </small>
             </span>
             <el-icon class="todo-arrow"><ArrowRight /></el-icon>
           </button>
@@ -438,7 +388,7 @@ onUnmounted(() => {
 
 .hero-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(84px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
   gap: 10px;
   min-width: 300px;
 }
@@ -462,6 +412,10 @@ onUnmounted(() => {
   color: var(--el-color-primary);
   font-size: 24px;
   line-height: 1.2;
+}
+
+.overdue-summary strong {
+  color: var(--el-color-danger);
 }
 
 .hero-decoration {
@@ -598,6 +552,10 @@ onUnmounted(() => {
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.todo-body .todo-due.overdue {
+  color: var(--el-color-danger);
 }
 
 .todo-arrow {

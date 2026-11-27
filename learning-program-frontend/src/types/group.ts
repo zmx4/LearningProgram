@@ -7,6 +7,9 @@ export interface GroupSummary {
   memberCount: number
   role: string
   createdAt: string
+  ongoingTasks?: number
+  overdueTasks?: number
+  completedTasks?: number
 }
 
 export interface GroupMember {
@@ -32,12 +35,14 @@ export interface GroupMessage {
   createdAt: string
 }
 
-export type TaskItemType = 'course' | 'resource' | 'member_visit' | 'text'
+export type TaskItemType = 'course' | 'resource' | 'member_visit' | 'text' | 'word_test' | 'question_set'
 
 export interface TaskItem {
   id: number
   type: TaskItemType
   refId: number | null
+  source?: string | null
+  passScore?: number | null
   title: string
   myCompleted: boolean | null
   myCompletedAt: string | null
@@ -52,6 +57,9 @@ export interface GroupTask {
   username: string
   createdAt: string
   dueAt?: string | null
+  myFinished?: boolean
+  myFinishedAt?: string | null
+  lateCompleted?: boolean
   items: TaskItem[]
   memberCount: number
   myCompleted: number
@@ -84,4 +92,6 @@ export interface TaskItemDraft {
   type: TaskItemType
   refId: number | null
   title: string
+  source?: string | null
+  passScore?: number | null
 }

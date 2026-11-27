@@ -15,6 +15,16 @@ public interface NotificationService extends IService<Notification> {
     List<Notification> findByAccountId(Integer accountId);
 
     /**
+     * 创建一条站内通知。
+     */
+    void create(Integer accountId, String title, String content, String link, String type);
+
+    /**
+     * 当前账号未读通知数。
+     */
+    long countUnread(Integer accountId);
+
+    /**
      * 标记单条通知已读；通知不属于该账号时返回 false。
      */
     boolean markRead(Integer accountId, Integer notificationId);

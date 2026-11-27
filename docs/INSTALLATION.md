@@ -16,7 +16,7 @@
 1. 检查 JDK 21+、Maven（优先用 `mvnw`）、Node 22.18+、包管理器（有 `pnpm-lock.yaml` 时优先 pnpm）、`mysql` 客户端；
 2. 收集 MySQL / Redis 连接信息：**环境变量里已有的直接沿用，没有指定的会逐个提示手动输入**；
 3. 生成 `learning-program-backend/.env` 与 `learning-program-frontend/.env.local`（已存在的文件先备份为 `*.bak.时间戳`）；
-4. 创建数据库 `learning` 并导入 `scripts/learning.sql`（整库 DDL，28 张表；库里已有表时跳过，避免覆盖数据）；
+4. 创建数据库 `learning` 并导入 `scripts/learning.sql`（整库 DDL，29 张表；库里已有表时跳过，避免覆盖数据）；
 5. 打包后端（`mvnw -DskipTests package`）与构建前端（`pnpm/npm run build`）。
 
 ### 环境变量的指定规则
@@ -51,7 +51,7 @@ PowerShell 版参数名一致，用开关形式：`-Yes`、`-NoDb`、`-NoBuild`�
 
 ### 注意事项
 
-- **表结构的唯一来源是 `scripts/learning.sql`**（整库 DDL，28 张表）。库中没有表时脚本会自动导入；已有表时跳过并提示，不会覆盖现有数据。
+- **表结构的唯一来源是 `scripts/learning.sql`**（整库 DDL，29 张表）。库中没有表时脚本会自动导入；已有表时跳过并提示，不会覆盖现有数据。
 - 需要按 `learning.sql` 重建库时用 `--reset-db` / `-ResetDb`：脚本会先 `DROP DATABASE learning` 再重新导入，**库中数据会全部丢失**（交互模式需输入 `yes` 确认，非交互模式视为显式同意）。
 - 未安装 `mysql` 客户端时脚本会跳过建库与建表，并打印需要手工执行的步骤。
 - `.env` 与 `.env.local` 均已被 `.gitignore` 忽略；脚本生成前会备份同名旧文件，不影响已有手工配置。
@@ -104,7 +104,7 @@ CREATE DATABASE IF NOT EXISTS learning
   COLLATE utf8mb4_unicode_ci;
 ```
 
-完整的表结构、表间关系和字段说明见 [数据库说明](./DATABASE.md)。表结构的唯一来源是仓库 `scripts/learning.sql`（整库 DDL，28 张表，含索引、外键与 JSON 约束），初始化有两种方式：
+完整的表结构、表间关系和字段说明见 [数据库说明](./DATABASE.md)。表结构的唯一来源是仓库 `scripts/learning.sql`（整库 DDL，29 张表，含索引、外键与 JSON 约束），初始化有两种方式：
 
 1. **安装脚本自动导入（推荐）**：库里没有任何表时，`scripts/install.sh` / `scripts/install.ps1` 会自动导入 `scripts/learning.sql`。
 2. **手工导入**：

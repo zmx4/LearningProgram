@@ -356,6 +356,20 @@ Authorization: Bearer <token>
 ```
 
 `link` 为点击通知后前端跳转的路由，管理员群发通知时为 `null`。
+小组事件通知的 `type` 包括 `group_task_published`（组长发任务给组员）、`group_task_finished`（成员完成任务给组长）、`group_member_joined`（新成员加入给组长），点击均跳回对应小组。
+
+### 查询未读通知数
+
+```http
+GET /api/notifications/unread-count
+Authorization: Bearer <token>
+```
+
+```json
+{ "code": 200, "data": { "count": 3 }, "message": "success" }
+```
+
+供顶栏铃铛红点使用；只返回当前账号的未读数量。
 
 ### 标记单条通知已读
 
@@ -975,6 +989,44 @@ Authorization: Bearer <token>
 
 `role` 为当前用户在该小组的身份：`owner` / `member`，按小组创建时间倒序。
 
+### 查询首页小组概览
+
+```http
+GET /api/groups/overview
+Authorization: Bearer <token>
+```
+
+一次返回当前用户的小组卡片、跨小组待办和汇总，不包含其他成员的完整进度矩阵：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "groups": [
+      {
+        "id": 7, "name": "四级冲刺小分队", "ownerId": 1, "ownerName": "tick",
+        "inviteCode": "AB23CD45", "memberCount": 3, "role": "owner",
+        "createdAt": "2026-10-14T20:00:00",
+        "ongoingTasks": 1, "overdueTasks": 0, "completedTasks": 2
+      }
+    ],
+    "todos": [
+      {
+        "key": "7-12-32", "groupId": 7, "groupName": "四级冲刺小分队",
+        "taskId": 12, "taskTitle": "本周学习任务", "itemId": 32,
+        "itemTitle": "在群里打卡汇报", "dueAt": "2026-11-30T23:59:00"
+      }
+    ],
+    "totalOngoing": 1,
+    "totalOverdue": 0,
+    "totalCompleted": 2
+  },
+  "message": "success"
+}
+```
+
+待办按截止时间升序排列，无截止时间的排在后面；成员在任务发布后加入时，不承担该任务。
+
 ### 创建小组
 
 ```http
@@ -1065,18 +1117,20 @@ Content-Type: application/json
 
 {
   "title": "本周背完 List 1-3",
-  "content": "周五前打卡",
+  "content": "周五前完成单词测试",
+  "dueAt": "2026-11-30T23:59:00",
   "items": [
     { "type": "course", "refId": 2 },
     { "type": "resource", "refId": 5 },
-    { "type": "member_visit", "title": "访问小组页面" },
-    { "type": "text", "title": "在群里打卡汇报" }
+    { "type": "text", "title": "在群里打卡汇报" },
+    { "type": "word_test", "source": "cet4", "passScore": 60, "title": "四级核心词测试" },
+    { "type": "question_set", "refId": 3, "passScore": 80, "title": "语法专项测试" }
   ]
 }
 ```
 
 仅组长可发布，非组长返回 `403`；标题为空或超过 100 字、内容为空或超过 2000 字返回 `400`。
-`items` 为可选的任务绑定项（最多 20 个），类型与完成判定：
+`dueAt` 可选，不得早于当前时间；旧任务没有截止时间。`items` 为可选的任务绑定项（最多 20 个），类型与完成判定：
 
 | `type` | 含义 | 完成判定 |
 | --- | --- | --- |
@@ -1084,8 +1138,11 @@ Content-Type: application/json
 | `resource` | 绑定资源（`refId` 为资源 id，标题自动取资源名） | 任务发布后访问（下载）过该资源，系统自动判定 |
 | `member_visit` | 组员必须访问小组（`title` 必填说明） | 任务发布后访问过小组详情页，系统自动判定 |
 | `text` | 纯文本事项（`title` 必填说明） | 组员手动标记完成 |
+| `word_test` | 绑定 CET-4 / CET-6 单词测试（`source` 为 `cet4` / `cet6`） | 任务发布后的对应词表测试成绩达到 `passScore` |
+| `question_set` | 绑定题集（`refId` 为题集 id） | 任务发布后的该题集测试成绩达到 `passScore` |
 
-课程/资源 id 不存在返回 `400`；member_visit/text 缺少说明文字返回 `400`。
+课程、资源或题集 id 不存在返回 `400`；member_visit/text 缺少说明文字返回 `400`。
+两种测试项的 `passScore` 必填且必须为 0–100 的整数。无任务项的任务不会结算完成或发放积分；成员加入前发布的任务不进入其待办范围。
 
 ### 查询小组任务列表（含完成进度）
 
@@ -1103,7 +1160,8 @@ Authorization: Bearer <token>
     {
       "id": 12,
       "title": "本周背完 List 1-3",
-      "content": "周五前打卡",
+      "content": "周五前完成单词测试",
+      "dueAt": "2026-11-30T23:59:00",
       "accountId": 1,
       "username": "tick",
       "createdAt": "2026-10-14T20:10:00",
@@ -1115,7 +1173,10 @@ Authorization: Bearer <token>
       "myCompleted": 1,
       "totalItems": 2,
       "totalCompletions": 3,
-      "progressPercent": 50
+      "progressPercent": 50,
+      "myFinished": false,
+      "myFinishedAt": null,
+      "lateCompleted": false
     }
   ],
   "message": "success"
@@ -1124,6 +1185,7 @@ Authorization: Bearer <token>
 
 `progressPercent` = 全部成员完成项次合计 /（任务项数 × 成员数），无绑定项时为 `null`。
 `myCompleted` / `myCompletedAt` 为当前用户的完成状态，`completedCount` 为全组已完成该项的人数。
+`myFinished` / `myFinishedAt` 表示当前用户是否已完成整个任务及完成时间，`lateCompleted` 表示是否逾期完成。任务查询保持只读，积分与通知由学习写入事件在事务提交后结算。
 非成员返回 `404`。
 
 ### 标记任务项完成（纯文本）
@@ -1134,7 +1196,7 @@ Authorization: Bearer <token>
 ```
 
 组员手动标记 `text` 类型任务项完成，幂等；成功后返回该任务的最新进度（结构同上）。
-对 course / resource / member_visit 类型调用返回 `400`「该任务项由系统自动判定完成，无需手动标记」。
+对 course / resource / member_visit / word_test / question_set 类型调用返回 `400`「该任务项由系统自动判定完成，无需手动标记」。
 
 ### 查询任务完成矩阵（组长）
 
@@ -1312,10 +1374,11 @@ Authorization: Bearer <token>
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
 | `groupId` | 是 | 小组 ID |
-| `metric` | 否 | 维度，缺省 `points`；支持 `points`、`study`、`check-in` |
+| `metric` | 否 | 维度，缺省 `points`；支持 `points`、`study`、`check-in`、`tasks` |
 | `limit` | 否 | 榜单条数，缺省 `20`，上限 `100` |
 
 返回结构与全站排行榜一致，但 `entries`、`rankedUsers` 和 `me` 只统计该小组成员。
+`tasks` 维度按任务完成台账统计完成任务数，单位为 `个`，仅小组榜提供。
 小组不存在或当前用户不是成员返回 `404`。
 
 ## 管理员接口

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { get, post } from '@/net'
 import TestStatistics from '@/components/TestStatistics.vue'
@@ -31,6 +31,7 @@ interface History {
 }
 
 const router = useRouter()
+const route = useRoute()
 const {t} = useI18n()
 const source = ref<Source>('cet4')
 const words = ref<Word[]>([])
@@ -121,7 +122,15 @@ function submitTest() {
   })
 }
 
-onMounted(loadHistory)
+onMounted(() => {
+  loadHistory()
+  const raw = route.query.source
+  const requested = Array.isArray(raw) ? raw[0] : raw
+  if (requested === 'cet4' || requested === 'cet6') {
+    source.value = requested
+    startTest()
+  }
+})
 </script>
 
 <template>

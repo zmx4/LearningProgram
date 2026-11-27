@@ -19,6 +19,7 @@ import com.tick.entity.vo.response.CourseProgressVO;
 import com.tick.entity.vo.response.CourseQuestionSetVO;
 import com.tick.entity.vo.response.CourseStudyProgressVO;
 import com.tick.entity.vo.response.CourseStudyResultVO;
+import com.tick.event.GroupLearningActivityEvent;
 import com.tick.mapper.CourseChapterMapper;
 import com.tick.mapper.CourseMapper;
 import com.tick.mapper.CourseProgressMapper;
@@ -30,6 +31,7 @@ import com.tick.mapper.QuestionSetMapper;
 import com.tick.monitor.Monitored;
 import com.tick.service.AccountPointsService;
 import com.tick.service.CourseProgressService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +67,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
     private final QuestionSetItemMapper setItemMapper;
     private final CourseRewardMapper courseRewardMapper;
     private final AccountPointsService accountPointsService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CourseProgressServiceImpl(CourseMapper courseMapper,
                                      CourseChapterMapper chapterMapper,
@@ -73,7 +76,8 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
                                      QuestionSetMapper setMapper,
                                      QuestionSetItemMapper setItemMapper,
                                      CourseRewardMapper courseRewardMapper,
-                                     AccountPointsService accountPointsService) {
+                                     AccountPointsService accountPointsService,
+                                     ApplicationEventPublisher eventPublisher) {
         this.courseMapper = courseMapper;
         this.chapterMapper = chapterMapper;
         this.questionSetMapper = questionSetMapper;
@@ -82,6 +86,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
         this.setItemMapper = setItemMapper;
         this.courseRewardMapper = courseRewardMapper;
         this.accountPointsService = accountPointsService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -230,6 +235,7 @@ public class CourseProgressServiceImpl extends ServiceImpl<CourseProgressMapper,
         Integer awardedPoints = STATUS_COMPLETED.equals(status)
                 ? awardCourseRewardOnce(accountId, course)
                 : null;
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         return new CourseStudyResultVO(studied, chapterCount, status, awardedPoints);
     }
 

@@ -93,7 +93,7 @@ LearningProgram/
 │   ├── install.ps1              # PowerShell 版安装（Windows 原生）
 │   ├── start.sh                 # bash 版一键启动（后端 + 前端，Ctrl+C 一起停）
 │   ├── start.ps1                # PowerShell 版一键启动（Windows 原生）
-│   └── learning.sql             # 整库 DDL（28 张表），安装脚本自动导入
+│   └── learning.sql             # 整库 DDL（29 张表），安装脚本自动导入
 ├── LICENSE                     # MIT 开源许可证全文
 ├── THIRD_PARTY_NOTICES.md      # 第三方依赖许可声明
 └── README.md
@@ -102,7 +102,7 @@ LearningProgram/
 ## 快速开始
 
 一键安装脚本会检查环境、收集数据库连接信息（未通过环境变量指定时会逐个提示手动输入）、
-生成 `.env` 配置、建库并导入 `scripts/learning.sql`（整库 DDL，28 张表），最后打包后端与构建前端：
+生成 `.env` 配置、建库并导入 `scripts/learning.sql`（整库 DDL，29 张表），最后打包后端与构建前端：
 
 ```bash
 # Git Bash / WSL / Linux / macOS

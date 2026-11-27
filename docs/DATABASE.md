@@ -8,7 +8,7 @@
 - 所有表使用 InnoDB 引擎、`db_` 前缀命名，主键为 `AUTO_INCREMENT` 的 `id`。
 - MyBatis-Plus 按驼峰 ↔ 下划线自动映射（如 `register_time` ↔ `registerTime`），个别字段用 `@TableField` 显式指定。
 - 用户密码保存 BCrypt 密文，字段长度 `VARCHAR(255)`。
-- 表结构的唯一来源是仓库根目录 `scripts/learning.sql`（整库 DDL，28 张表，含索引与外键）。项目未启用 Flyway，也没有增量迁移脚本，结构变更直接维护该文件。
+- 表结构的唯一来源是仓库根目录 `scripts/learning.sql`（整库 DDL，29 张表，含索引与外键）。项目未启用 Flyway；已有数据库的结构变更记录在 `scripts/migrations/`，新安装直接使用整库 DDL。
 
 ## 表清单
 
@@ -32,8 +32,9 @@
 | 学习小组 | `db_study_group` | 学习小组本身（名称、组长、邀请码） |
 | 学习小组 | `db_study_group_member` | 小组成员，一个人可加入多个小组 |
 | 学习小组 | `db_study_group_message` | 小组消息，含组长发布的学习任务 |
-| 学习小组 | `db_group_task_item` | 学习任务绑定项（课程/资源/组员访问/纯文本） |
+| 学习小组 | `db_group_task_item` | 学习任务绑定项（课程/资源/组员访问/纯文本/单词测试/题集测试） |
 | 学习小组 | `db_group_task_progress` | 纯文本任务项的手动完成记录 |
+| 学习小组 | `db_group_task_finish` | 整任务完成台账与积分发放记录，`(task_id, account_id)` 唯一 |
 | 学习小组 | `db_group_member_visit` | 成员最近访问小组的时间（member_visit 判定依据） |
 | 词典与资源 | `db_dictionary` | 英文词典（word ↔ translation） |
 | 词典与资源 | `db_cet4` / `db_cet6` | CET4 / CET6 词表 |
@@ -67,6 +68,7 @@ erDiagram
     db_study_group ||--o{ db_study_group_message : "消息与任务"
     db_study_group ||--o{ db_group_member_visit : "访问记录"
     db_study_group_message ||--o{ db_group_task_item : "任务绑定项"
+    db_study_group_message ||--o{ db_group_task_finish : "任务完成台账"
     db_group_task_item ||--o{ db_group_task_progress : "手动完成记录"
 ```
 
@@ -378,7 +380,7 @@ erDiagram
 
 ## 建表脚本
 
-表结构的唯一来源是 `scripts/learning.sql`（整库 DDL，28 张表）。安装脚本检测到库为空时会自动导入它；也可以手工执行：
+表结构的唯一来源是 `scripts/learning.sql`（整库 DDL，29 张表）。安装脚本检测到库为空时会自动导入它；也可以手工执行：
 
 ```bash
 mysql -h 127.0.0.1 -P 3306 -u root -p learning < scripts/learning.sql

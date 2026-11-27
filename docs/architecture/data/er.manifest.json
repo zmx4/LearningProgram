@@ -12,9 +12,9 @@
     "id": "01-overview",
     "name": "01 实体总览",
     "tables": 0,
-    "relations": 21,
+    "relations": 22,
     "width": 1800,
-    "height": 1162,
+    "height": 1212,
     "mermaid": true
   },
   {
@@ -47,10 +47,10 @@
   {
     "id": "05-group",
     "name": "05 学习小组",
-    "tables": 7,
-    "relations": 13,
+    "tables": 8,
+    "relations": 16,
     "width": 1580,
-    "height": 886,
+    "height": 904,
     "mermaid": true
   },
   {

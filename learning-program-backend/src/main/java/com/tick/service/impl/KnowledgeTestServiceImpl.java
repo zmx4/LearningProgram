@@ -9,10 +9,13 @@ import com.tick.entity.dto.TestRecord;
 import com.tick.entity.dto.TestType;
 import com.tick.entity.vo.request.KnowledgeTestResultVO;
 import com.tick.entity.vo.response.KnowledgeTestRecordVO;
+import com.tick.event.GroupLearningActivityEvent;
 import com.tick.mapper.QuestionSetMapper;
 import com.tick.service.KnowledgeTestService;
 import com.tick.service.TestTypeService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,10 +32,13 @@ public class KnowledgeTestServiceImpl extends BaseTestService implements Knowled
 
     private final TestTypeService testTypeService;
     private final QuestionSetMapper questionSetMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public KnowledgeTestServiceImpl(TestTypeService testTypeService, QuestionSetMapper questionSetMapper) {
+    public KnowledgeTestServiceImpl(TestTypeService testTypeService, QuestionSetMapper questionSetMapper,
+                                    ApplicationEventPublisher eventPublisher) {
         this.testTypeService = testTypeService;
         this.questionSetMapper = questionSetMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -41,6 +47,7 @@ public class KnowledgeTestServiceImpl extends BaseTestService implements Knowled
     }
 
     @Override
+    @Transactional
     public KnowledgeTestRecordVO saveResult(Integer accountId, KnowledgeTestResultVO vo) {
         if (vo == null) {
             throw new IllegalArgumentException("请求体不能为空");
@@ -74,6 +81,7 @@ public class KnowledgeTestServiceImpl extends BaseTestService implements Knowled
         record.setTypeName(type == null ? "题集：" + set.getTitle() : type.getName());
         record.setDetail(toDetailJson(vo.getDetail()));
         save(record);
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         return toVO(record);
     }
 

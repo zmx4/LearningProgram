@@ -16,23 +16,33 @@ public final class GroupTaskCompletionContext {
     private final Map<String, CourseStudy> studies;
     private final Map<String, LocalDateTime> accesses;
     private final Map<Integer, LocalDateTime> visits;
+    private final Map<String, LocalDateTime> finishes;
+    private final Map<String, List<TestScore>> wordTests;
+    private final Map<String, List<TestScore>> questionSetTests;
 
     public GroupTaskCompletionContext(Map<Integer, List<GroupTaskItem>> itemsByMessage,
                                       Map<String, LocalDateTime> manual,
                                       Map<Integer, Long> chapterCounts,
                                       Map<String, CourseStudy> studies,
                                       Map<String, LocalDateTime> accesses,
-                                      Map<Integer, LocalDateTime> visits) {
+                                      Map<Integer, LocalDateTime> visits,
+                                      Map<String, LocalDateTime> finishes,
+                                      Map<String, List<TestScore>> wordTests,
+                                      Map<String, List<TestScore>> questionSetTests) {
         this.itemsByMessage = itemsByMessage;
         this.manual = manual;
         this.chapterCounts = chapterCounts;
         this.studies = studies;
         this.accesses = accesses;
         this.visits = visits;
+        this.finishes = finishes;
+        this.wordTests = wordTests;
+        this.questionSetTests = questionSetTests;
     }
 
     public static GroupTaskCompletionContext empty() {
-        return new GroupTaskCompletionContext(Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+        return new GroupTaskCompletionContext(Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of());
     }
 
     public List<GroupTaskItem> items(Integer messageId) {
@@ -59,7 +69,23 @@ public final class GroupTaskCompletionContext {
         return visits.get(accountId);
     }
 
+    public LocalDateTime finishAt(Integer taskId, Integer accountId) {
+        return finishes.get(taskId + "_" + accountId);
+    }
+
+    public List<TestScore> wordTests(Integer accountId, String source) {
+        return wordTests.getOrDefault(accountId + "_" + source, List.of());
+    }
+
+    public List<TestScore> questionSetTests(Integer accountId, Integer setId) {
+        return questionSetTests.getOrDefault(accountId + "_" + setId, List.of());
+    }
+
     /** 某成员在某课程下已学章节数与最近学习时间。 */
     public record CourseStudy(long count, LocalDateTime lastAt) {
+    }
+
+    /** 任务发布后的测试成绩。 */
+    public record TestScore(int score, LocalDateTime createdAt) {
     }
 }

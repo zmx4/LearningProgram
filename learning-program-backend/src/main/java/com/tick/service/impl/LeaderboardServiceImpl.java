@@ -36,6 +36,9 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     public List<Map<String, String>> listMetrics() {
         List<Map<String, String>> metrics = new ArrayList<>();
         for (LeaderboardMetric metric : LeaderboardMetric.values()) {
+            if (metric == LeaderboardMetric.TASKS) {
+                continue;
+            }
             Map<String, String> item = new LinkedHashMap<>();
             item.put("code", metric.getCode());
             item.put("label", metric.getLabel());
@@ -53,6 +56,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             case POINTS -> leaderboardMapper.selectPointsRanking(accountId, safeLimit);
             case STUDY -> leaderboardMapper.selectStudyRanking(accountId, safeLimit);
             case CHECK_IN -> leaderboardMapper.selectCheckInRanking(accountId, safeLimit);
+            case TASKS -> leaderboardMapper.selectTasksRanking(accountId, safeLimit);
         };
         return toVO(metric, safeLimit, rows, accountId);
     }
@@ -68,6 +72,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             case POINTS -> leaderboardMapper.selectGroupPointsRanking(accountId, groupId, safeLimit);
             case STUDY -> leaderboardMapper.selectGroupStudyRanking(accountId, groupId, safeLimit);
             case CHECK_IN -> leaderboardMapper.selectGroupCheckInRanking(accountId, groupId, safeLimit);
+            case TASKS -> leaderboardMapper.selectGroupTasksRanking(accountId, groupId, safeLimit);
         };
         return toVO(metric, safeLimit, rows, accountId);
     }

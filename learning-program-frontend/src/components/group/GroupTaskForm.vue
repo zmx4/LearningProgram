@@ -14,17 +14,22 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const publishing = ref(false)
-const taskForm = ref({ title: '', content: '' })
+const taskForm = ref({ title: '', content: '', dueAt: '' })
 const taskItems = ref<(TaskItemDraft & { draftId: number })[]>([])
-const itemDraft = ref<TaskItemDraft>({ type: 'course', refId: null, title: '' })
+const itemDraft = ref<TaskItemDraft>({
+  type: 'course', refId: null, title: '', source: 'cet4', passScore: 60,
+})
 const courseOptions = ref<NamedOption[]>([])
 const resourceOptions = ref<NamedOption[]>([])
+const questionSetOptions = ref<NamedOption[]>([])
 let nextDraftId = 1
 let disposed = false
 
 watch(() => itemDraft.value.type, () => {
   itemDraft.value.refId = null
   itemDraft.value.title = ''
+  itemDraft.value.source = 'cet4'
+  itemDraft.value.passScore = 60
 })
 
 function loadBindOptions() {
@@ -36,6 +41,10 @@ function loadBindOptions() {
     if (disposed) return
     resourceOptions.value = data.map(resource => ({ id: resource.id, title: resource.title }))
   }, () => undefined)
+  get<{ id: number; title: string }[]>('/api/question-sets', data => {
+    if (disposed) return
+    questionSetOptions.value = data.map(set => ({ id: set.id, title: set.title }))
+  }, () => undefined)
 }
 
 function itemTypeLabel(type: TaskItemType) {
@@ -43,23 +52,44 @@ function itemTypeLabel(type: TaskItemType) {
     case 'course': return t('groups.itemTypeCourse')
     case 'resource': return t('groups.itemTypeResource')
     case 'member_visit': return t('groups.itemTypeVisit')
+    case 'word_test': return t('groups.itemTypeWordTest')
+    case 'question_set': return t('groups.itemTypeQuestionSet')
     default: return t('groups.itemTypeText')
   }
 }
 
 function addTaskItem() {
   const item = itemDraft.value
-  if (item.type === 'course' || item.type === 'resource') {
+  const passScore = Number(item.passScore)
+  if ((item.type === 'word_test' || item.type === 'question_set')
+      && (!Number.isInteger(passScore) || passScore < 0 || passScore > 100)) {
+    ElMessage.warning(t('groups.passScoreRequired'))
+    return
+  }
+  if (item.type === 'word_test') {
+    taskItems.value = [...taskItems.value, {
+      type: item.type,
+      refId: null,
+      source: item.source ?? 'cet4',
+      passScore,
+      title: item.title.trim() || `${item.source?.toUpperCase()} ${t('groups.wordTestDefault')}（≥${passScore}）`,
+      draftId: nextDraftId++,
+    }]
+  } else if (item.type === 'course' || item.type === 'resource' || item.type === 'question_set') {
     if (item.refId == null) {
       ElMessage.warning(t('groups.itemNeedRef'))
       return
     }
-    const options = item.type === 'course' ? courseOptions.value : resourceOptions.value
+    const options = item.type === 'course'
+      ? courseOptions.value
+      : item.type === 'resource' ? resourceOptions.value : questionSetOptions.value
     const title = options.find(option => option.id === item.refId)?.title ?? ''
     taskItems.value = [...taskItems.value, {
       type: item.type,
       refId: item.refId,
-      title,
+      source: null,
+      passScore: item.type === 'question_set' ? passScore : null,
+      title: item.title.trim() || (item.type === 'question_set' ? `${title}（≥${passScore}）` : title),
       draftId: nextDraftId++,
     }]
   } else {
@@ -72,11 +102,13 @@ function addTaskItem() {
     taskItems.value = [...taskItems.value, {
       type: item.type,
       refId: null,
+      source: null,
+      passScore: null,
       title,
       draftId: nextDraftId++,
     }]
   }
-  itemDraft.value = { type: item.type, refId: null, title: '' }
+  itemDraft.value = { type: item.type, refId: null, title: '', source: 'cet4', passScore: 60 }
 }
 
 function removeTaskItem(draftId: number) {
@@ -84,9 +116,9 @@ function removeTaskItem(draftId: number) {
 }
 
 function resetForm() {
-  taskForm.value = { title: '', content: '' }
+  taskForm.value = { title: '', content: '', dueAt: '' }
   taskItems.value = []
-  itemDraft.value = { type: 'course', refId: null, title: '' }
+  itemDraft.value = { type: 'course', refId: null, title: '', source: 'cet4', passScore: 60 }
 }
 
 function publishTask() {
@@ -101,8 +133,12 @@ function publishTask() {
     return
   }
   publishing.value = true
-  const items = taskItems.value.map(({ type, refId, title: itemTitle }) => ({ type, refId, title: itemTitle }))
-  post<GroupMessage>(`/api/groups/${props.groupId}/tasks`, { title, content, items }, message => {
+  const items = taskItems.value.map(({ type, refId, title: itemTitle, source, passScore }) => ({
+    type, refId, title: itemTitle, source, passScore,
+  }))
+  post<GroupMessage>(`/api/groups/${props.groupId}/tasks`, {
+    title, content, dueAt: taskForm.value.dueAt || null, items,
+  }, message => {
     if (disposed) return
     publishing.value = false
     resetForm()
@@ -130,6 +166,10 @@ onUnmounted(() => {
       <textarea v-model="taskForm.content" rows="3" maxlength="2000"
                 :placeholder="t('groups.taskContentPlaceholder')"></textarea>
     </label>
+    <label class="field">
+      <span>{{ t('groups.dueAtLabel') }}</span>
+      <input v-model="taskForm.dueAt" type="datetime-local">
+    </label>
     <div class="field">
       <span>{{ t('groups.taskItems') }}</span>
       <div class="item-builder">
@@ -138,6 +178,8 @@ onUnmounted(() => {
           <option value="resource">{{ t('groups.itemTypeResource') }}</option>
           <option value="member_visit">{{ t('groups.itemTypeVisit') }}</option>
           <option value="text">{{ t('groups.itemTypeText') }}</option>
+          <option value="word_test">{{ t('groups.itemTypeWordTest') }}</option>
+          <option value="question_set">{{ t('groups.itemTypeQuestionSet') }}</option>
         </select>
         <select
             v-if="itemDraft.type === 'course'"
@@ -159,6 +201,24 @@ onUnmounted(() => {
             {{ resource.title }}
           </option>
         </select>
+        <select
+            v-else-if="itemDraft.type === 'question_set'"
+            v-model="itemDraft.refId"
+            class="item-select grow"
+        >
+          <option :value="null" disabled>{{ t('groups.itemQuestionSetPlaceholder') }}</option>
+          <option v-for="set in questionSetOptions" :key="set.id" :value="set.id">
+            {{ set.title }}
+          </option>
+        </select>
+        <select
+            v-else-if="itemDraft.type === 'word_test'"
+            v-model="itemDraft.source"
+            class="item-select"
+        >
+          <option value="cet4">CET-4</option>
+          <option value="cet6">CET-6</option>
+        </select>
         <input
             v-else
             v-model="itemDraft.title"
@@ -168,6 +228,14 @@ onUnmounted(() => {
             :placeholder="itemDraft.type === 'member_visit'
               ? t('groups.itemVisitDefault') : t('groups.itemTitlePlaceholder')"
         >
+        <template v-if="itemDraft.type === 'word_test' || itemDraft.type === 'question_set'">
+          <label class="test-config">
+            <span>{{ t('groups.passScore') }}</span>
+            <input v-model.number="itemDraft.passScore" type="number" min="0" max="100">
+          </label>
+          <input v-model="itemDraft.title" type="text" maxlength="200" class="item-input grow"
+                 :placeholder="t('groups.itemTitleOptional')">
+        </template>
         <button class="ghost-button" type="button" @click="addTaskItem">{{ t('groups.addItem') }}</button>
       </div>
       <ul v-if="taskItems.length" class="item-draft-list">
@@ -240,6 +308,25 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.test-config {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.test-config input {
+  width: 72px;
+  padding: 8px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  color: var(--el-text-color-primary);
+  background: var(--el-bg-color);
+  font: inherit;
 }
 
 .item-select,

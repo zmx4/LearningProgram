@@ -11,5 +11,7 @@ import lombok.Data;
 public class GroupTaskItemCreateVO {
     private String type;
     private Integer refId;
+    private String source;
+    private Integer passScore;
     private String title;
 }

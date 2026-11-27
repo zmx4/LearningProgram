@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Flag } from '@element-plus/icons-vue'
 import type { GroupMessage, GroupTask, TaskItem, TaskItemType } from '@/types/group'
@@ -12,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   goCourse: [item: TaskItem]
   accessResource: [item: TaskItem]
+  goTest: [item: TaskItem]
   completeItem: [task: GroupTask, item: TaskItem]
   openProgress: [task: GroupTask]
 }>()
@@ -23,6 +25,8 @@ function itemTypeLabel(type: TaskItemType) {
     case 'course': return t('groups.itemTypeCourse')
     case 'resource': return t('groups.itemTypeResource')
     case 'member_visit': return t('groups.itemTypeVisit')
+    case 'word_test': return t('groups.itemTypeWordTest')
+    case 'question_set': return t('groups.itemTypeQuestionSet')
     default: return t('groups.itemTypeText')
   }
 }
@@ -31,6 +35,17 @@ function formatTime(value: string) {
   if (!value) return ''
   return value.replace('T', ' ').slice(5, 16)
 }
+
+const dueLabel = computed(() => {
+  if (!props.task?.dueAt) return ''
+  if (props.task.lateCompleted) return t('groups.lateCompleted')
+  if (props.task.myFinished) return t('groups.finished')
+  return `${t('groups.dueAtLabel')}: ${formatTime(props.task.dueAt)}`
+})
+
+const overdue = computed(() => Boolean(
+    props.task?.dueAt && !props.task.myFinished && new Date(props.task.dueAt).getTime() < Date.now(),
+))
 </script>
 
 <template>
@@ -41,6 +56,9 @@ function formatTime(value: string) {
     </div>
     <h4>{{ message.title }}</h4>
     <p>{{ message.content }}</p>
+    <p v-if="dueLabel" class="task-due" :class="{ overdue, late: task?.lateCompleted }">
+      <el-icon><Flag /></el-icon>{{ dueLabel }}
+    </p>
     <template v-if="task">
       <div v-if="task.items.length" class="task-items">
         <div v-for="item in task.items" :key="item.id" class="task-item">
@@ -63,6 +81,12 @@ function formatTime(value: string) {
                 type="button"
                 @click="emit('accessResource', item)"
             >{{ t('groups.goDownload') }}</button>
+            <button
+                v-else-if="(item.type === 'word_test' || item.type === 'question_set') && !item.myCompleted"
+                class="mini-button"
+                type="button"
+                @click="emit('goTest', item)"
+            >{{ t('groups.goTest') }}</button>
             <button
                 v-else-if="item.type === 'text' && !item.myCompleted"
                 class="mini-button"
@@ -136,6 +160,27 @@ function formatTime(value: string) {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  font-size: 11px;
+}
+
+.task-due.overdue {
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+}
+
+.task-due.late {
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
 }
 
 .task-items {

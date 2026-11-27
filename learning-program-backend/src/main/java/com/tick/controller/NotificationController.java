@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 站内通知接口：当前用户的通知列表、单条已读与全部已读。
@@ -32,6 +33,11 @@ public class NotificationController {
                 .filter(notification -> !Boolean.TRUE.equals(notification.getReadStatus()))
                 .count();
         return RestBean.success(new NotificationListVO(notifications, unreadCount));
+    }
+
+    @GetMapping("/unread-count")
+    public RestBean<Map<String, Long>> unreadCount(@RequestAttribute("id") Integer accountId) {
+        return RestBean.success(Map.of("count", notificationService.countUnread(accountId)));
     }
 
     @PostMapping("/{id}/read")

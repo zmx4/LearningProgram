@@ -15,6 +15,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   goCourse: [item: TaskItem]
   accessResource: [item: TaskItem]
+  goTest: [item: TaskItem]
   completeItem: [task: GroupTask, item: TaskItem]
   openProgress: [task: GroupTask]
 }>()
@@ -59,6 +60,7 @@ defineExpose({ scrollToBottom })
           :is-owner="isOwner"
           @go-course="emit('goCourse', $event)"
           @access-resource="emit('accessResource', $event)"
+          @go-test="emit('goTest', $event)"
           @complete-item="onCompleteItem"
           @open-progress="emit('openProgress', $event)"
       />

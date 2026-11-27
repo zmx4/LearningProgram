@@ -4,23 +4,28 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tick.entity.dto.CourseChapter;
 import com.tick.entity.dto.CourseProgress;
 import com.tick.entity.dto.GroupMemberVisit;
+import com.tick.entity.dto.GroupTaskFinish;
 import com.tick.entity.dto.GroupTaskItem;
 import com.tick.entity.dto.GroupTaskProgress;
 import com.tick.entity.dto.ResourceAccessLog;
 import com.tick.entity.dto.StudyGroupMember;
 import com.tick.entity.dto.StudyGroupMessage;
+import com.tick.entity.dto.TestRecord;
 import com.tick.mapper.CourseChapterMapper;
 import com.tick.mapper.CourseProgressMapper;
 import com.tick.mapper.GroupMemberVisitMapper;
+import com.tick.mapper.GroupTaskFinishMapper;
 import com.tick.mapper.GroupTaskItemMapper;
 import com.tick.mapper.GroupTaskProgressMapper;
 import com.tick.mapper.ResourceAccessLogMapper;
+import com.tick.mapper.TestRecordMapper;
 import com.tick.service.impl.group.GroupTaskCompletionContext;
 import com.tick.service.impl.group.GroupTaskItemJudge;
 import com.tick.service.impl.group.GroupTaskItemState;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,31 +41,41 @@ import java.util.stream.Collectors;
 public class GroupTaskCompletionService {
     private final GroupTaskItemMapper taskItemMapper;
     private final GroupTaskProgressMapper taskProgressMapper;
+    private final GroupTaskFinishMapper taskFinishMapper;
     private final GroupMemberVisitMapper visitMapper;
     private final ResourceAccessLogMapper accessLogMapper;
     private final CourseChapterMapper chapterMapper;
     private final CourseProgressMapper courseProgressMapper;
+    private final TestRecordMapper testRecordMapper;
     private final Map<String, GroupTaskItemJudge> judges;
 
     public GroupTaskCompletionService(GroupTaskItemMapper taskItemMapper,
                                       GroupTaskProgressMapper taskProgressMapper,
+                                      GroupTaskFinishMapper taskFinishMapper,
                                       GroupMemberVisitMapper visitMapper,
                                       ResourceAccessLogMapper accessLogMapper,
                                       CourseChapterMapper chapterMapper,
                                       CourseProgressMapper courseProgressMapper,
+                                      TestRecordMapper testRecordMapper,
                                       List<GroupTaskItemJudge> judges) {
         this.taskItemMapper = taskItemMapper;
         this.taskProgressMapper = taskProgressMapper;
+        this.taskFinishMapper = taskFinishMapper;
         this.visitMapper = visitMapper;
         this.accessLogMapper = accessLogMapper;
         this.chapterMapper = chapterMapper;
         this.courseProgressMapper = courseProgressMapper;
+        this.testRecordMapper = testRecordMapper;
         this.judges = judges.stream()
                 .collect(Collectors.toUnmodifiableMap(GroupTaskItemJudge::type, Function.identity()));
     }
 
     public GroupTaskItemState state(GroupTaskCompletionContext context, GroupTaskItem item,
-                                    Integer accountId, LocalDateTime taskCreatedAt) {
+                                    Integer accountId, LocalDateTime taskCreatedAt,
+                                    LocalDateTime memberJoinedAt) {
+        if (memberJoinedAt != null && taskCreatedAt != null && memberJoinedAt.isAfter(taskCreatedAt)) {
+            return new GroupTaskItemState(false, null);
+        }
         GroupTaskItemJudge judge = judges.get(item.getItemType());
         if (judge == null) {
             return new GroupTaskItemState(false, null);
@@ -70,10 +85,13 @@ public class GroupTaskCompletionService {
 
     /**
      * 批量加载一组任务的完成判定上下文，避免按项逐次查库。
-     * 只统计本组成员、且只读取任务发布之后的资源访问流水，避免随流水表增长而全量扫描。
+     * 只统计本组成员、且只读取任务发布之后的资源访问与测试流水。
      */
     public GroupTaskCompletionContext loadContext(Integer groupId, List<StudyGroupMessage> tasks,
                                                   List<StudyGroupMember> members) {
+        if (tasks.isEmpty()) {
+            return GroupTaskCompletionContext.empty();
+        }
         List<Integer> messageIds = tasks.stream().map(StudyGroupMessage::getId).toList();
         List<GroupTaskItem> items = taskItemMapper.selectList(
                 new LambdaQueryWrapper<GroupTaskItem>()
@@ -94,6 +112,16 @@ public class GroupTaskCompletionService {
         }
 
         List<Integer> memberIds = members.stream().map(StudyGroupMember::getAccountId).toList();
+        Map<String, LocalDateTime> finishes = new HashMap<>();
+        if (!memberIds.isEmpty()) {
+            for (GroupTaskFinish row : taskFinishMapper.selectList(
+                    new LambdaQueryWrapper<GroupTaskFinish>()
+                            .in(GroupTaskFinish::getTaskId, messageIds)
+                            .in(GroupTaskFinish::getAccountId, memberIds))) {
+                finishes.put(row.getTaskId() + "_" + row.getAccountId(), row.getCompletedAt());
+            }
+        }
+
         LocalDateTime taskWindowStart = tasks.stream()
                 .map(StudyGroupMessage::getCreatedAt)
                 .filter(Objects::nonNull)
@@ -157,6 +185,48 @@ public class GroupTaskCompletionService {
                         .eq(GroupMemberVisit::getGroupId, groupId))) {
             visits.put(visit.getAccountId(), visit.getLastVisitAt());
         }
-        return new GroupTaskCompletionContext(itemsByMessage, manual, chapterCounts, studies, accesses, visits);
+
+        Map<String, List<GroupTaskCompletionContext.TestScore>> wordTests = new HashMap<>();
+        Set<String> wordSources = items.stream()
+                .filter(item -> GroupTaskItem.TYPE_WORD_TEST.equals(item.getItemType()))
+                .map(GroupTaskItem::getSource).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!wordSources.isEmpty() && !memberIds.isEmpty()) {
+            for (TestRecord record : testRecordMapper.selectList(
+                    new LambdaQueryWrapper<TestRecord>()
+                            .select(TestRecord::getAccountId, TestRecord::getSource,
+                                    TestRecord::getScore, TestRecord::getCreatedAt)
+                            .eq(TestRecord::getCategory, "word")
+                            .in(TestRecord::getAccountId, memberIds)
+                            .in(TestRecord::getSource, wordSources)
+                            .ge(taskWindowStart != null, TestRecord::getCreatedAt, taskWindowStart))) {
+                wordTests.computeIfAbsent(record.getAccountId() + "_" + record.getSource(),
+                        key -> new ArrayList<>()).add(new GroupTaskCompletionContext.TestScore(
+                                record.getScore() == null ? 0 : record.getScore(), record.getCreatedAt()));
+            }
+        }
+
+        Map<String, List<GroupTaskCompletionContext.TestScore>> questionSetTests = new HashMap<>();
+        Set<Integer> questionSetIds = items.stream()
+                .filter(item -> GroupTaskItem.TYPE_QUESTION_SET.equals(item.getItemType()))
+                .map(GroupTaskItem::getRefId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!questionSetIds.isEmpty() && !memberIds.isEmpty()) {
+            for (TestRecord record : testRecordMapper.selectList(
+                    new LambdaQueryWrapper<TestRecord>()
+                            .select(TestRecord::getAccountId, TestRecord::getSetId,
+                                    TestRecord::getScore, TestRecord::getCreatedAt)
+                            .eq(TestRecord::getCategory, "knowledge")
+                            .in(TestRecord::getAccountId, memberIds)
+                            .in(TestRecord::getSetId, questionSetIds)
+                            .ge(taskWindowStart != null, TestRecord::getCreatedAt, taskWindowStart))) {
+                questionSetTests.computeIfAbsent(record.getAccountId() + "_" + record.getSetId(),
+                        key -> new ArrayList<>()).add(new GroupTaskCompletionContext.TestScore(
+                                record.getScore() == null ? 0 : record.getScore(), record.getCreatedAt()));
+            }
+        }
+
+        return new GroupTaskCompletionContext(itemsByMessage, manual, chapterCounts, studies, accesses, visits,
+                finishes, wordTests, questionSetTests);
     }
 }

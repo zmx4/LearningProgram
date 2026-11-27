@@ -210,6 +210,8 @@ GET /api/groups/{groupId}/leaderboard?metric=points|study|check-in|tasks
 
 服务端按小批量查询任务、成员和台账，避免逐个小组、逐条任务项查询。
 
+**实施状态（2026-11-27）**：阶段 2 前后端已落地，包含截止时间、两种测试任务项、提交后事件结算、真实未读数、组内 `tasks` 榜和首页概览接口。当前每个任务项完成奖励 1 积分，整任务奖励为任务项数量；后续如需调整奖励权重，只改结算服务中的 `POINTS_PER_ITEM`。
+
 ## 6. 阶段 3：做减法与收尾
 
 - `member_visit` 任务项不再出现在新建任务的表单里，已有任务保留可读。彻底删除需要删表，另行确认。
@@ -228,7 +230,7 @@ GET /api/groups/{groupId}/leaderboard?metric=points|study|check-in|tasks
 | `db_group_task_finish`（新表） | 任务完成台账：任务、成员、完成时间、发放积分；任务加成员唯一，任务删除时级联 |
 | `db_notification` | 不改结构，`type` 新增小组事件取值 |
 
-新增一张表后，安装脚本里的表数核对值（现为 28）同步加 1。
+新增一张表后，整库 DDL 与安装脚本预期表数同步为 29。
 
 ## 8. 接口调整
 
@@ -277,6 +279,14 @@ GET /api/groups/{groupId}/leaderboard?metric=points|study|check-in|tasks
 - SSR：`/index`、`/groups`、`/leaderboard?groupId=1` 均返回 200，页面标题分别为“我的小组”“学习小组”“排行榜”。
 - 浏览器：当前 WSL 环境没有可用浏览器运行时，未执行真实浏览器截图与点击验证；待具备浏览器环境后补做桌面和移动端检查。
 - 接口联调：本机未安装/启动 Redis，运行中的接口请求被限流过滤器阻断，未完成真实数据库联调；鉴权与查询逻辑由服务层单测覆盖。
+
+### 阶段 2 验证记录（2026-11-27）
+
+- 后端：`mvn test`，151 个测试全部通过；新增测试项判定、结算幂等、首页概览、组内任务榜和通知未读数回归用例。
+- 前端：`pnpm run build`，类型检查与生产构建通过。
+- SSR：`/index`、`/groups`、`/leaderboard?groupId=1` 均返回 200，页面标题分别为“我的小组”“学习小组”“排行榜”。
+- 数据库：完整 DDL 已包含 29 张表，已有库升级脚本位于 `scripts/migrations/2026-11-27-group-task-settlement.sql`。
+- 浏览器：当前 WSL 不在内置浏览器支持范围内，仍未执行真实浏览器截图与点击验证；未启动本地 MySQL / Redis，未完成真实数据库联调。
 
 ## 11. 提交边界
 

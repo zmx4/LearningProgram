@@ -3,8 +3,11 @@ package com.tick.service.impl;
 import com.tick.entity.dto.TestCategory;
 import com.tick.entity.dto.TestRecord;
 import com.tick.entity.dto.WordTestRecord;
+import com.tick.event.GroupLearningActivityEvent;
 import com.tick.service.WordTestService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -14,12 +17,19 @@ import java.util.Map;
  */
 @Service
 public class WordTestServiceImpl extends BaseTestService implements WordTestService {
+    private final ApplicationEventPublisher eventPublisher;
+
+    public WordTestServiceImpl(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
     @Override
     protected TestCategory category() {
         return TestCategory.WORD;
     }
 
     @Override
+    @Transactional
     public WordTestRecord saveResult(Integer accountId, WordTestRecord vo) {
         if (!"cet4".equals(vo.getSource()) && !"cet6".equals(vo.getSource())) {
             throw new IllegalArgumentException("单词来源无效");
@@ -29,6 +39,7 @@ public class WordTestServiceImpl extends BaseTestService implements WordTestServ
                 vo.getDurationSeconds());
         record.setSource(vo.getSource());
         save(record);
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         return toWordRecord(record);
     }
 

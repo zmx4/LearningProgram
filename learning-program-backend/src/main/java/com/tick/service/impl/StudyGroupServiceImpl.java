@@ -13,12 +13,15 @@ import com.tick.entity.vo.response.GroupMemberVO;
 import com.tick.entity.vo.response.GroupMessageVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
+import com.tick.event.GroupLearningActivityEvent;
 import com.tick.exception.NotFoundException;
 import com.tick.mapper.GroupMemberVisitMapper;
 import com.tick.mapper.StudyGroupMapper;
 import com.tick.mapper.StudyGroupMemberMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
+import com.tick.service.NotificationService;
 import com.tick.service.StudyGroupService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,15 +52,21 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
     private final StudyGroupMessageMapper messageMapper;
     private final GroupMemberVisitMapper visitMapper;
     private final StudyGroupMemberQuery memberQuery;
+    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public StudyGroupServiceImpl(StudyGroupMemberMapper memberMapper,
                                  StudyGroupMessageMapper messageMapper,
                                  GroupMemberVisitMapper visitMapper,
-                                 StudyGroupMemberQuery memberQuery) {
+                                 StudyGroupMemberQuery memberQuery,
+                                 NotificationService notificationService,
+                                 ApplicationEventPublisher eventPublisher) {
         this.memberMapper = memberMapper;
         this.messageMapper = messageMapper;
         this.visitMapper = visitMapper;
         this.memberQuery = memberQuery;
+        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -129,6 +138,10 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         } catch (DuplicateKeyException exception) {
             throw new IllegalArgumentException("你已经在该小组中");
         }
+        String memberName = memberQuery.usernames(List.of(accountId)).get(accountId);
+        notificationService.create(group.getOwnerId(), "有新成员加入学习小组",
+                (memberName == null ? "新成员" : memberName) + " 加入了 " + group.getName(),
+                "/groups/" + group.getId(), "group_member_joined");
 
         return toVO(group, StudyGroupMember.ROLE_MEMBER,
                 memberQuery.usernames(List.of(group.getOwnerId())).get(group.getOwnerId()),
@@ -136,6 +149,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
     }
 
     @Override
+    @Transactional
     public StudyGroupDetailVO getDetail(Integer accountId, Integer groupId) {
         StudyGroup group = getById(groupId);
         StudyGroupMember self = group == null ? null : memberQuery.membership(groupId, accountId);
@@ -144,6 +158,7 @@ public class StudyGroupServiceImpl extends ServiceImpl<StudyGroupMapper, StudyGr
         }
         // 记录本次访问，供 member_visit 类型任务项判定"任务发布后组员已访问小组"
         recordVisit(groupId, accountId);
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         List<StudyGroupMember> members = memberQuery.membersOf(groupId);
         Map<Integer, String> names = memberQuery.usernames(members.stream().map(StudyGroupMember::getAccountId).toList());
         List<GroupMemberVO> memberVOs = members.stream()

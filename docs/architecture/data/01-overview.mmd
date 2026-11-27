@@ -63,6 +63,9 @@ erDiagram
   db_group_task_progress {
     int id PK "int(11) 自增"
   }
+  db_group_task_finish {
+    int id PK "int(11) 自增"
+  }
   db_discussion_post {
     int id PK "int(11) 自增"
   }
@@ -106,8 +109,9 @@ erDiagram
   db_study_group ||--o{ db_group_member_visit : "成员访问 1:0..N"
   db_study_group_message ||--o{ db_group_task_item : "任务项 1:0..N"
   db_group_task_item ||--o{ db_group_task_progress : "任务完成 1:0..N"
+  db_study_group_message ||--o{ db_group_task_finish : "任务结算 1:0..N"
 
   %% 证据：
-  %% - scripts/learning.sql:8-338（28 张表 DDL）
-  %% - 21 条 CONSTRAINT ... FOREIGN KEY 子句；连接表：db_course_question_set、db_question_set_item、db_study_group_member
+  %% - scripts/learning.sql:8-350（29 张表 DDL）
+  %% - 22 条 CONSTRAINT ... FOREIGN KEY 子句；连接表：db_course_question_set、db_question_set_item、db_study_group_member
   %% - 软引用、冗余列、多态引用在 02 - 06 分域页用虚线标注

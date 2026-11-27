@@ -47,6 +47,19 @@ const isAdmin = currentRole() === 'admin'
 const isLoggedIn = !unauthorized()
 // 顶栏头像：未设置头像或未启用对象存储时为空，回退为默认图标
 const avatarSrc = ref('')
+const unreadCount = ref(0)
+let unreadTimer: ReturnType<typeof setInterval> | null = null
+
+function loadUnreadCount() {
+  if (!isLoggedIn) return
+  get<{ count: number }>('/api/notifications/unread-count', data => {
+    unreadCount.value = data.count
+  }, () => undefined)
+}
+
+function onVisibilityChange() {
+  if (!document.hidden) loadUnreadCount()
+}
 
 // On mobile the sidebar is an off-canvas drawer driven by mobileNavOpen;
 // on desktop it keeps the hover/click-to-expand rail behaviour.
@@ -207,6 +220,9 @@ function onProfileUpdated(event: Event) {
 onMounted(() => {
   loadDailyWord()
   loadAvatar()
+  loadUnreadCount()
+  unreadTimer = setInterval(loadUnreadCount, 30000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
   window.addEventListener(profileUpdatedEvent, onProfileUpdated)
   document.addEventListener('keydown', onDocumentKeydown)
@@ -216,6 +232,8 @@ onUnmounted(() => {
   window.removeEventListener(dailyWordSettingsChangedEvent, onDailyWordSettingsChanged)
   window.removeEventListener(profileUpdatedEvent, onProfileUpdated)
   document.removeEventListener('keydown', onDocumentKeydown)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  if (unreadTimer) clearInterval(unreadTimer)
 })
 </script>
 
@@ -345,7 +363,7 @@ onUnmounted(() => {
               <el-icon>
                 <Bell/>
               </el-icon>
-              <span class="notification-dot"></span>
+              <span v-if="unreadCount > 0" class="notification-dot"></span>
             </button>
             <button class="profile" type="button" :aria-label="t('common.openProfile')"
                     @click="router.push({ name: 'profile' })">

@@ -5,7 +5,7 @@ import type { GroupSummary } from '@/types/group'
 
 interface GroupMetrics {
   ongoingTasks: number
-  completionRate: number | null
+  completedTasks: number
   overdueTasks: number
 }
 
@@ -52,8 +52,8 @@ function formatDate(value: string) {
           <strong>{{ metrics.ongoingTasks }}</strong>
         </span>
         <span class="metric">
-          <small>{{ t('groups.myCompletion') }}</small>
-          <strong>{{ metrics.completionRate == null ? '—' : `${metrics.completionRate}%` }}</strong>
+          <small>{{ t('groups.completedTasks') }}</small>
+          <strong>{{ metrics.completedTasks }}</strong>
         </span>
         <span class="metric">
           <small>{{ t('groups.overdueTasks') }}</small>

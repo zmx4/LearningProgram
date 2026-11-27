@@ -1,7 +1,7 @@
 # E-R 图证据与置信度
 
 本文件记录 `learning-program-er.drawio` 与其 Mermaid 规范源（`01-overview.mmd` … `06-social.mmd`）
-的建模依据。唯一事实源是 `scripts/learning.sql`（28 张表，第 8 - 338 行）；
+的建模依据。唯一事实源是 `scripts/learning.sql`（29 张表，第 8 - 338 行）；
 MyBatis-Plus 实体位于 `learning-program-backend/src/main/java/com/tick/entity/dto/`。
 
 置信度定义：

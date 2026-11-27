@@ -103,6 +103,14 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
     loadTasks()
   }
 
+  function goTest(item: TaskItem) {
+    if (item.type === 'word_test') {
+      void router.push({ name: 'tests-words', query: { source: item.source ?? 'cet4' } })
+    } else if (item.type === 'question_set' && item.refId != null) {
+      void router.push({ name: 'tests-knowledge', query: { set: item.refId } })
+    }
+  }
+
   function completeItem(task: GroupTask, item: TaskItem) {
     post<GroupTask>(`/api/groups/${groupId}/tasks/${task.id}/items/${item.id}/complete`, {}, updated => {
       if (disposed) return
@@ -192,6 +200,7 @@ export function useGroupDetail(groupId: number, scrollToBottom: () => void) {
     sendMessage,
     goCourse,
     accessResource,
+    goTest,
     completeItem,
     openMember,
     copyInviteCode,

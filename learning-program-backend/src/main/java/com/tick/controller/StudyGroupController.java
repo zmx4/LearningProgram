@@ -8,11 +8,13 @@ import com.tick.entity.vo.request.StudyGroupCreateVO;
 import com.tick.entity.vo.request.StudyGroupJoinVO;
 import com.tick.entity.vo.response.GroupMemberDetailVO;
 import com.tick.entity.vo.response.GroupMessageVO;
+import com.tick.entity.vo.response.GroupOverviewVO;
 import com.tick.entity.vo.response.GroupTaskProgressVO;
 import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.LeaderboardVO;
 import com.tick.entity.vo.response.StudyGroupDetailVO;
 import com.tick.entity.vo.response.StudyGroupVO;
+import com.tick.service.GroupOverviewService;
 import com.tick.service.GroupTaskService;
 import com.tick.service.LeaderboardService;
 import com.tick.service.StudyGroupService;
@@ -38,13 +40,16 @@ public class StudyGroupController {
     private final StudyGroupService studyGroupService;
     private final GroupTaskService groupTaskService;
     private final LeaderboardService leaderboardService;
+    private final GroupOverviewService groupOverviewService;
 
     public StudyGroupController(StudyGroupService studyGroupService,
                                 GroupTaskService groupTaskService,
-                                LeaderboardService leaderboardService) {
+                                LeaderboardService leaderboardService,
+                                GroupOverviewService groupOverviewService) {
         this.studyGroupService = studyGroupService;
         this.groupTaskService = groupTaskService;
         this.leaderboardService = leaderboardService;
+        this.groupOverviewService = groupOverviewService;
     }
 
     @GetMapping
@@ -66,6 +71,11 @@ public class StudyGroupController {
     public RestBean<StudyGroupVO> join(@RequestBody StudyGroupJoinVO vo,
                                        @RequestAttribute("id") Integer accountId) {
         return RestBean.success(studyGroupService.joinByCode(accountId, vo));
+    }
+
+    @GetMapping("/overview")
+    public RestBean<GroupOverviewVO> overview(@RequestAttribute("id") Integer accountId) {
+        return RestBean.success(groupOverviewService.getOverview(accountId));
     }
 
     @GetMapping("/{id}")

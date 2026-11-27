@@ -27,6 +27,8 @@ public class StudyGroupMessage {
     private String type;
     private String title;
     private String content;
+    @TableField("due_at")
+    private LocalDateTime dueAt;
     @TableField("created_at")
     private LocalDateTime createdAt;
 }

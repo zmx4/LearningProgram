@@ -17,6 +17,10 @@ public class GroupTaskItemVO {
     /** course / resource / member_visit / text */
     private String type;
     private Integer refId;
+    /** 单词测试词表来源：cet4 / cet6 */
+    private String source;
+    /** 测试任务项及格分（0-100） */
+    private Integer passScore;
     private String title;
     /** 当前用户是否已完成该项 */
     private Boolean myCompleted;

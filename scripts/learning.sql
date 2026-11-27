@@ -183,8 +183,10 @@ CREATE TABLE `db_group_task_item` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
   `group_id` int(11) NOT NULL COMMENT '小组 ID',
   `message_id` int(11) NOT NULL COMMENT '所属任务消息',
-  `item_type` varchar(20) NOT NULL COMMENT '任务项类型：course / resource / member_visit / text',
-  `ref_id` int(11) DEFAULT NULL COMMENT '关联对象 ID（课程或资源），text 类型为空',
+  `item_type` varchar(20) NOT NULL COMMENT '任务项类型：course / resource / member_visit / text / word_test / question_set',
+  `ref_id` int(11) DEFAULT NULL COMMENT '关联对象 ID（课程、资源或题集）；单词测试为空',
+  `source` varchar(16) DEFAULT NULL COMMENT '单词测试词表来源：cet4 / cet6',
+  `pass_score` int(11) DEFAULT NULL COMMENT '测试任务项及格分（0-100）',
   `title` varchar(200) NOT NULL COMMENT '任务项标题',
   `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序值',
   PRIMARY KEY (`id`),
@@ -202,6 +204,19 @@ CREATE TABLE `db_group_task_progress` (
   UNIQUE KEY `uk_group_task_progress` (`item_id`,`account_id`),
   CONSTRAINT `fk_group_task_progress_item` FOREIGN KEY (`item_id`) REFERENCES `db_group_task_item` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组成员任务项完成记录（手动勾选）';
+
+CREATE TABLE `db_group_task_finish` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` int(11) NOT NULL COMMENT '小组 ID',
+  `task_id` int(11) NOT NULL COMMENT '任务消息 ID',
+  `account_id` int(11) NOT NULL COMMENT '完成成员账号',
+  `completed_at` datetime NOT NULL COMMENT '完成时间',
+  `points_awarded` int(11) NOT NULL COMMENT '本次发放积分',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_group_task_finish` (`task_id`,`account_id`),
+  KEY `idx_group_task_finish_group` (`group_id`,`account_id`),
+  CONSTRAINT `fk_group_task_finish_task` FOREIGN KEY (`task_id`) REFERENCES `db_study_group_message` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='小组成员整任务完成台账，唯一键保证只结算一次';
 
 CREATE TABLE `db_learning_resource` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -291,6 +306,7 @@ CREATE TABLE `db_study_group_message` (
   `type` varchar(10) NOT NULL COMMENT '消息类型：text / task',
   `title` varchar(100) DEFAULT NULL COMMENT '标题，任务消息使用',
   `content` varchar(2000) NOT NULL COMMENT '消息内容',
+  `due_at` datetime DEFAULT NULL COMMENT '任务截止时间，普通消息为空',
   `created_at` datetime NOT NULL COMMENT '发送时间',
   PRIMARY KEY (`id`),
   KEY `idx_study_group_message_group` (`group_id`,`id`),

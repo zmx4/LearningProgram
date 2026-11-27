@@ -9,7 +9,9 @@ import com.tick.mapper.StudyGroupMapper;
 import com.tick.mapper.StudyGroupMemberMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
 import com.tick.service.AccountService;
+import com.tick.service.NotificationService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -35,7 +37,9 @@ class StudyGroupServiceImplTest {
                 memberMapper,
                 mock(StudyGroupMessageMapper.class),
                 mock(GroupMemberVisitMapper.class),
-                memberQuery);
+                memberQuery,
+                mock(NotificationService.class),
+                mock(ApplicationEventPublisher.class));
     }
 
     private StudyGroupMember member(int id, int accountId, String role) {

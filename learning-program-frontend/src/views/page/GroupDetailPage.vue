@@ -37,6 +37,7 @@ const {
   sendMessage,
   goCourse,
   accessResource,
+  goTest,
   completeItem,
   openMember,
   copyInviteCode,
@@ -105,6 +106,7 @@ function openLeaderboard() {
             :my-id="myId"
             @go-course="goCourse"
             @access-resource="accessResource"
+            @go-test="goTest"
             @complete-item="completeItem"
             @open-progress="openProgress"
         />

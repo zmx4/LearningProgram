@@ -6,6 +6,7 @@ import com.tick.mapper.NotificationMapper;
 import com.tick.service.NotificationService;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -21,6 +22,27 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
                 .eq("account_id", accountId)
                 .orderByDesc("created_at")
                 .list();
+    }
+
+    @Override
+    public void create(Integer accountId, String title, String content, String link, String type) {
+        Notification notification = new Notification();
+        notification.setAccountId(accountId);
+        notification.setTitle(title);
+        notification.setContent(content);
+        notification.setLink(link);
+        notification.setType(type);
+        notification.setReadStatus(false);
+        notification.setCreatedAt(new Date());
+        save(notification);
+    }
+
+    @Override
+    public long countUnread(Integer accountId) {
+        Long count = query().eq("account_id", accountId)
+                .eq("is_read", false)
+                .count();
+        return count == null ? 0 : count;
     }
 
     @Override

@@ -52,6 +52,9 @@ public interface LeaderboardMapper {
     @Select(RANKED_PREFIX + "SELECT account_id, COUNT(*) AS metricValue FROM db_check_in GROUP BY account_id" + RANKED_SUFFIX)
     List<LeaderboardEntryVO> selectCheckInRanking(@Param("accountId") Integer accountId, @Param("limit") int limit);
 
+    @Select(RANKED_PREFIX + "SELECT account_id, COUNT(*) AS metricValue FROM db_group_task_finish GROUP BY account_id" + RANKED_SUFFIX)
+    List<LeaderboardEntryVO> selectTasksRanking(@Param("accountId") Integer accountId, @Param("limit") int limit);
+
     @Select(RANKED_PREFIX
             + "SELECT p.account_id, p.total_points AS metricValue FROM db_account_points p "
             + "JOIN db_study_group_member m ON m.account_id = p.account_id "
@@ -76,6 +79,14 @@ public interface LeaderboardMapper {
             + "WHERE m.group_id = #{groupId} GROUP BY c.account_id"
             + RANKED_SUFFIX)
     List<LeaderboardEntryVO> selectGroupCheckInRanking(@Param("accountId") Integer accountId,
+                                                      @Param("groupId") Integer groupId,
+                                                      @Param("limit") int limit);
+
+    @Select(RANKED_PREFIX
+            + "SELECT f.account_id, COUNT(*) AS metricValue FROM db_group_task_finish f "
+            + "WHERE f.group_id = #{groupId} GROUP BY f.account_id"
+            + RANKED_SUFFIX)
+    List<LeaderboardEntryVO> selectGroupTasksRanking(@Param("accountId") Integer accountId,
                                                       @Param("groupId") Integer groupId,
                                                       @Param("limit") int limit);
 }

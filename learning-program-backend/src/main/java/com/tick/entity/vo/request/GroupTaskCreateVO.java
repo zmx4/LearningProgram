@@ -2,6 +2,7 @@ package com.tick.entity.vo.request;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -12,5 +13,6 @@ import java.util.List;
 public class GroupTaskCreateVO {
     private String title;
     private String content;
+    private LocalDateTime dueAt;
     private List<GroupTaskItemCreateVO> items;
 }

@@ -19,6 +19,8 @@ public class GroupTaskItem {
     public static final String TYPE_RESOURCE = "resource";
     public static final String TYPE_MEMBER_VISIT = "member_visit";
     public static final String TYPE_TEXT = "text";
+    public static final String TYPE_WORD_TEST = "word_test";
+    public static final String TYPE_QUESTION_SET = "question_set";
 
     @TableId(type = IdType.AUTO)
     private Integer id;
@@ -28,9 +30,15 @@ public class GroupTaskItem {
     private Integer messageId;
     @TableField("item_type")
     private String itemType;
-    /** item_type 为 course / resource 时的课程或资源 id，其余类型为 null */
+    /** item_type 为 course / resource / question_set 时的关联对象 id，其余类型为 null */
     @TableField("ref_id")
     private Integer refId;
+    /** 单词测试词表来源：cet4 / cet6 */
+    @TableField("source")
+    private String source;
+    /** 测试任务项及格分（0-100） */
+    @TableField("pass_score")
+    private Integer passScore;
     private String title;
     @TableField("sort_order")
     private Integer sortOrder;

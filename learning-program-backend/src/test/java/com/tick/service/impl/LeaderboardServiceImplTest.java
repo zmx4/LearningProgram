@@ -144,6 +144,23 @@ class LeaderboardServiceImplTest {
     }
 
     @Test
+    void groupTaskLeaderboardCountsSettledTasks() {
+        StudyGroupMember member = new StudyGroupMember();
+        member.setGroupId(10);
+        member.setAccountId(ME);
+        when(memberQuery.membership(10, ME)).thenReturn(member);
+        when(mapper.selectGroupTasksRanking(ME, 10, 20)).thenReturn(List.of(
+                row(1, ME, "me", 4, 2)));
+
+        LeaderboardVO board = service.getGroupLeaderboard(ME, 10, "tasks", null);
+
+        assertEquals("tasks", board.getMetric());
+        assertEquals("完成任务", board.getMetricLabel());
+        assertEquals(4, board.getMe().getValue());
+        verify(mapper).selectGroupTasksRanking(ME, 10, 20);
+    }
+
+    @Test
     void nonMemberCannotReadGroupLeaderboard() {
         when(memberQuery.membership(10, ME)).thenReturn(null);
 

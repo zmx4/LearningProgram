@@ -6,6 +6,7 @@ import com.tick.entity.dto.Course;
 import com.tick.entity.dto.GroupTaskItem;
 import com.tick.entity.dto.GroupTaskProgress;
 import com.tick.entity.dto.LearningResource;
+import com.tick.entity.dto.QuestionSet;
 import com.tick.entity.dto.StudyGroupMember;
 import com.tick.entity.dto.StudyGroupMessage;
 import com.tick.entity.vo.request.GroupTaskCreateVO;
@@ -16,16 +17,21 @@ import com.tick.entity.vo.response.GroupTaskItemVO;
 import com.tick.entity.vo.response.GroupTaskProgressVO;
 import com.tick.entity.vo.response.GroupTaskVO;
 import com.tick.entity.vo.response.MemberTaskProgressVO;
+import com.tick.event.GroupLearningActivityEvent;
+import com.tick.event.GroupTaskPublishedEvent;
 import com.tick.mapper.CourseMapper;
 import com.tick.mapper.GroupTaskItemMapper;
 import com.tick.mapper.GroupTaskProgressMapper;
 import com.tick.mapper.LearningResourceMapper;
+import com.tick.mapper.QuestionSetMapper;
 import com.tick.mapper.StudyGroupMessageMapper;
 import com.tick.monitor.Monitored;
 import com.tick.service.AccountService;
 import com.tick.service.GroupTaskService;
+import com.tick.service.NotificationService;
 import com.tick.service.impl.group.GroupTaskCompletionContext;
 import com.tick.service.impl.group.GroupTaskItemState;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +56,8 @@ public class GroupTaskServiceImpl implements GroupTaskService {
     private static final int MAX_ITEM_TITLE_LENGTH = 200;
     private static final Set<String> ITEM_TYPES = Set.of(
             GroupTaskItem.TYPE_COURSE, GroupTaskItem.TYPE_RESOURCE,
-            GroupTaskItem.TYPE_MEMBER_VISIT, GroupTaskItem.TYPE_TEXT);
+            GroupTaskItem.TYPE_MEMBER_VISIT, GroupTaskItem.TYPE_TEXT,
+            GroupTaskItem.TYPE_WORD_TEST, GroupTaskItem.TYPE_QUESTION_SET);
 
     private final StudyGroupMemberQuery memberQuery;
     private final StudyGroupMessageMapper messageMapper;
@@ -58,8 +65,11 @@ public class GroupTaskServiceImpl implements GroupTaskService {
     private final GroupTaskProgressMapper taskProgressMapper;
     private final CourseMapper courseMapper;
     private final LearningResourceMapper resourceMapper;
+    private final QuestionSetMapper questionSetMapper;
     private final AccountService accountService;
     private final GroupTaskCompletionService completionService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     public GroupTaskServiceImpl(StudyGroupMemberQuery memberQuery,
                                 StudyGroupMessageMapper messageMapper,
@@ -67,16 +77,22 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                                 GroupTaskProgressMapper taskProgressMapper,
                                 CourseMapper courseMapper,
                                 LearningResourceMapper resourceMapper,
+                                QuestionSetMapper questionSetMapper,
                                 AccountService accountService,
-                                GroupTaskCompletionService completionService) {
+                                GroupTaskCompletionService completionService,
+                                ApplicationEventPublisher eventPublisher,
+                                NotificationService notificationService) {
         this.memberQuery = memberQuery;
         this.messageMapper = messageMapper;
         this.taskItemMapper = taskItemMapper;
         this.taskProgressMapper = taskProgressMapper;
         this.courseMapper = courseMapper;
         this.resourceMapper = resourceMapper;
+        this.questionSetMapper = questionSetMapper;
         this.accountService = accountService;
         this.completionService = completionService;
+        this.eventPublisher = eventPublisher;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -94,8 +110,12 @@ public class GroupTaskServiceImpl implements GroupTaskService {
             throw new IllegalArgumentException("任务标题不能为空且不超过 " + MAX_TITLE_LENGTH + " 字");
         }
         String content = normalizeContent(vo.getContent());
+        LocalDateTime dueAt = vo.getDueAt();
+        if (dueAt != null && dueAt.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("截止时间不能早于当前时间");
+        }
         List<GroupTaskItem> items = normalizeItems(vo.getItems());
-        StudyGroupMessage message = saveMessage(groupId, accountId, StudyGroupMessage.TYPE_TASK, title, content);
+        StudyGroupMessage message = saveMessage(groupId, accountId, StudyGroupMessage.TYPE_TASK, title, content, dueAt);
         for (int i = 0; i < items.size(); i++) {
             GroupTaskItem item = items.get(i);
             item.setGroupId(groupId);
@@ -103,6 +123,8 @@ public class GroupTaskServiceImpl implements GroupTaskService {
             item.setSortOrder(i);
             taskItemMapper.insert(item);
         }
+        notifyTaskPublished(groupId, accountId, title);
+        eventPublisher.publishEvent(new GroupTaskPublishedEvent(groupId, message.getId()));
         Account account = accountService.getById(accountId);
         return toMessageVO(message, account == null ? null : account.getUsername(), self.getRole());
     }
@@ -157,6 +179,7 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                 // 并发重复标记，唯一键兜底，幂等处理
             }
         }
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         List<StudyGroupMember> members = memberQuery.membersOf(groupId);
         GroupTaskCompletionContext ctx = completionService.loadContext(groupId, List.of(task), members);
         Account publisher = accountService.getById(task.getAccountId());
@@ -179,19 +202,20 @@ public class GroupTaskServiceImpl implements GroupTaskService {
             return null;
         }
         List<StudyGroupMember> members = memberQuery.membersOf(groupId);
+        List<StudyGroupMember> eligibleMembers = eligibleMembers(members, task.getCreatedAt());
         GroupTaskCompletionContext ctx = completionService.loadContext(groupId, List.of(task), members);
         List<GroupTaskItem> items = ctx.items(taskId);
 
         List<GroupTaskItemVO> itemVOs = new ArrayList<>();
         for (GroupTaskItem item : items) {
             int completedCount = 0;
-            for (StudyGroupMember member : members) {
-                if (itemState(ctx, item, member.getAccountId(), task.getCreatedAt()).completed()) {
+            for (StudyGroupMember member : eligibleMembers) {
+                if (itemState(ctx, item, member.getAccountId(), task.getCreatedAt(), member.getJoinedAt()).completed()) {
                     completedCount++;
                 }
             }
             itemVOs.add(new GroupTaskItemVO(item.getId(), item.getItemType(), item.getRefId(),
-                    item.getTitle(), null, null, completedCount));
+                    item.getSource(), item.getPassScore(), item.getTitle(), null, null, completedCount));
         }
         Map<Integer, String> names = memberQuery.usernames(members.stream().map(StudyGroupMember::getAccountId).toList());
         List<MemberTaskProgressVO> memberVOs = members.stream()
@@ -220,13 +244,17 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                     List<GroupTaskItem> items = ctx.items(task.getId());
                     List<GroupTaskItemVO> itemVOs = items.stream()
                             .map(item -> {
-                                GroupTaskItemState state = itemState(ctx, item, memberAccountId, task.getCreatedAt());
+                                GroupTaskItemState state = itemState(ctx, item, memberAccountId,
+                                        task.getCreatedAt(), target.getJoinedAt());
                                 return new GroupTaskItemVO(item.getId(), item.getItemType(), item.getRefId(),
-                                        item.getTitle(), state.completed(), state.completedAt(), null);
+                                        item.getSource(), item.getPassScore(), item.getTitle(),
+                                        state.completed(), state.completedAt(), null);
                             })
                             .toList();
                     long done = itemVOs.stream().filter(vo -> Boolean.TRUE.equals(vo.getMyCompleted())).count();
-                    Integer percent = items.isEmpty() ? null
+                    boolean eligible = target.getJoinedAt() == null || task.getCreatedAt() == null
+                            || !target.getJoinedAt().isAfter(task.getCreatedAt());
+                    Integer percent = !eligible || items.isEmpty() ? null
                             : (int) Math.round(done * 100.0 / items.size());
                     return new GroupMemberDetailVO.TaskStatus(task.getId(), task.getTitle(),
                             task.getCreatedAt(), (int) done, items.size(), percent, itemVOs);
@@ -239,8 +267,19 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                 target.getRole(), target.getJoinedAt(), taskStatuses);
     }
 
+    private void notifyTaskPublished(Integer groupId, Integer publisherId, String title) {
+        for (StudyGroupMember member : memberQuery.membersOf(groupId)) {
+            if (publisherId.equals(member.getAccountId())) {
+                continue;
+            }
+            notificationService.create(member.getAccountId(), "小组发布了新学习任务",
+                    title, "/groups/" + groupId, "group_task_published");
+        }
+    }
+
     /**
-     * 发布任务时校验并构建绑定项：course/resource 取关联实体标题，member_visit/text 用自定义标题。
+     * 发布任务时校验并构建绑定项：course/resource/question_set 取关联实体标题，
+     * word_test 使用词表来源，member_visit/text 使用自定义标题。
      */
     private List<GroupTaskItem> normalizeItems(List<GroupTaskItemCreateVO> vos) {
         if (vos == null || vos.isEmpty()) {
@@ -275,6 +314,30 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                     item.setRefId(resource.getId());
                     item.setTitle(resource.getTitle());
                 }
+                case GroupTaskItem.TYPE_WORD_TEST -> {
+                    String source = itemVO.getSource() == null ? "" : itemVO.getSource().trim().toLowerCase();
+                    if (!"cet4".equals(source) && !"cet6".equals(source)) {
+                        throw new IllegalArgumentException("单词测试必须选择 CET-4 或 CET-6 词表");
+                    }
+                    item.setSource(source);
+                    item.setPassScore(validatePassScore(itemVO.getPassScore()));
+                    String title = itemVO.getTitle() == null ? "" : itemVO.getTitle().trim();
+                    item.setTitle(title.isEmpty()
+                            ? ("cet4".equals(source) ? "CET-4" : "CET-6") + " 单词测试（≥" + item.getPassScore() + "分）"
+                            : title);
+                }
+                case GroupTaskItem.TYPE_QUESTION_SET -> {
+                    QuestionSet set = itemVO.getRefId() == null ? null
+                            : questionSetMapper.selectById(itemVO.getRefId());
+                    if (set == null) {
+                        throw new IllegalArgumentException("绑定的题集不存在");
+                    }
+                    item.setRefId(set.getId());
+                    item.setPassScore(validatePassScore(itemVO.getPassScore()));
+                    String title = itemVO.getTitle() == null ? "" : itemVO.getTitle().trim();
+                    item.setTitle(title.isEmpty()
+                            ? set.getTitle() + "（≥" + item.getPassScore() + "分）" : title);
+                }
                 default -> {
                     String title = itemVO.getTitle() == null ? "" : itemVO.getTitle().trim();
                     if (title.isEmpty() || title.length() > MAX_ITEM_TITLE_LENGTH) {
@@ -294,13 +357,17 @@ public class GroupTaskServiceImpl implements GroupTaskService {
                                                 String username) {
         List<MemberTaskProgressVO.ItemStatus> statuses = items.stream()
                 .map(item -> {
-                    GroupTaskItemState state = itemState(ctx, item, member.getAccountId(), task.getCreatedAt());
+                    GroupTaskItemState state = itemState(ctx, item, member.getAccountId(),
+                            task.getCreatedAt(), member.getJoinedAt());
                     return new MemberTaskProgressVO.ItemStatus(item.getId(), state.completed(),
                             state.completedAt());
                 })
                 .toList();
         long done = statuses.stream().filter(MemberTaskProgressVO.ItemStatus::getCompleted).count();
-        Integer percent = items.isEmpty() ? null : (int) Math.round(done * 100.0 / items.size());
+        boolean eligible = member.getJoinedAt() == null || task.getCreatedAt() == null
+                || !member.getJoinedAt().isAfter(task.getCreatedAt());
+        Integer percent = !eligible || items.isEmpty() ? null
+                : (int) Math.round(done * 100.0 / items.size());
         return new MemberTaskProgressVO(member.getAccountId(), username, member.getRole(),
                 (int) done, items.size(), percent, statuses);
     }
@@ -308,35 +375,53 @@ public class GroupTaskServiceImpl implements GroupTaskService {
     private GroupTaskVO toTaskVO(StudyGroupMessage task, Integer viewerId,
                                  List<StudyGroupMember> members, GroupTaskCompletionContext ctx, String username) {
         List<GroupTaskItem> items = ctx.items(task.getId());
-        int memberCount = members.size();
+        List<StudyGroupMember> eligibleMembers = eligibleMembers(members, task.getCreatedAt());
+        StudyGroupMember viewer = members.stream()
+                .filter(member -> member.getAccountId().equals(viewerId))
+                .findFirst().orElse(null);
         List<GroupTaskItemVO> itemVOs = new ArrayList<>();
         int myCompleted = 0;
         int totalCompletions = 0;
         for (GroupTaskItem item : items) {
-            GroupTaskItemState mine = itemState(ctx, item, viewerId, task.getCreatedAt());
+            GroupTaskItemState mine = itemState(ctx, item, viewerId, task.getCreatedAt(),
+                    viewer == null ? null : viewer.getJoinedAt());
             if (mine.completed()) {
                 myCompleted++;
             }
             int completedCount = 0;
-            for (StudyGroupMember member : members) {
-                if (itemState(ctx, item, member.getAccountId(), task.getCreatedAt()).completed()) {
+            for (StudyGroupMember member : eligibleMembers) {
+                if (itemState(ctx, item, member.getAccountId(), task.getCreatedAt(), member.getJoinedAt()).completed()) {
                     completedCount++;
                 }
             }
             totalCompletions += completedCount;
             itemVOs.add(new GroupTaskItemVO(item.getId(), item.getItemType(), item.getRefId(),
-                    item.getTitle(), mine.completed(), mine.completedAt(), completedCount));
+                    item.getSource(), item.getPassScore(), item.getTitle(),
+                    mine.completed(), mine.completedAt(), completedCount));
         }
-        Integer percent = items.isEmpty() || memberCount == 0 ? null
-                : (int) Math.round(totalCompletions * 100.0 / (items.size() * (double) memberCount));
+        Integer percent = items.isEmpty() || eligibleMembers.isEmpty() ? null
+                : (int) Math.round(totalCompletions * 100.0 / (items.size() * (double) eligibleMembers.size()));
+        LocalDateTime finishedAt = ctx.finishAt(task.getId(), viewerId);
+        boolean myFinished = finishedAt != null;
+        boolean lateCompleted = myFinished && task.getDueAt() != null && finishedAt.isAfter(task.getDueAt());
         return new GroupTaskVO(task.getId(), task.getTitle(), task.getContent(), task.getAccountId(),
-                username, task.getCreatedAt(), itemVOs, memberCount, myCompleted, items.size(),
-                totalCompletions, percent);
+                username, task.getCreatedAt(), task.getDueAt(), myFinished, finishedAt, lateCompleted,
+                itemVOs, members.size(), myCompleted, items.size(), totalCompletions, percent);
+    }
+
+    private List<StudyGroupMember> eligibleMembers(List<StudyGroupMember> members, LocalDateTime taskCreatedAt) {
+        if (taskCreatedAt == null) {
+            return members;
+        }
+        return members.stream()
+                .filter(member -> member.getJoinedAt() == null || !member.getJoinedAt().isAfter(taskCreatedAt))
+                .toList();
     }
 
     private GroupTaskItemState itemState(GroupTaskCompletionContext ctx, GroupTaskItem item,
-                                         Integer accountId, LocalDateTime taskCreatedAt) {
-        return completionService.state(ctx, item, accountId, taskCreatedAt);
+                                         Integer accountId, LocalDateTime taskCreatedAt,
+                                         LocalDateTime memberJoinedAt) {
+        return completionService.state(ctx, item, accountId, taskCreatedAt, memberJoinedAt);
     }
 
     private List<StudyGroupMessage> taskMessages(Integer groupId) {
@@ -349,16 +434,24 @@ public class GroupTaskServiceImpl implements GroupTaskService {
     }
 
     private StudyGroupMessage saveMessage(Integer groupId, Integer accountId, String type,
-                                          String title, String content) {
+                                          String title, String content, LocalDateTime dueAt) {
         StudyGroupMessage message = new StudyGroupMessage();
         message.setGroupId(groupId);
         message.setAccountId(accountId);
         message.setType(type);
         message.setTitle(title);
         message.setContent(content);
+        message.setDueAt(dueAt);
         message.setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
         return message;
+    }
+
+    private int validatePassScore(Integer passScore) {
+        if (passScore == null || passScore < 0 || passScore > 100) {
+            throw new IllegalArgumentException("测试任务项及格分必须在 0 到 100 之间");
+        }
+        return passScore;
     }
 
     private String normalizeContent(String content) {

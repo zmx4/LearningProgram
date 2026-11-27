@@ -17,7 +17,9 @@ public enum LeaderboardMetric {
     /** 课程学习流水，按用户求和（单位：秒） */
     STUDY("study", "学习时长", "秒"),
     /** 签到记录，按用户计数 */
-    CHECK_IN("check-in", "签到天数", "天");
+    CHECK_IN("check-in", "签到天数", "天"),
+    /** 小组任务完成台账，按用户计数（仅小组榜展示） */
+    TASKS("tasks", "完成任务", "个");
 
     private final String code;
     private final String label;

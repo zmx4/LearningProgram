@@ -7,6 +7,8 @@ import com.tick.monitor.Monitored;
 import com.tick.service.AccountPointsService;
 import com.tick.service.CheckInService;
 import com.tick.entity.vo.response.CheckInSummaryVO;
+import com.tick.event.GroupLearningActivityEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +25,11 @@ import java.util.Map;
 public class CheckInServiceImpl extends ServiceImpl<CheckInRecordMapper, CheckInRecord>
         implements CheckInService {
     private final AccountPointsService accountPointsService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public CheckInServiceImpl(AccountPointsService accountPointsService) {
+    public CheckInServiceImpl(AccountPointsService accountPointsService, ApplicationEventPublisher eventPublisher) {
         this.accountPointsService = accountPointsService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -85,6 +89,7 @@ public class CheckInServiceImpl extends ServiceImpl<CheckInRecordMapper, CheckIn
         }
 
         accountPointsService.addPoints(accountId, record.getPoints());
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
         return record;
     }
 

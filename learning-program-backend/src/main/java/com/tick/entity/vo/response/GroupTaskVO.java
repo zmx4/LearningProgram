@@ -21,6 +21,13 @@ public class GroupTaskVO {
     private Integer accountId;
     private String username;
     private LocalDateTime createdAt;
+    private LocalDateTime dueAt;
+    /** 当前用户是否已完成整项任务 */
+    private Boolean myFinished;
+    /** 当前用户整任务完成时间 */
+    private LocalDateTime myFinishedAt;
+    /** 当前用户是否已逾期完成 */
+    private Boolean lateCompleted;
     private List<GroupTaskItemVO> items;
     /** 小组当前成员数（含组长） */
     private Integer memberCount;

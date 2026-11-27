@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.tick.entity.dto.Account;
 import com.tick.entity.dto.LearningResource;
 import com.tick.entity.vo.response.ResourceVO;
+import com.tick.event.GroupLearningActivityEvent;
 import com.tick.entity.vo.response.StorageStatusVO;
 import com.tick.mapper.AccountMapper;
 import com.tick.mapper.LearningResourceMapper;
@@ -15,6 +16,7 @@ import com.tick.storage.ResourceStorageManager;
 import com.tick.storage.StoredFile;
 import com.tick.storage.StorageType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,13 +48,16 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     private final AccountMapper accountMapper;
     private final ResourceAccessLogMapper accessLogMapper;
     private final ResourceStorageManager storageManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     public LearningResourceServiceImpl(AccountMapper accountMapper,
                                        ResourceAccessLogMapper accessLogMapper,
-                                       ResourceStorageManager storageManager) {
+                                       ResourceStorageManager storageManager,
+                                       ApplicationEventPublisher eventPublisher) {
         this.accountMapper = accountMapper;
         this.accessLogMapper = accessLogMapper;
         this.storageManager = storageManager;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -178,11 +183,13 @@ public class LearningResourceServiceImpl extends ServiceImpl<LearningResourceMap
     }
 
     @Override
+    @Transactional
     public void recordAccess(Integer accountId, Integer resourceId) {
         if (accountId == null || resourceId == null) {
             return;
         }
         accessLogMapper.upsertAccess(accountId, resourceId, LocalDateTime.now());
+        eventPublisher.publishEvent(new GroupLearningActivityEvent(accountId));
     }
 
     /**
