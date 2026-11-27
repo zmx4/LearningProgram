@@ -22,14 +22,17 @@ The homepage is “My Groups”. Study groups are the primary product line, whil
 
 Learners use the web application for account-based study workflows: they browse courses and chapters, practice vocabulary and knowledge tests, record progress, participate in discussions or study groups, check in, and review notifications and rankings. Administrators manage users, learning content, question banks, study sets, resources, and directed notifications.
 
+The home page also renders for signed-out visitors with a guest hero, a short product walkthrough, sample courses, and a login prompt; the remaining application pages require sign-in. Users can switch between light, dark, and system display themes in settings.
+
 ## Capabilities and Constraints
 
 - The primary workflow is group co-learning: create or join a group, publish tasks with due dates, learn through courses/resources/tests, track group progress, earn points, view group rankings, and receive notifications.
 - Supporting capabilities include registration, username or email login, remember-me sessions, JWT authentication, password recovery, profiles, courses, chapters, CET-4/CET-6 vocabulary, vocabulary and knowledge tests, dictionary lookup, daily words, learning resources, discussions, comments, check-ins, rankings, notifications, and an administration area.
+- The leaderboard has global and group scopes with metric tabs; group scope adds a task-count metric, and the signed-in user's own rank is shown whenever they are ranked.
 - Group task queries are read-only. Settlement runs only after learning write transactions commit, and the finish ledger guarantees one reward per member per task.
 - Legacy `member_visit` tasks remain readable and judgeable, but new task creation does not offer that item type.
 - Preserve the existing Vue 3, TypeScript, Vite, Vue Router, Vue i18n, Element Plus, Axios, and SSR-capable web stack.
-- Chinese is the first supported application language.
+- Chinese is the first supported application language. A language selector exists in settings, but Simplified Chinese is currently the only registered locale.
 - Learner and administrator roles are part of the product model. Administrator access is protected by the backend security layer.
 - Frontend requests use same-origin relative `/api` paths, with development proxying to the backend.
 - Authentication state is stored in the existing `authorize` local/session storage flow and enforced through JWT-aware backend and frontend behavior.
