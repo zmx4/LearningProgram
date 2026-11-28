@@ -245,7 +245,7 @@ onUnmounted(() => {
     </div>
     <div class="task-form-actions">
       <button class="ghost-button" type="button" @click="emit('close')">
-        {{ t('groups.back') }}
+        {{ t('groups.cancel') }}
       </button>
       <button class="primary-button" type="button" :disabled="publishing" @click="publishTask">
         {{ publishing ? t('groups.publishing') : t('groups.publish') }}
@@ -258,10 +258,11 @@ onUnmounted(() => {
 .task-form {
   display: grid;
   gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--el-color-warning-light-5);
-  border-radius: 10px;
-  background: var(--el-color-warning-light-9);
+  padding: 14px;
+  border: 1px solid var(--el-color-warning-light-7);
+  border-radius: 14px;
+  background: var(--el-fill-color-lighter);
+  box-shadow: 0 16px 36px -34px var(--el-color-warning-dark-2);
 }
 
 .task-form-actions {
@@ -297,7 +298,14 @@ onUnmounted(() => {
 .field input:focus,
 .field textarea:focus {
   border-color: var(--el-color-primary);
-  outline: none;
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 1px;
+}
+
+.field input::placeholder,
+.field textarea::placeholder,
+.item-input::placeholder {
+  color: var(--el-text-color-secondary);
 }
 
 .item-builder {
@@ -441,16 +449,23 @@ onUnmounted(() => {
 .primary-button {
   border: 0;
   color: var(--el-color-white);
-  background: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary-dark-2) 78%, #071624);
   font-weight: 600;
 }
 
-.primary-button:hover {
-  background: var(--el-color-primary-light-3);
+.primary-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--el-color-primary-dark-2) 88%, #071624);
 }
 
 .primary-button:disabled {
   opacity: .6;
   cursor: not-allowed;
+}
+
+.ghost-button:focus-visible,
+.primary-button:focus-visible,
+.remove-inline:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 </style>
